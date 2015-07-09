@@ -18,8 +18,8 @@ pi=np.pi
 
 class Spar(Component):
     # design variables 
-    wall_thickness = Array([0.03,0.03,0.03,0.03],iotype='in', units='m',desc = 'wall thickness of each section')
-    number_of_rings = Array([1,4,4,13],iotype='in',desc = 'number of stiffeners in each section')
+    wall_thickness = Array([0.04,0.03,0.03,0.06],iotype='in', units='m',desc = 'wall thickness of each section')
+    number_of_rings = Array([1,4,4,14],iotype='in',desc = 'number of stiffeners in each section')
     neutral_axis = Float(0.2,iotype='in',units='m',desc = 'neutral axis location')
     # inputs 
     initial_pass = Bool(True, iotype='in', desc='flag for using optimized stiffener dimensions or discrete stiffeners')
@@ -662,4 +662,12 @@ class Spar(Component):
         JMAX = np.array([0]*10)
         VD, self.shell_ring_bulkhead_mass=calculateWindCurrentForces(0.)
         VD_unused, self.shell_ring_bulkhead_mass=calculateWindCurrentForces(VD)
+        print self.wall_thickness
+        print self.number_of_rings
+        print self.neutral_axis
+        print self.VAL
+        print self.VAG
+        print self.VEL
+        print self.VEG
+        print self.shell_ring_bulkhead_mass
 #------------------------------------------------------------------
