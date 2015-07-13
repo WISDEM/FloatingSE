@@ -76,6 +76,7 @@ def fairlead_anchor_table(NM,direction,FOFF,FD,WD,ODB,x0,NSEG,survival_mooring,T
     Ttop_tension = np.empty((1,NSEG+1),dtype=np.object)
     H_Force = np.empty((1,NSEG+1),dtype=np.object)
     FX = np.empty((1,NSEG+1),dtype=np.object)
+    FY = np.empty((1,NSEG+1),dtype=np.object)
     sum_FX = np.array([0.]*(NSEG+1))
     stiffness = np.array([0.]*(NSEG+1))
     for i in range(0,NSEG+1):
@@ -89,13 +90,15 @@ def fairlead_anchor_table(NM,direction,FOFF,FD,WD,ODB,x0,NSEG,survival_mooring,T
         Ttop_tension[0,i] = Ttop_vect
         H_Force[0,i] = H_vect
         FX[0,i] = np.array((anchor_x-X_Fairlead[0,i])/anchor_distance[0,i]*H_Force[0,i])
+        FY[0,i] = np.array((anchor_y-fairlead_y)/anchor_distance[0,i]*H_Force[0,i])
         sum_FX[i] = sum(FX[0,i])
     for i in range(0,NSEG+1):    
         if i == NSEG:
             stiffness[i] = abs(sum_FX[i]/X_Offset[i])
         else: 
-            stiffness[i] = abs((sum_FX[i]-sum_FX[i+1])/(X_Offset[i]-X_Offset[i+1]))        
-    return stiffness
+            stiffness[i] = abs((sum_FX[i]-sum_FX[i+1])/(X_Offset[i]-X_Offset[i+1]))    
+ 
+    return FY
 
 
     
