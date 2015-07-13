@@ -1,46 +1,43 @@
 from openmdao.main.api import Component, Assembly, convert_units
 from openmdao.main.datatypes.api import Float, Array, Enum, Str, Int, Bool
-from openmdao.lib.drivers.api import COBYLAdriver
+from openmdao.lib.drivers.api import COBYLAdriver, SLSQPdriver
 from spar import Spar
 #from spar_discrete import spar_discrete
 import numpy as np
 import time
-from spar_utils import filtered_stiffeners_table
+from spar_utils import filtered_stiffeners_table, full_stiffeners_table
 
 class optimizationSpar(Assembly):
+    # variables 
+    first_fit = Bool(True,iotype='in',desc = 'wall thickness of each section')
+
     def configure(self):
         self.add('driver',COBYLAdriver())
-        self.driver.maxfun = 10000
-    
+        self.driver.maxfun = 100000
         self.add('spar',Spar())
         self.driver.workflow.add('spar')
-        # connect inputs
         
         # objective
         self.driver.add_objective('spar.shell_ring_bulkhead_mass')
+       
         # design variables
-
-        self.driver.add_parameter('spar.neutral_axis',low=10.,high=41.,scaler=0.01)
-        #self.driver.add_parameter('spar.wall_thickness',low=[0.01,0.01,0.01,0.01],high=[0.06,0.06,0.06,0.06])
-
-        self.driver.add_parameter('spar.wall_thickness[0]',low=100.,high=1000.,scaler=0.0001)
-        self.driver.add_parameter('spar.wall_thickness[1]',low=100.,high=1000.,scaler=0.0001)
-        self.driver.add_parameter('spar.wall_thickness[2]',low=100.,high=1000.,scaler=0.0001)
-        self.driver.add_parameter('spar.wall_thickness[3]',low=100.,high=1000.,scaler=0.0001)
-        #self.driver.add_parameter('spar.number_of_rings',low=[1,1,1,1],high=[5,10,10,50])
-        self.driver.add_parameter('spar.number_of_rings[0]',low=10,high=50,scaler=0.1)
-        self.driver.add_parameter('spar.number_of_rings[1]',low=10,high=50,scaler=0.1)
-        self.driver.add_parameter('spar.number_of_rings[2]',low=10,high=50,scaler=0.1)
-        self.driver.add_parameter('spar.number_of_rings[3]',low=10,high=50,scaler=0.1)
-        
+        self.driver.add_parameter('spar.neutral_axis',low=10.,high=40.,scaler=0.01)
+        self.driver.add_parameter('spar.number_of_rings[0]',low=1,high=5)
+        self.driver.add_parameter('spar.number_of_rings[1]',low=1,high=10)
+        self.driver.add_parameter('spar.number_of_rings[2]',low=1,high=10)
+        self.driver.add_parameter('spar.number_of_rings[3]',low=1,high=40)
+        self.driver.add_parameter('spar.wall_thickness[0]',low=10.,high=100.,scaler=0.001)
+        self.driver.add_parameter('spar.wall_thickness[1]',low=10.,high=100.,scaler=0.001)
+        self.driver.add_parameter('spar.wall_thickness[2]',low=10.,high=100.,scaler=0.001)
+        self.driver.add_parameter('spar.wall_thickness[3]',low=10.,high=100.,scaler=0.001)
         # Constraints
-        self.driver.add_constraint('spar.flange_compactness <= 1')
-        self.driver.add_constraint('spar.web_compactness <= 1')
+        self.driver.add_constraint('spar.flange_compactness <= 1.')
+        self.driver.add_constraint('spar.web_compactness <= 1.')
 
-        self.driver.add_constraint('spar.VAL[0] <= 1')
+        self.driver.add_constraint('spar.VAL[0] <= 1.')
         self.driver.add_constraint('spar.VAL[1] <= 1.')
         self.driver.add_constraint('spar.VAL[2] <= 1.')
-        self.driver.add_constraint('spar.VAL[3] <= 1')
+        self.driver.add_constraint('spar.VAL[3] <= 1.')
 
         self.driver.add_constraint('spar.VAG[0] <= 1.')
         self.driver.add_constraint('spar.VAG[1] <= 1.')
@@ -59,7 +56,7 @@ class optimizationSpar(Assembly):
 
 
 def sys_print(example):
-    filteredStiffeners = filtered_stiffeners_table()
+    fullStiffeners = full_stiffeners_table()
     print 'number of stiffeners: ',example.number_of_rings
     print 'wall thickness: ',example.wall_thickness
     print 'VAL: ',example.VAL
@@ -68,10 +65,9 @@ def sys_print(example):
     print 'VEG: ',example.VEG
     print 'web compactness: ',example.web_compactness
     print 'flange compactness: ',example.flange_compactness
-    print 'stiffener: ', filteredStiffeners[example.stiffener_index]
+    print 'stiffener: ', fullStiffeners[example.stiffener_index]
     print 'shell+ring+bulkhead mass: ',example.shell_ring_bulkhead_mass
     
-
 def example_218WD_3MW():
     example = optimizationSpar()
     tt = time.time()
@@ -112,10 +108,10 @@ def example_218WD_3MW():
     example.spar.rotor_diameter = 101.0
     example.run()
     yna = convert_units(example.spar.neutral_axis ,'m','inch')
-    filteredStiffeners = filtered_stiffeners_table()
-    for i in range (0,len(filteredStiffeners)-1):
-        stiffener_bef = filteredStiffeners[i]
-        stiffener_aft = filteredStiffeners[i+1]
+    fullStiffeners = full_stiffeners_table()
+    for i in range (0,len(fullStiffeners)-1):
+        stiffener_bef = fullStiffeners[i]
+        stiffener_aft = fullStiffeners[i+1]
         if yna > stiffener_bef[6] and yna<stiffener_aft[6]:
             opt_index = i+1
     second_fit = Spar()
@@ -160,20 +156,28 @@ def example_218WD_3MW():
     second_fit.rotor_diameter = example.spar.rotor_diameter
     second_fit.run()
     index = opt_index
-    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))   
+    unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))   
     while ((unity-1.0) > 1e-7):
         if index <124:
             index += 1
             second_fit.stiffener_index = index
             second_fit.run()
-            unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
+            unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
         else:
-            second_fit.stiffener_index = opt_index
+            index = opt_index 
+            second_fit.stiffener_index = index
+            second_fit.run()
+            compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness) 
+            while (compact_unity >1.0):
+                index+=1
+                second_fit.stiffener_index = index
+                second_fit.run()
+                compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness)
             for i in range(0,second_fit.number_of_sections):
                 if second_fit.VAL[i] >1. or second_fit.VAG[i]>1. or second_fit.VEL[i]>1. or second_fit.VEG[i]>1.:    
                     second_fit.number_of_rings[i] += 1 
                     second_fit.run()
-                    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
+                    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))             
     print '--------------example_218WD_3MW------------------'
     print "Elapsed time: ", time.time()-tt, " seconds"
     sys_print(second_fit)
@@ -216,13 +220,13 @@ def example_218WD_6MW():
     example.spar.cut_out_speed = 25.
     example.spar.turbine_size = '6MW'
     example.spar.rotor_diameter = 154.0
-
     example.run()
+    
     yna = convert_units(example.spar.neutral_axis ,'m','inch')
-    filteredStiffeners = filtered_stiffeners_table()
-    for i in range (0,len(filteredStiffeners)-1):
-        stiffener_bef = filteredStiffeners[i]
-        stiffener_aft = filteredStiffeners[i+1]
+    fullStiffeners = full_stiffeners_table()
+    for i in range (0,len(fullStiffeners)-1):
+        stiffener_bef = fullStiffeners[i]
+        stiffener_aft = fullStiffeners[i+1]
         if yna > stiffener_bef[6] and yna<stiffener_aft[6]:
             opt_index = i+1
     second_fit = Spar()
@@ -268,29 +272,37 @@ def example_218WD_6MW():
     #second_fit.system_acceleration=example.system_acceleration
     second_fit.run()
     index = opt_index
-    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))   
+    unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))   
+    print 'UNITY: ', unity
     while ((unity-1.0) > 1e-7):
         if index <124:
             index += 1
             second_fit.stiffener_index = index
             second_fit.run()
-            unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
+            unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
         else:
-            second_fit.stiffener_index = opt_index
+            index = opt_index 
+            second_fit.stiffener_index = index
+            second_fit.run()
+            compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness) 
+            while (compact_unity >1.0):
+                index+=1
+                second_fit.stiffener_index = index
+                second_fit.run()
+                compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness)
             for i in range(0,second_fit.number_of_sections):
                 if second_fit.VAL[i] >1. or second_fit.VAG[i]>1. or second_fit.VEL[i]>1. or second_fit.VEG[i]>1.:    
                     second_fit.number_of_rings[i] += 1 
                     second_fit.run()
-                    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
+                    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))  
     print '--------------example_218WD_6MW------------------'
     print "Elapsed time: ", time.time()-tt, " seconds"
     sys_print(second_fit)
 
-
-
 def example_218WD_10MW():
     example = optimizationSpar()
     tt = time.time()
+    example.first_fit=True
     example.spar.water_depth = 218.
     example.spar.load_condition = 'N'
     example.spar.significant_wave_height = 10.820
@@ -327,15 +339,14 @@ def example_218WD_10MW():
     example.spar.turbine_size = '10MW'
     example.spar.rotor_diameter = 194.0
     example.run()
+    
     yna = convert_units(example.spar.neutral_axis ,'m','inch')
-    print yna
-    filteredStiffeners = filtered_stiffeners_table()
-    for i in range (0,len(filteredStiffeners)-1):
-        stiffener_bef = filteredStiffeners[i]
-        stiffener_aft = filteredStiffeners[i+1]
+    fullStiffeners = full_stiffeners_table()
+    for i in range (0,len(fullStiffeners)-1):
+        stiffener_bef = fullStiffeners[i]
+        stiffener_aft = fullStiffeners[i+1]
         if yna > stiffener_bef[6] and yna<stiffener_aft[6]:
             opt_index = i+1
-    print opt_index
     second_fit = Spar()
     second_fit.wall_thickness = example.spar.wall_thickness
     second_fit.number_of_rings = example.spar.number_of_rings
@@ -376,27 +387,39 @@ def example_218WD_10MW():
     second_fit.cut_out_speed = example.spar.cut_out_speed
     second_fit.turbine_size = example.spar.turbine_size
     second_fit.rotor_diameter = example.spar.rotor_diameter
+    #second_fit.system_acceleration=example.system_acceleration
     second_fit.run()
     index = opt_index
-    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))   
+    unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))   
+
+
+
     while ((unity-1.0) > 1e-7):
-        if index <124:
+        if index <326:
             index += 1
             second_fit.stiffener_index = index
             second_fit.run()
-            unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
-            #print unity-1.0
+            unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
         else:
-            second_fit.stiffener_index = opt_index
+            index = opt_index 
+            second_fit.stiffener_index = index
+            second_fit.run()
+            compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness) 
+            while (compact_unity >1.0):
+                index+=1
+                second_fit.stiffener_index = index
+                second_fit.run()
+                compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness)
             for i in range(0,second_fit.number_of_sections):
                 if second_fit.VAL[i] >1. or second_fit.VAG[i]>1. or second_fit.VEL[i]>1. or second_fit.VEG[i]>1.:    
                     second_fit.number_of_rings[i] += 1 
                     second_fit.run()
-                    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
-                    #print second_fit.number_of_rings
+                    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))  
     print '--------------example_218WD_10MW------------------'
     print "Elapsed time: ", time.time()-tt, " seconds"
     sys_print(second_fit)
+    
+    
 
 if __name__ == "__main__":
     #example_218WD_3MW()

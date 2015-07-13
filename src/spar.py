@@ -13,14 +13,14 @@ from scipy.optimize import fmin, minimize
 from sympy.solvers import solve
 from sympy import Symbol
 import math
-from spar_utils import filtered_stiffeners_table, thrust_table
+from spar_utils import full_stiffeners_table, thrust_table
 pi=np.pi
 
 class Spar(Component):
     # design variables 
-    wall_thickness = Array([0.04,0.03,0.03,0.06],iotype='in', units='m',desc = 'wall thickness of each section')
-    number_of_rings = Array([1,4,4,14],iotype='in',desc = 'number of stiffeners in each section')
-    neutral_axis = Float(0.2,iotype='in',units='m',desc = 'neutral axis location')
+    wall_thickness = Array([0.03,0.03,0.03,0.045],iotype='in', units='m',desc = 'wall thickness of each section')
+    number_of_rings = Array([1,4,4,20],iotype='in',desc = 'number of stiffeners in each section')
+    neutral_axis = Float(0.3,iotype='in',units='m',desc = 'neutral axis location')
     # inputs 
     initial_pass = Bool(True, iotype='in', desc='flag for using optimized stiffener dimensions or discrete stiffeners')
     stiffener_index = Int(iotype='in',desc='index of stiffener from filtered table')
@@ -453,7 +453,7 @@ class Spar(Component):
             SMASS = self.hull_mass
         else: # discrete, actual stiffener
             SMASS = 1.11*self.shell_ring_bulkhead_mass
-            allStiffeners = filtered_stiffeners_table()
+            allStiffeners = full_stiffeners_table()
             stiffener = allStiffeners[self.stiffener_index]
             stiffenerName = stiffener[0]
             AR = convert_units( stiffener[1],'inch**2','m**2')
@@ -462,6 +462,7 @@ class Spar(Component):
             BF=  convert_units(stiffener[4],'inch','m')
             TFM = convert_units(stiffener[5],'inch','m')
             YNA = convert_units(stiffener[6],'inch','m')
+            self.neutral_axis=YNA
             IR = convert_units(stiffener[7],'inch**4','m**4')
         HW = D - TFM
         WBM = self.variable_ballast_mass
@@ -669,5 +670,7 @@ class Spar(Component):
         print self.VAG
         print self.VEL
         print self.VEG
+        print self.web_compactness
+        print self.flange_compactness
         print self.shell_ring_bulkhead_mass
 #------------------------------------------------------------------
