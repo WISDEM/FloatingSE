@@ -21,15 +21,15 @@ class optimizationSpar(Assembly):
         self.driver.add_objective('spar.shell_ring_bulkhead_mass')
        
         # design variables
-        self.driver.add_parameter('spar.neutral_axis',low=10.,high=40.,scaler=0.01)
+        self.driver.add_parameter('spar.neutral_axis',low=100.,high=419.,scaler=0.001)
         self.driver.add_parameter('spar.number_of_rings[0]',low=1,high=5)
         self.driver.add_parameter('spar.number_of_rings[1]',low=1,high=10)
         self.driver.add_parameter('spar.number_of_rings[2]',low=1,high=10)
-        self.driver.add_parameter('spar.number_of_rings[3]',low=1,high=40)
-        self.driver.add_parameter('spar.wall_thickness[0]',low=10.,high=100.,scaler=0.001)
-        self.driver.add_parameter('spar.wall_thickness[1]',low=10.,high=100.,scaler=0.001)
-        self.driver.add_parameter('spar.wall_thickness[2]',low=10.,high=100.,scaler=0.001)
-        self.driver.add_parameter('spar.wall_thickness[3]',low=10.,high=100.,scaler=0.001)
+        self.driver.add_parameter('spar.number_of_rings[3]',low=1,high=50)
+        self.driver.add_parameter('spar.wall_thickness[0]',low=100.,high=1000.,scaler=0.0001)
+        self.driver.add_parameter('spar.wall_thickness[1]',low=100.,high=1000.,scaler=0.0001)
+        self.driver.add_parameter('spar.wall_thickness[2]',low=100.,high=1000.,scaler=0.0001)
+        self.driver.add_parameter('spar.wall_thickness[3]',low=100.,high=1000.,scaler=0.0001)
         # Constraints
         self.driver.add_constraint('spar.flange_compactness <= 1.')
         self.driver.add_constraint('spar.web_compactness <= 1.')
@@ -155,29 +155,22 @@ def example_218WD_3MW():
     second_fit.turbine_size = example.spar.turbine_size
     second_fit.rotor_diameter = example.spar.rotor_diameter
     second_fit.run()
+    mass = second_fit.shell_ring_bulkhead_mass
     index = opt_index
+    best_index = opt_index
     unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))   
-    while ((unity-1.0) > 1e-7):
-        if index <124:
-            index += 1
-            second_fit.stiffener_index = index
-            second_fit.run()
-            unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
-        else:
-            index = opt_index 
-            second_fit.stiffener_index = index
-            second_fit.run()
-            compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness) 
-            while (compact_unity >1.0):
-                index+=1
-                second_fit.stiffener_index = index
+    for i in range(opt_index,326):
+        index += 1
+        second_fit.stiffener_index = index
+        second_fit.run()
+        unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
+        if unity < 1.0:
+            if second_fit.shell_ring_bulkhead_mass < mass : 
+                mass=second_fit.shell_ring_bulkhead_mass 
+                best_index = i
+                second_fit.stiffener_index = best_index
                 second_fit.run()
-                compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness)
-            for i in range(0,second_fit.number_of_sections):
-                if second_fit.VAL[i] >1. or second_fit.VAG[i]>1. or second_fit.VEL[i]>1. or second_fit.VEG[i]>1.:    
-                    second_fit.number_of_rings[i] += 1 
-                    second_fit.run()
-                    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))             
+    
     print '--------------example_218WD_3MW------------------'
     print "Elapsed time: ", time.time()-tt, " seconds"
     sys_print(second_fit)
@@ -271,30 +264,21 @@ def example_218WD_6MW():
     second_fit.rotor_diameter = example.spar.rotor_diameter
     #second_fit.system_acceleration=example.system_acceleration
     second_fit.run()
+    mass = second_fit.shell_ring_bulkhead_mass
     index = opt_index
+    best_index = opt_index
     unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))   
-    print 'UNITY: ', unity
-    while ((unity-1.0) > 1e-7):
-        if index <124:
-            index += 1
-            second_fit.stiffener_index = index
-            second_fit.run()
-            unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
-        else:
-            index = opt_index 
-            second_fit.stiffener_index = index
-            second_fit.run()
-            compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness) 
-            while (compact_unity >1.0):
-                index+=1
-                second_fit.stiffener_index = index
+    for i in range(opt_index,326):
+        index += 1
+        second_fit.stiffener_index = index
+        second_fit.run()
+        unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
+        if unity < 1.0:
+            if second_fit.shell_ring_bulkhead_mass < mass : 
+                mass=second_fit.shell_ring_bulkhead_mass 
+                best_index = i
+                second_fit.stiffener_index = best_index
                 second_fit.run()
-                compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness)
-            for i in range(0,second_fit.number_of_sections):
-                if second_fit.VAL[i] >1. or second_fit.VAG[i]>1. or second_fit.VEL[i]>1. or second_fit.VEG[i]>1.:    
-                    second_fit.number_of_rings[i] += 1 
-                    second_fit.run()
-                    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))  
     print '--------------example_218WD_6MW------------------'
     print "Elapsed time: ", time.time()-tt, " seconds"
     sys_print(second_fit)
@@ -389,34 +373,24 @@ def example_218WD_10MW():
     second_fit.rotor_diameter = example.spar.rotor_diameter
     #second_fit.system_acceleration=example.system_acceleration
     second_fit.run()
+    mass = second_fit.shell_ring_bulkhead_mass
     index = opt_index
+    best_index = opt_index
     unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))   
-
-
-
-    while ((unity-1.0) > 1e-7):
-        if index <326:
-            index += 1
-            second_fit.stiffener_index = index
-            second_fit.run()
-            unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
-        else:
-            index = opt_index 
-            second_fit.stiffener_index = index
-            second_fit.run()
-            compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness) 
-            while (compact_unity >1.0):
-                index+=1
-                second_fit.stiffener_index = index
+    for i in range(opt_index,326):
+        index += 1
+        second_fit.stiffener_index = index
+        second_fit.run()
+        unity = max(second_fit.web_compactness,second_fit.flange_compactness,max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG)) 
+        if unity < 1.0:
+            if second_fit.shell_ring_bulkhead_mass < mass : 
+                mass=second_fit.shell_ring_bulkhead_mass 
+                best_index = i
+                second_fit.stiffener_index = best_index
                 second_fit.run()
-                compact_unity = max(second_fit.web_compactness,second_fit.flange_compactness)
-            for i in range(0,second_fit.number_of_sections):
-                if second_fit.VAL[i] >1. or second_fit.VAG[i]>1. or second_fit.VEL[i]>1. or second_fit.VEG[i]>1.:    
-                    second_fit.number_of_rings[i] += 1 
-                    second_fit.run()
-                    unity = max(max(second_fit.VAL),max(second_fit.VAG),max(second_fit.VEL),max(second_fit.VEG))  
     print '--------------example_218WD_10MW------------------'
     print "Elapsed time: ", time.time()-tt, " seconds"
+    
     sys_print(second_fit)
     
     

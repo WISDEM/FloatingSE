@@ -7,6 +7,7 @@ from math import pi, cos, sqrt, radians, sin, exp, log10, log, floor, ceil
 import algopy
 import scipy as scp
 
+
 def thrust_table(size_of_turbine,ADEN,RWA): 
     wind = np.array(range(0,26))
     if size_of_turbine == '3MW':

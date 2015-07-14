@@ -18,9 +18,9 @@ pi=np.pi
 
 class Spar(Component):
     # design variables 
-    wall_thickness = Array([0.03,0.03,0.03,0.045],iotype='in', units='m',desc = 'wall thickness of each section')
-    number_of_rings = Array([1,4,4,20],iotype='in',desc = 'number of stiffeners in each section')
-    neutral_axis = Float(0.3,iotype='in',units='m',desc = 'neutral axis location')
+    wall_thickness = Array([0.036,0.036,0.036,0.0625],iotype='in', units='m',desc = 'wall thickness of each section')
+    number_of_rings = Array([1,4,5,35],iotype='in',desc = 'number of stiffeners in each section')
+    neutral_axis = Float(0.35,iotype='in',units='m',desc = 'neutral axis location')
     # inputs 
     initial_pass = Bool(True, iotype='in', desc='flag for using optimized stiffener dimensions or discrete stiffeners')
     stiffener_index = Int(iotype='in',desc='index of stiffener from filtered table')
@@ -69,6 +69,8 @@ class Spar(Component):
     VAG = Array(iotype='out',desc = 'unity check for axial load - genenral instability')
     VEL = Array(iotype='out',desc = 'unity check for external pressure - local buckling')
     VEG = Array(iotype='out',desc = 'unity check for external pressure - general instability')
+    columns_mass = Float(iotype='out', units='kg',desc='total mass of straight columns/sections')
+    tapered_mass = Float(iotype='out', units='kg',desc='total mass od tapered columns/sections')
     # shell_mass = Float(iotype='out',desc = 'mass of shell')   
     shell_ring_bulkhead_mass = Float(iotype='out',desc = 'mass to be minimized')
     def __init__(self):
@@ -107,18 +109,17 @@ class Spar(Component):
             ID = np.array([0.]*l)
             ID = D - 2.*WALL
             return ID if not is_scalar else (ID)
-        def waveHeight(Hs): 
-            return 1.1*Hs
-        def wavePeriod(H):
-            return 11.1*(H/G)**0.5   
-        def waveNumber(T,D):
+        def waveProperties(Hs,T,D):
+            waveHeight = 1.1*Hs
+            wavePeriod = 11.1*(waveHeight/G)**0.5
             k0 = 2 * pi / ( T * (G * D) **0.5)
             ktol =1 
             while ktol > 0.001:
                 k = ( 2* pi/T) **2 / (G * np.tanh(k0*D))
                 ktol = abs(k-k0)
                 k0 = k
-            return k
+            waveNumber = k 
+            return waveHeight,wavePeriod,waveNumber
         def waveU(H,T,k,z,D,theta):
             return (pi*H/T)*(np.cosh(k*(z+D))/np.sinh(k*D))*np.cos(theta)
         def waveUdot(H,T,k,z,D,theta):
@@ -170,8 +171,7 @@ class Spar(Component):
             return np.interp(abs(XNEW),CDEPTH,CSPEED)
         def curWaveDrag(Hs,Tp,WD,ODT,ODB,ELS,SL,CG,VDOT): 
             if Hs != 0: 
-                H = waveHeight(Hs)
-                k = waveNumber(Tp,WD) 
+                H,per,k = waveProperties(Hs,Tp,WD)
             # calculate current and wave drag 
             DL = SL /10.     # step sizes
             dtheta = pi/30. 
@@ -343,7 +343,7 @@ class Spar(Component):
                     KCG[i] = (KCG[i] * SHM[i] + (DRAFT + ELE[i] + 0.5 * T[i]) * BHM[i]) / (SHM[i] + BHM[i])
                 else: 
                     KCG[i] = KCG[i]
-            total_mass = sum(SHM)+sum(RGM)+sum(BHM)
+            #total_mass = sum(SHM)+sum(RGM)+sum(BHM)
 
             TWF = windDrag(TLEN,TBOD,TTOD,WREFS,WREFH,ALPHA,FB,ADEN)
             wind,Ct,thrust = thrust_table(self.turbine_size,ADEN,RWA)
@@ -357,7 +357,7 @@ class Spar(Component):
             else: 
                 RWF = max_thrust*1000*GF**2*0.75
             VD = (RWF+TWF+sum(SWF)+sum(SCF))/(SMASS+RMASS+TMASS+FBM+PBM+WBM)
-            return (VD,total_mass)
+            return (VD,SHM,RGM,BHM)
         def rootsearch(f,a,b,dx):
             x1 = a; f1 = f(a)
             x2 = a + dx; f2 = f(x2)
@@ -661,8 +661,11 @@ class Spar(Component):
         self.VEG = abs(FTHETAS / FEG)
         global JMAX
         JMAX = np.array([0]*10)
-        VD, self.shell_ring_bulkhead_mass=calculateWindCurrentForces(0.)
-        VD_unused, self.shell_ring_bulkhead_mass=calculateWindCurrentForces(VD)
+        VD, SHM,RGM,BHM=calculateWindCurrentForces(0.)
+        VD_unused, SHM,RGM,BHM=calculateWindCurrentForces(VD)
+        self.shell_ring_bulkhead_mass = sum(SHM)+sum(RGM)+sum(BHM)
+        self.columns_mass = sum(SHM[1::2])+sum(RGM[1::2])+sum(BHM[1::2])
+        self.tapered_mass = sum(SHM[0::2])+sum(RGM[0::2])+sum(BHM[0::2])
         print self.wall_thickness
         print self.number_of_rings
         print self.neutral_axis
@@ -673,4 +676,6 @@ class Spar(Component):
         print self.web_compactness
         print self.flange_compactness
         print self.shell_ring_bulkhead_mass
+        print self.columns_mass
+        print self.tapered_mass
 #------------------------------------------------------------------
