@@ -27,12 +27,41 @@ class Mooring(Component):
 	user_MCPL = Float(0.0,iotype='in',units='USD/m',desc='user defined mooring cost per length')
 	user_anchor_cost = Float(0.0,iotype='in',units='USD',desc='user defined cost per anchor')
 	misc_cost_factor = Float(10.0,iotype='in',desc='miscellaneous cost factor in percent')
-	number_of_segments = Int(20,iotype='in',desc='number of segments for mooring discretization')
+	number_of_discretizations = Int(20,iotype='in',desc='number of segments for mooring discretization')
+	start_elevation = Array(iotype='in', units='m',desc = 'start elevation of each section')
+    end_elevation = Array(iotype='in', units='m',desc = 'end elevation of each section')
+    shell_buoyancy = Array(iotype='in', units='kg',desc = 'shell buoyancy by section')
+    shell_mass = Array(iotype='in', units='kg',desc = 'shell mass by section')
+    bulkhead_mass = Array(iotype='in', units='kg',desc = 'bulkhead mass by section')
+    ring_mass = Array(iotype='in', units='kg',desc = 'ring mass by section')
+	shell_mass_factor = Float(1.0,iotype='in',desc='shell mass factor')
+	bulkhead_mass_factor = Float(1.0,iotype='in',desc='bulkhead mass factor')
+	ring_mass_factor = Float(1.0,iotype='in',desc='ring mass factor')
+	outfitting_factor = Float(0.06,iotype='in',desc='outfitting factor')
+	spar_mass_factor = Float(1.05,iotype='in',desc='spar mass factor')
+	KCG = Array(iotype='in', units='m',desc = 'KCG by section from spar')
+	KCB = Array(iotype='in', units='m',desc = 'KCB by section from spar')
+	water_density = Float(1025,iotype='in',units='kg/m**3',desc='density of water')
+	outer_diameter_top = Float(iotype='in',units='m',desc='top outer diameter')
+	spar_wind_force = Array(iotype='in', units='N',desc = 'SWF by section from spar')
+	spar_wind_moment = Array(iotype='in', units='N*m',desc = 'SWM by section from spar')
+	spar_current_force = Array(iotype='in', units='N',desc = 'SCF by section from spar')
+	spar_current_moment = Array(iotype='in', units='N*m',desc = 'SCM by section from spar')
+	wall_thickness = Array(iotype='in', units='m',desc = 'wall thickness by section from spar')
+	permanent_ballast_height = Float(iotype='in',units='m',desc='height of permanent ballast')
+	fixed_ballast_height = Float(iotype='in',units='m',desc='height of fixed ballast')
+	permanent_ballast_density = Float(iotype='in',units='kg/m**3',desc='density of permanent ballast')
+	fixed_ballast_density = Float(iotype='in',units='kg/m**3',desc='density of fixed ballast')
+	RNA_mass = Float(iotype='in',units='kg',desc='RNA mass')
+	tower_mass = Float(iotype='in',units='kg',desc='tower mass')
+	gravity = Float(9.806,iotype='in', units='m/s**2', desc='gravity')
 	# outputs 
-	total_cost = Float(iotype='in',units='USD',desc='total cost for anchor + legs + miscellaneous costs')
+	total_cost = Float(iotype='out',units='USD',desc='total cost for anchor + legs + miscellaneous costs')
+
 	def __init__(self):
         super(Mooring,self).__init__()
     def execute(self):
+    	##### MOORING TAB ##### 
     	WD = self.water_depth
     	FD = self.fairlead_depth
     	MDIA = self.mooring_diameter
@@ -42,7 +71,7 @@ class Mooring(Component):
 		NM = self.number_of_mooring_lines
 		FOFF = self.fairlead_offset_from_shell
 		ODB = self.outer_diameter_base
-		NSEG= self.number_of_segments
+		NDIS= self.number_of_discretizations
 		FH = WD-FD 
 		S = FH*SR
 		if MTYPE == 'CHAIN': 	
@@ -83,7 +112,7 @@ class Mooring(Component):
 			MCPL = self.user_MCPL
 		PTEN = MBL*PPER/100.
 		MWPL = WML*9.806
-		x0,a,x,H,sp,yp,s,Ttop,Vtop,Tbot,Vbot,Tave,stretch,ang,offset,MKH,MKV = ref_table(PTEN,MWPL,S,FH,AE_storm,MBL)
+		x0,a,x,H,sp,yp,s,Ttop,Vtop,Tbot,Vbot,Tave,stretch,ang,offset,mkh,mkv = ref_table(PTEN,MWPL,S,FH,AE_storm,MBL)
 		if np.interp(PTEN,Ttop,sp)>0.:
 			cat_type = 'semi-taut'
 		else: 
@@ -113,10 +142,48 @@ class Mooring(Component):
 		self.total_cost = legs_total+anchor_total+misc_cost 
 		# INITIAL CONDITION 
 		KGM = DRAFT - FD 
-		VTOP 
-		MHK 
-		MVK 
-		TMM 
+		VTOP =  np.interp(PTEN,Ttop,Vtop)
+		MHK = np.interp(PTEN,Ttop,mkh)
+		MVK = np.interp(PTEN,Ttop,mkv)
+		TMM = (WML+np.pi*MDIA**2/4*WDEN)*S*NM
+
+		###### PLATFORM TAB #####
+		WDEN = self.water_density
+    	ODT = self.outer_diameter_top
+    	T = self.wall_thickness
+		FB = self.start_elevation[0]
+		DRAFT = abs(min(self.end_elevation))
+		SHBUOY = sum(self.shell_buoyancy)
+		SHMASS = sum(self.shell_mass)*self.shell_mass_factor
+		BHMASS = sum(self.bulkhead_mass)*self.bulkhead_mass_factor
+		RGMASS = sum(self.ring_mass)*self.ring_mass_factor
+		SHRMASS = SHMASS + BHMASS + RGMASS
+		SHRM = np.array(self.shell_mass)+np.array(self.bulkhead_mass)+np.array(self.ring_mass)
+		percent_shell_mass = RMASS/SMASS *100. 
+		outfitting_mass = SHRMASS*self.outfitting_factor
+		SMASS = SHRMASS*self.spar_mass_factor + outfitting_mass
+		KG = np.dot(SHRM,np.array(self.KCG))/SHRMASS
+		KB = np.dot(np.array(self.shell_buoyancy),np.array(self.KCB))/SHBUOY
+		BM = ((np.pi/64)*ODT**4)/(SHBUOY/WDEN)
+		SWFORCE = sum(self.spar_wind_force)
+		SWMOM = sum(self.spar_wind_moment)
+		SCFORCE = sum(self.spar_current_force)
+		SCMOM = sum(self.spar_current_moment)
+		BVL = np.pi/4.*(ODB-2*T[-1])**2.  # ballast volume per length
+		PBH = self.permanent_ballast_height 
+		PBDEN = self.permanent_ballast_density
+		KGPB = (PBH/2.)+T[-1] 
+		PBM = BVL*PBH*PBDEN
+		FBH = self.fixed_ballast_height
+		FBDEN = self.fixed_ballast_density
+		KGFB = (FBH/2.)+PBH+T[-1] 
+		FBM = BVL*FBH*FBDEN
+		WPA = np.pi/4*(ODT)**2
+
+		##### SIZING TAB #####
+		RMASS = self.RNA_mass
+		WBM = SHBUOY-SMASS-RMASS-VTOP/G
+
 
 		
 

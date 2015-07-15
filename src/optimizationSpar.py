@@ -86,7 +86,7 @@ def example_218WD_3MW():
     example.spar.yield_stress = 345000000.
     example.spar.rotor_mass = 125000.
     example.spar.tower_mass = 127877.
-    example.spar.free_board = 13.
+    #example.spar.free_board = 13.
     example.spar.draft = 67.
     example.spar.fixed_ballast_mass = 1244227.77
     example.spar.hull_mass = 890985.086
@@ -134,7 +134,7 @@ def example_218WD_3MW():
     second_fit.yield_stress = example.spar.yield_stress
     second_fit.rotor_mass = example.spar.rotor_mass
     second_fit.tower_mass = example.spar.tower_mass
-    second_fit.free_board = example.spar.free_board
+    #second_fit.free_board = example.spar.free_board
     second_fit.draft = example.spar.draft
     second_fit.fixed_ballast_mass = example.spar.fixed_ballast_mass
     second_fit.hull_mass = example.spar.hull_mass
@@ -193,7 +193,7 @@ def example_218WD_6MW():
     example.spar.yield_stress = 345000000.
     example.spar.rotor_mass = 365500.000
     example.spar.tower_mass = 366952.000
-    example.spar.free_board = 13.
+    #example.spar.free_board = 13.
     example.spar.draft = 72.
     example.spar.fixed_ballast_mass = 3659547.034
     example.spar.hull_mass = 1593822.041
@@ -242,7 +242,7 @@ def example_218WD_6MW():
     second_fit.yield_stress = example.spar.yield_stress
     second_fit.rotor_mass = example.spar.rotor_mass
     second_fit.tower_mass = example.spar.tower_mass
-    second_fit.free_board = example.spar.free_board
+    #second_fit.free_board = example.spar.free_board
     second_fit.draft = example.spar.draft
     second_fit.fixed_ballast_mass = example.spar.fixed_ballast_mass
     second_fit.hull_mass = example.spar.hull_mass
@@ -302,7 +302,7 @@ def example_218WD_10MW():
     example.spar.yield_stress = 345000000.
     example.spar.rotor_mass = 677000.000
     example.spar.tower_mass = 698235.000
-    example.spar.free_board = 13.
+    #example.spar.free_board = 13.
     example.spar.draft = 92.
     example.spar.fixed_ballast_mass = 6276669.794
     example.spar.hull_mass = 2816863.293
@@ -351,7 +351,7 @@ def example_218WD_10MW():
     second_fit.yield_stress = example.spar.yield_stress
     second_fit.rotor_mass = example.spar.rotor_mass
     second_fit.tower_mass = example.spar.tower_mass
-    second_fit.free_board = example.spar.free_board
+    #second_fit.free_board = example.spar.free_board
     second_fit.draft = example.spar.draft
     second_fit.fixed_ballast_mass = example.spar.fixed_ballast_mass
     second_fit.hull_mass = example.spar.hull_mass

@@ -42,7 +42,6 @@ class Spar(Component):
     yield_stress = Float(345000000.,iotype='in', units='Pa', desc='yield stress of spar material')
     rotor_mass = Float(iotype='in', units='kg', desc='rotor mass')
     tower_mass = Float(iotype='in', units='kg', desc='tower mass')
-    free_board = Float(iotype='in', units='m', desc='free board length')
     draft = Float(iotype='in', units='m', desc='draft length')
     fixed_ballast_mass = Float(iotype='in', units='kg', desc='fixed ballast mass')
     hull_mass = Float(iotype='in', units='kg', desc='hull mass')
@@ -71,8 +70,19 @@ class Spar(Component):
     VEG = Array(iotype='out',desc = 'unity check for external pressure - general instability')
     columns_mass = Float(iotype='out', units='kg',desc='total mass of straight columns/sections')
     tapered_mass = Float(iotype='out', units='kg',desc='total mass od tapered columns/sections')
+    shell_buoyancy = Array(iotype='out',units='kg',desc = 'shell shell buoyancy')
     # shell_mass = Float(iotype='out',desc = 'mass of shell')   
     shell_ring_bulkhead_mass = Float(iotype='out',desc = 'mass to be minimized')
+    shell_mass = Array(iotype='out', units='kg',desc = 'shell mass by section')
+    bulkhead_mass = Array(iotype='out', units='kg',desc = 'bulkhead mass by section')
+    ring_mass = Array(iotype='out', units='kg',desc = 'ring mass by section')
+    KCG = Array(iotype='out', units='m',desc = 'KCG by section')
+    KCB = Array(iotype='out', units='m',desc = 'KCB by section')
+    spar_wind_force = Array(iotype='out', units='N',desc = 'SWF by section')
+    spar_wind_moment = Array(iotype='out', units='N*m',desc = 'SWM by section')
+    spar_current_force = Array(iotype='out', units='N',desc = 'SCF by section')
+    spar_current_moment = Array(iotype='out', units='N*m',desc = 'SCM by section')
+
     def __init__(self):
         super(Spar,self).__init__()
     def execute(self):
@@ -429,7 +439,6 @@ class Spar(Component):
         FY = self.yield_stress
         RMASS = self.rotor_mass
         TMASS = self.tower_mass
-        FB = self.free_board
         DRAFT = self.draft
         FBM = self.fixed_ballast_mass
         PBM = self.permanent_ballast_mass
@@ -438,6 +447,7 @@ class Spar(Component):
         LB = np.array(self.length)
         ELE = np.array(self.end_elevation)
         ELS = np.array(self.start_elevation)
+        FB = ELS [0]
         BH = self.bulk_head
         N = np.array(self.number_of_rings)
         NSEC = self.number_of_sections
@@ -661,8 +671,9 @@ class Spar(Component):
         self.VEG = abs(FTHETAS / FEG)
         global JMAX
         JMAX = np.array([0]*10)
-        VD, SHM,RGM,BHM=calculateWindCurrentForces(0.)
-        VD_unused, SHM,RGM,BHM=calculateWindCurrentForces(VD)
+        VD,SHM,RGM,BHM=calculateWindCurrentForces(0.)
+        VD_unused,SHM,RGM,BHM=calculateWindCurrentForces(VD)
+        self.shell_mass = SHM 
         self.shell_ring_bulkhead_mass = sum(SHM)+sum(RGM)+sum(BHM)
         self.columns_mass = sum(SHM[1::2])+sum(RGM[1::2])+sum(BHM[1::2])
         self.tapered_mass = sum(SHM[0::2])+sum(RGM[0::2])+sum(BHM[0::2])
