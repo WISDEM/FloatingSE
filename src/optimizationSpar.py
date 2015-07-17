@@ -70,6 +70,7 @@ def sys_print(example):
 
 def example_218WD_3MW():
     example = optimizationSpar()
+    tt = time.time()
     example.spar.water_depth = 218.
     example.spar.load_condition = 'N'
     example.spar.significant_wave_height = 10.820
@@ -102,6 +103,7 @@ def example_218WD_3MW():
         stiffener_aft = fullStiffeners[i+1]
         if yna > stiffener_bef[6] and yna<stiffener_aft[6]:
             opt_index = i+1
+    
     second_fit = Spar()
     second_fit.wall_thickness = example.spar.wall_thickness
     second_fit.number_of_rings = example.spar.number_of_rings
@@ -129,7 +131,6 @@ def example_218WD_3MW():
     second_fit.bulk_head = example.spar.bulk_head
     second_fit.gust_factor = example.spar.gust_factor
     second_fit.cut_out_speed = example.spar.cut_out_speed
-    second_fit.cut_out_speed = example.spar.cut_out_speed
     second_fit.run()
 
     mass = second_fit.shell_ring_bulkhead_mass
@@ -153,6 +154,7 @@ def example_218WD_3MW():
 
 def example_218WD_6MW():
     example = optimizationSpar()
+    tt = time.time()
     example.spar.water_depth = 218.
     example.spar.load_condition = 'N'
     example.spar.significant_wave_height = 10.820
@@ -185,6 +187,7 @@ def example_218WD_6MW():
         stiffener_aft = fullStiffeners[i+1]
         if yna > stiffener_bef[6] and yna<stiffener_aft[6]:
             opt_index = i+1
+    
     second_fit = Spar()
     second_fit.wall_thickness = example.spar.wall_thickness
     second_fit.number_of_rings = example.spar.number_of_rings
@@ -212,7 +215,6 @@ def example_218WD_6MW():
     second_fit.bulk_head = example.spar.bulk_head
     second_fit.gust_factor = example.spar.gust_factor
     second_fit.cut_out_speed = example.spar.cut_out_speed
-    second_fit.cut_out_speed = example.spar.cut_out_speed
     second_fit.run()
 
     mass = second_fit.shell_ring_bulkhead_mass
@@ -236,6 +238,7 @@ def example_218WD_6MW():
 
 def example_218WD_10MW():
     example = optimizationSpar()
+    tt = time.time()
     example.spar.water_depth = 218.
     example.spar.load_condition = 'N'
     example.spar.significant_wave_height = 10.820
@@ -268,6 +271,7 @@ def example_218WD_10MW():
         stiffener_aft = fullStiffeners[i+1]
         if yna > stiffener_bef[6] and yna<stiffener_aft[6]:
             opt_index = i+1
+    
     second_fit = Spar()
     second_fit.wall_thickness = example.spar.wall_thickness
     second_fit.number_of_rings = example.spar.number_of_rings
@@ -295,7 +299,6 @@ def example_218WD_10MW():
     second_fit.bulk_head = example.spar.bulk_head
     second_fit.gust_factor = example.spar.gust_factor
     second_fit.cut_out_speed = example.spar.cut_out_speed
-    second_fit.cut_out_speed = example.spar.cut_out_speed
     second_fit.run()
 
     mass = second_fit.shell_ring_bulkhead_mass
@@ -318,6 +321,6 @@ def example_218WD_10MW():
     sys_print(second_fit)
 
 if __name__ == "__main__":
-    example_218WD_3MW()
-    #example_218WD_6MW()
+    #example_218WD_3MW()
+    example_218WD_6MW()
     #example_218WD_10MW()

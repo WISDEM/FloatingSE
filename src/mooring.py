@@ -62,16 +62,15 @@ class Mooring(Component):
     RNA_wind_moment = Float(iotype='in',units='N*m',desc='wind moment on tower')
     RNA_center_of_gravity_x = Float(iotype='in', units='m',desc='rotor center of gravity') 
     amplification_factor = Float(1.0,iotype='in',desc='amplification factor for offsets') 
-    allowable_heel_angle = Float(6.0,iotype='deg',desc='amplification factor for offsets') 
     load_condition =  Str(iotype='in',desc='Load condition - N for normal or E for extreme')
     # outputs 
     mooring_total_cost = Float(iotype='out',units='USD',desc='total cost for anchor + legs + miscellaneous costs')
-    heel_angle_unity = Float(iotype='out',desc='heel angle unity check')
+    heel_angle = Float(iotype='out',desc='heel angle unity check')
     min_offset_unity = Float(iotype='out',desc='minimum offset unity check')
     max_offset_unity = Float(iotype='out',desc='maximum offset unity check')
     keel_to_CG_operating_system = Float(iotype='out',desc='keel tp venter of gravity of whole system')
     fixed_ballast_mass = Float(iotype='out',units='kg',desc='fixed ballast mass')
-    permanen_ballast_mass = Float(iotype='out',units='kg',desc='permanenet ballast mass')
+    permanent_ballast_mass = Float(iotype='out',units='kg',desc='permanenet ballast mass')
     variable_ballast_mass = Float(iotype='out',units='kg',desc='variable ballast mass')
 
     def __init__(self):
@@ -259,6 +258,7 @@ class Mooring(Component):
         K_pitch = GM*SHBUOY*G
         T_pitch = 2*pi*(pitch/K_pitch)**0.5
         F_total = RWF+TWF+sum(SWF)+sum(SCF)
+        #print sum_FX
         for j in range(1,len(sum_FX)): 
             if sum_FX[j]< (-F_total/1000.): 
                 X2 = sum_FX[j]
@@ -271,9 +271,8 @@ class Mooring(Component):
                 i+=1
         min_offset = (X_Offset[i-1]+(F_total/1000.-sum_FX[i-1])*(X_Offset[i]-X_Offset[i-1])/(sum_FX[i]-sum_FX[i-1]))*self.amplification_factor
         M_total = RWM+TWM+sum(SWM)+sum(SCM)+(-F_total*(KGM-KG))+(RMASS*G*-RCGX)
-        heel_angle = (M_total/K_pitch)*180./pi
+        self.heel_angle = (M_total/K_pitch)*180./pi
         # unity checks! 
-        self.heel_angle_unity = heel_angle/self.allowable_heel_angle
         if self.load_condition == 'E': 
             self.max_offset_unity = max_offset/damaged_mooring[1]
             self.min_offset_unity = min_offset/damaged_mooring[0]
@@ -282,7 +281,7 @@ class Mooring(Component):
             self.min_offset_unity = min_offset/intact_mooring[0]
         self.keel_to_CG_operating_system = KG
         self.fixed_ballast_mass = FBM
-        self.permanen_ballast_mass = PBM
+        self.permanent_ballast_mass = PBM
         self.variable_ballast_mass = WBM
 
 
