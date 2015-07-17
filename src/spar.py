@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jun 12 16:27:49 2015
-
-@author: yhuang1
-"""
-
 from openmdao.main.api import Component, Assembly,convert_units
 from openmdao.lib.datatypes.api import Float, Array, Str, Int, Bool
 from openmdao.lib.drivers.api import SLSQPdriver
@@ -17,11 +10,9 @@ from spar_utils import full_stiffeners_table,thrust_table,plasticityRF,frustumVo
 pi=np.pi
 
 class Spar(Component):
-    # design variables 
     wall_thickness = Array([0.027,0.025,0.027,0.047],iotype='in', units='m',desc = 'wall thickness of each section')
     number_of_rings = Array([1,4,4,23],iotype='in',desc = 'number of stiffeners in each section')
     neutral_axis = Float(0.285,iotype='in',units='m',desc = 'neutral axis location')
-    # inputs 
     initial_pass = Bool(True, iotype='in', desc='flag for using optimized stiffener dimensions or discrete stiffeners')
     stiffener_index = Int(iotype='in',desc='index of stiffener from filtered table')
     gravity = Float(9.806,iotype='in', units='m/s**2', desc='gravity')
@@ -31,8 +22,7 @@ class Spar(Component):
     load_condition =  Str(iotype='in',desc='Load condition - N for normal or E for extreme')
     significant_wave_height = Float(iotype='in', units='m', desc='significant wave height')
     significant_wave_period = Float(iotype='in', units='m', desc='significant wave period')
-    #keel_cg_mooring = Float(iotype='in', units='m', desc='center of gravity above keel of mooring line')
-    keel_cg_operating_system = Float(iotype='in', units='m', desc='center of gravity above keel of operating system')
+    keel_to_CG_operating_system = Float(iotype='in', units='m', desc='center of gravity above keel of operating system')
     wind_reference_speed = Float(iotype='in', units='m/s', desc='reference wind speed')
     wind_reference_height = Float(iotype='in', units='m', desc='reference height')
     alpha = Float(iotype='in', desc='power law exponent')
@@ -42,7 +32,6 @@ class Spar(Component):
     yield_stress = Float(345000000.,iotype='in', units='Pa', desc='yield stress of spar material')
     RNA_mass = Float(iotype='in', units='kg', desc='rotor mass')
     tower_mass = Float(iotype='in', units='kg', desc='tower mass')
-    #draft = Float(iotype='in', units='m', desc='draft length')
     fixed_ballast_mass = Float(iotype='in', units='kg', desc='fixed ballast mass')
     hull_mass = Float(iotype='in', units='kg', desc='hull mass')
     permanent_ballast_mass = Float(iotype='in', units='kg', desc='permanent ballast mass')
@@ -55,14 +44,10 @@ class Spar(Component):
     bulk_head = Array(iotype='in',desc = 'N for none, T for top, B for bottom')
     tower_wind_force = Float(iotype='in',units='N',desc='wind force on tower')
     RNA_wind_force = Float(iotype='in',units='N',desc='wind force on RNA')
-    #system_acceleration = Float(iotype='in', units='m/s**2', desc='acceleration')
-    #tower_base_OD = Float(iotype='in', units='m', desc='outer diameter of tower base')
-    #tower_top_OD = Float(iotype='in', units='m', desc='outer diameter of tower top')
-    #tower_length = Float(iotype='in', units='m', desc='length of tower')
     gust_factor = Float(iotype='in', desc='gust factor')
-    cut_out_speed = Float(iotype='in', units='m/s',desc='cut out speed of turbine')
-    
-    #rotor_diameter = Float(iotype='in', units='m',desc='rotor diameter')
+    straight_col_cost = Float(3490.,iotype='in',units='USD',desc='cost of straight columns in $/ton')
+    tapered_col_cost = Float(4720.,iotype='in',units='USD',desc='cost of tapered columns in $/ton')
+    mooring_total_cost = Float(0.,iotype='in',units='USD',desc='cost of mooring')
     # outputs
     flange_compactness = Float(iotype='out',desc = 'check for flange compactness')
     web_compactness = Float(iotype='out',desc = 'check for web compactness')
@@ -72,18 +57,19 @@ class Spar(Component):
     VEG = Array(iotype='out',desc = 'unity check for external pressure - general instability')
     columns_mass = Float(iotype='out', units='kg',desc='total mass of straight columns/sections')
     tapered_mass = Float(iotype='out', units='kg',desc='total mass od tapered columns/sections')
-    shell_buoyancy = Array(iotype='out',units='kg',desc = 'shell shell buoyancy')
-    # shell_mass = Float(iotype='out',desc = 'mass of shell')   
+    spar_total_cost = Float(iotype='out', units='USD',desc='total cost of spar')
     shell_ring_bulkhead_mass = Float(iotype='out',desc = 'mass to be minimized')
     shell_mass = Array(iotype='out', units='kg',desc = 'shell mass by section')
-    bulkhead_mass = Array(iotype='out', units='kg',desc = 'bulkhead mass by section')
-    ring_mass = Array(iotype='out', units='kg',desc = 'ring mass by section')
-    keel_cg_shell = Array(iotype='out', units='m',desc = 'KCG by section')
-    keel_cb_shell = Array(iotype='out', units='m',desc = 'KCB by section')
+    shell_buoyancy = Array(iotype='out',units='kg',desc = 'shell shell buoyancy')
     spar_wind_force = Array(iotype='out', units='N',desc = 'SWF by section')
     spar_wind_moment = Array(iotype='out', units='N*m',desc = 'SWM by section')
     spar_current_force = Array(iotype='out', units='N',desc = 'SCF by section')
     spar_current_moment = Array(iotype='out', units='N*m',desc = 'SCM by section')
+    bulkhead_mass = Array(iotype='out', units='kg',desc = 'bulkhead mass by section')
+    ring_mass = Array(iotype='out', units='kg',desc = 'ring mass by section')
+    keel_cg_shell = Array(iotype='out', units='m',desc = 'KCG by section')
+    keel_cb_shell = Array(iotype='out', units='m',desc = 'KCB by section')
+    spar_mooring_cost = Array(iotype='out', units='USD',desc = 'cost of mooring+spar')
 
     def __init__(self):
         super(Spar,self).__init__()
@@ -225,7 +211,7 @@ class Spar(Component):
             WAVEL = G*WAVEP**2/(2*pi)
             WAVEN = 2*pi/WAVEL
         #KCG = self.keel_cg_mooring
-        KCGO = self.keel_cg_operating_system
+        KCGO = self.keel_to_CG_operating_system
         WREFS = self.wind_reference_speed
         WREFH = self.wind_reference_height
         ALPHA = self.alpha 
@@ -309,7 +295,6 @@ class Spar(Component):
         #TLEN = self.tower_length
         GF = self.gust_factor
         #TCG = (TLEN/4.)*(((TBOD/2.)**2+2.*(TBOD/2.)*(TTOD/2.)+3.*(TTOD/2.)**2.)/((TBOD/2.)**2+(TBOD/2.)*(TTOD/2.)+(TTOD/2.)**2))
-        VOUT = self.cut_out_speed
         #TSIZE = self.turbine_size
         
         #-----RING SECTION COMPACTNESS (SECTION 7)-----#
@@ -468,8 +453,6 @@ class Spar(Component):
 
         VD,SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB=calculateWindCurrentForces(0.)
         VD_unused,SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB=calculateWindCurrentForces(VD)
-        
-
         self.shell_mass = SHM 
         self.ring_mass = RGM 
         self.bulkhead_mass = BHM 
@@ -483,7 +466,10 @@ class Spar(Component):
         self.shell_ring_bulkhead_mass = sum(SHM)+sum(RGM)+sum(BHM)
         self.columns_mass = sum(SHM[1::2])+sum(RGM[1::2])+sum(BHM[1::2])
         self.tapered_mass = sum(SHM[0::2])+sum(RGM[0::2])+sum(BHM[0::2])
-        
+        COSTCOL = self.straight_col_cost
+        COSTTAP = self.tapered_col_cost
+        self.spar_total_cost = COSTCOL*self.columns_mass/1000. + COSTTAP*self.tapered_mass/1000.
+        self.spar_mooring_cost = self.mooring_total_cost + self.spar_total_cost
         print self.wall_thickness
         print self.number_of_rings
         print self.neutral_axis

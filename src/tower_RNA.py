@@ -13,22 +13,22 @@ class Tower_RNA(Component):
     base_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower base')
     top_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower top')
     length = Float(iotype='in',units='m',desc='tower length')
-    tower_mass =  Float(iotype='in',units='kg',desc='tower mass')
+    #RNA_mass = Float(iotype='in', units='kg',desc='mass of RNA')
+    #tower_mass =  Float(iotype='in',units='kg',desc='tower mass')
     air_density = Float(1.198,iotype='in', units='kg/m**3', desc='density of air') 
     wind_reference_speed = Float(iotype='in', units='m/s', desc='reference wind speed')
     wind_reference_height = Float(iotype='in', units='m', desc='reference height')
     gust_factor = Float(1.0,iotype='in', desc='gust factor')
     alpha = Float(iotype='in', desc='power law exponent')
     spar_start_elevation = Array(iotype='in', units='m',desc = 'start elevation of each section')
-    draft = Float(iotype='in',units='m',desc='draft')
+    spar_end_elevation = Array(iotype='in', units='m',desc = 'end elevation of each section')
     keel_to_CG_operating_system = Float(iotype='in',units='m',desc='keel to center of gravity of overall system')
     example_turbine_size = Str(iotype='in',desc='for example cases, 3MW, 6MW, or 10 MW')
     rotor_diameter = Float(iotype='in', units='m',desc='rotor diameter')
     RNA_center_of_gravity_x = Float(iotype='in', units='m',desc='rotor center of gravity') 
     RNA_center_of_gravity_y = Float(iotype='in', units='m',desc='rotor center of gravity') 
     cut_out_speed = Float(25.,iotype='in', units='m/s',desc='cut-out speed of turbine') 
-    #tower_mass = Float(iotype='in', units='kg',desc='mass of tower')
-    RNA_mass = Float(iotype='in', units='kg',desc='mass of RNA')
+    
     # outputs
     tower_center_of_gravity = Float(iotype='out',units='m',desc='tower center of gravity')
     tower_keel_to_CG = Float(iotype='out',units='m',desc='keel to tower center of gravity')
@@ -48,7 +48,7 @@ class Tower_RNA(Component):
         TTOD = self.top_outer_diameter
         TLEN = self.length
         GF = self.gust_factor
-        DRAFT = self.draft
+        DRAFT = abs(min(self.spar_end_elevation))
         WREFS = self.wind_reference_speed
         WREFH = self.wind_reference_height
         ALPHA = self.alpha

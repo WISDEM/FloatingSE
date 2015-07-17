@@ -67,7 +67,6 @@ def sys_print(example):
     print 'straight columns mass: ', example.columns_mass
     print 'tapered columns mass: ', example.tapered_mass
 
-
 def example_218WD_3MW():
     example = optimizationSpar()
     tt = time.time()
@@ -94,7 +93,6 @@ def example_218WD_3MW():
     example.spar.tower_wind_force = 19950.529
     example.spar.RNA_wind_force = 391966.178
     example.spar.gust_factor = 1.0
-    example.spar.cut_out_speed = 25.
     example.run()
     yna = convert_units(example.spar.neutral_axis ,'m','inch')
     fullStiffeners = full_stiffeners_table()
@@ -130,7 +128,6 @@ def example_218WD_3MW():
     second_fit.start_elevation = example.spar.start_elevation
     second_fit.bulk_head = example.spar.bulk_head
     second_fit.gust_factor = example.spar.gust_factor
-    second_fit.cut_out_speed = example.spar.cut_out_speed
     second_fit.run()
 
     mass = second_fit.shell_ring_bulkhead_mass
@@ -178,7 +175,6 @@ def example_218WD_6MW():
     example.spar.tower_wind_force = 33125.4915744322
     example.spar.RNA_wind_force = 820818.422
     example.spar.gust_factor = 1.0
-    example.spar.cut_out_speed = 25.
     example.run()
     yna = convert_units(example.spar.neutral_axis ,'m','inch')
     fullStiffeners = full_stiffeners_table()
@@ -214,7 +210,6 @@ def example_218WD_6MW():
     second_fit.start_elevation = example.spar.start_elevation
     second_fit.bulk_head = example.spar.bulk_head
     second_fit.gust_factor = example.spar.gust_factor
-    second_fit.cut_out_speed = example.spar.cut_out_speed
     second_fit.run()
 
     mass = second_fit.shell_ring_bulkhead_mass
@@ -262,7 +257,6 @@ def example_218WD_10MW():
     example.spar.tower_wind_force = 53037.111
     example.spar.RNA_wind_force = 1743933.574
     example.spar.gust_factor = 1.0
-    example.spar.cut_out_speed = 25.
     example.run()
     yna = convert_units(example.spar.neutral_axis ,'m','inch')
     fullStiffeners = full_stiffeners_table()
@@ -298,7 +292,6 @@ def example_218WD_10MW():
     second_fit.start_elevation = example.spar.start_elevation
     second_fit.bulk_head = example.spar.bulk_head
     second_fit.gust_factor = example.spar.gust_factor
-    second_fit.cut_out_speed = example.spar.cut_out_speed
     second_fit.run()
 
     mass = second_fit.shell_ring_bulkhead_mass
