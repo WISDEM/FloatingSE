@@ -13,14 +13,14 @@ from scipy.optimize import fmin, minimize
 from sympy.solvers import solve
 from sympy import Symbol
 import math
-from spar_utils import full_stiffeners_table, thrust_table
+from spar_utils import full_stiffeners_table,thrust_table,plasticityRF,frustumVol,frustumCG,ID,waveProperties,waveU,waveUdot,CD,inertialForce,windPowerLaw,pipeBuoyancy,currentSpeed,rootsearch,bisect,roots,calcPsi,dragForce,curWaveDrag,windDrag
 pi=np.pi
 
 class Spar(Component):
     # design variables 
-    wall_thickness = Array([0.036,0.036,0.036,0.0625],iotype='in', units='m',desc = 'wall thickness of each section')
-    number_of_rings = Array([1,4,5,35],iotype='in',desc = 'number of stiffeners in each section')
-    neutral_axis = Float(0.35,iotype='in',units='m',desc = 'neutral axis location')
+    wall_thickness = Array([0.027,0.025,0.027,0.047],iotype='in', units='m',desc = 'wall thickness of each section')
+    number_of_rings = Array([1,4,4,23],iotype='in',desc = 'number of stiffeners in each section')
+    neutral_axis = Float(0.285,iotype='in',units='m',desc = 'neutral axis location')
     # inputs 
     initial_pass = Bool(True, iotype='in', desc='flag for using optimized stiffener dimensions or discrete stiffeners')
     stiffener_index = Int(iotype='in',desc='index of stiffener from filtered table')
@@ -31,18 +31,18 @@ class Spar(Component):
     load_condition =  Str(iotype='in',desc='Load condition - N for normal or E for extreme')
     significant_wave_height = Float(iotype='in', units='m', desc='significant wave height')
     significant_wave_period = Float(iotype='in', units='m', desc='significant wave period')
-    keel_cg_mooring = Float(iotype='in', units='m', desc='center of gravity above keel of mooring line')
+    #keel_cg_mooring = Float(iotype='in', units='m', desc='center of gravity above keel of mooring line')
     keel_cg_operating_system = Float(iotype='in', units='m', desc='center of gravity above keel of operating system')
-    reference_wind_speed = Float(iotype='in', units='m/s', desc='reference wind speed')
-    reference_height = Float(iotype='in', units='m', desc='reference height')
+    wind_reference_speed = Float(iotype='in', units='m/s', desc='reference wind speed')
+    wind_reference_height = Float(iotype='in', units='m', desc='reference height')
     alpha = Float(iotype='in', desc='power law exponent')
     material_density = Float(7850.,iotype='in', units='kg/m**3', desc='density of spar material')
     E = Float(200.e9,iotype='in', units='Pa', desc='young"s modulus of spar material')
     nu = Float(0.3,iotype='in', desc='poisson"s ratio of spar material')
     yield_stress = Float(345000000.,iotype='in', units='Pa', desc='yield stress of spar material')
-    rotor_mass = Float(iotype='in', units='kg', desc='rotor mass')
+    RNA_mass = Float(iotype='in', units='kg', desc='rotor mass')
     tower_mass = Float(iotype='in', units='kg', desc='tower mass')
-    draft = Float(iotype='in', units='m', desc='draft length')
+    #draft = Float(iotype='in', units='m', desc='draft length')
     fixed_ballast_mass = Float(iotype='in', units='kg', desc='fixed ballast mass')
     hull_mass = Float(iotype='in', units='kg', desc='hull mass')
     permanent_ballast_mass = Float(iotype='in', units='kg', desc='permanent ballast mass')
@@ -53,14 +53,16 @@ class Spar(Component):
     end_elevation = Array(iotype='in', units='m',desc = 'end elevation of each section')
     start_elevation = Array(iotype='in', units='m',desc = 'start elevation of each section')
     bulk_head = Array(iotype='in',desc = 'N for none, T for top, B for bottom')
+    tower_wind_force = Float(iotype='in',units='N',desc='wind force on tower')
+    RNA_wind_force = Float(iotype='in',units='N',desc='wind force on RNA')
     #system_acceleration = Float(iotype='in', units='m/s**2', desc='acceleration')
-    tower_base_OD = Float(iotype='in', units='m', desc='outer diameter of tower base')
-    tower_top_OD = Float(iotype='in', units='m', desc='outer diameter of tower top')
-    tower_length = Float(iotype='in', units='m', desc='length of tower')
+    #tower_base_OD = Float(iotype='in', units='m', desc='outer diameter of tower base')
+    #tower_top_OD = Float(iotype='in', units='m', desc='outer diameter of tower top')
+    #tower_length = Float(iotype='in', units='m', desc='length of tower')
     gust_factor = Float(iotype='in', desc='gust factor')
     cut_out_speed = Float(iotype='in', units='m/s',desc='cut out speed of turbine')
-    turbine_size = Str(iotype='in',desc='for example cases, 3MW, 6MW, or 10 MW')
-    rotor_diameter = Float(iotype='in', units='m',desc='rotor diameter')
+    
+    #rotor_diameter = Float(iotype='in', units='m',desc='rotor diameter')
     # outputs
     flange_compactness = Float(iotype='out',desc = 'check for flange compactness')
     web_compactness = Float(iotype='out',desc = 'check for web compactness')
@@ -76,8 +78,8 @@ class Spar(Component):
     shell_mass = Array(iotype='out', units='kg',desc = 'shell mass by section')
     bulkhead_mass = Array(iotype='out', units='kg',desc = 'bulkhead mass by section')
     ring_mass = Array(iotype='out', units='kg',desc = 'ring mass by section')
-    KCG = Array(iotype='out', units='m',desc = 'KCG by section')
-    KCB = Array(iotype='out', units='m',desc = 'KCB by section')
+    keel_cg_shell = Array(iotype='out', units='m',desc = 'KCG by section')
+    keel_cb_shell = Array(iotype='out', units='m',desc = 'KCB by section')
     spar_wind_force = Array(iotype='out', units='N',desc = 'SWF by section')
     spar_wind_moment = Array(iotype='out', units='N*m',desc = 'SWM by section')
     spar_current_force = Array(iotype='out', units='N',desc = 'SCF by section')
@@ -88,157 +90,6 @@ class Spar(Component):
     def execute(self):
         ''' 
         '''
-        def plasticityRF(F):
-            dum = FY/F
-            if F > FY/2:
-                return F*dum*(1+3.75*dum**2)**(-0.25)
-            else: 
-                return F*1
-        def frustrumVol(D1,D2,H): # array inputs
-            l = len(D1)
-            fV = np.array([0.]*l)
-            r1 = D1/2.
-            r2 = D2/2.
-            fV = pi * (H / 3) * (r1**2 + r1*r2 + r2**2)
-            return fV
-        def frustrumCG(D1,D2,H):  # array inputs
-            # frustrum vertical CG
-            l = len(D1)
-            fCG = np.array([0.]*l)
-            r1 = D1/2.
-            r2 = D2/2.    
-            dum1 = r1**2 + 2.*r1*r2 + 3.*r2**2
-            dum2 = r1**2 + r1 * r2 + r2**2
-            fCG = H / 4. * (dum1/dum2)
-            return fCG
-        def ID(D,WALL):  # array inputs
-            D = np.asarray(D)
-            is_scalar = False if D.ndim>0 else True
-            D.shape = (1,)*(1-D.ndim) + D.shape   
-            l = len(D)
-            ID = np.array([0.]*l)
-            ID = D - 2.*WALL
-            return ID if not is_scalar else (ID)
-        def waveProperties(Hs,T,D):
-            waveHeight = 1.1*Hs
-            wavePeriod = 11.1*(waveHeight/G)**0.5
-            k0 = 2 * pi / ( T * (G * D) **0.5)
-            ktol =1 
-            while ktol > 0.001:
-                k = ( 2* pi/T) **2 / (G * np.tanh(k0*D))
-                ktol = abs(k-k0)
-                k0 = k
-            waveNumber = k 
-            return waveHeight,wavePeriod,waveNumber
-        def waveU(H,T,k,z,D,theta):
-            return (pi*H/T)*(np.cosh(k*(z+D))/np.sinh(k*D))*np.cos(theta)
-        def waveUdot(H,T,k,z,D,theta):
-            return (2*pi**2*H/T**2)* (np.cosh(k*(z+D))/np.sinh(k*D))*np.sin(theta)
-        def CD(U,D,DEN):
-            RE = np.log10(abs(U) * D / DEN)
-            if RE <= 5.:
-                return 1.2
-            elif RE < 5.301:
-                return 1.1
-            elif RE < 5.477:
-                return  0.5
-            elif RE < 6.:
-                return 0.2
-            elif RE < 6.301:
-                return 0.4
-            elif RE < 6.477:
-                return 0.45
-            elif RE < 6.699:
-                return 0.5
-            elif RE < 7.:
-                return 0.6
-            else:
-                return 0.8
-        def inertialForce(D,CA,L,A,VDOT,DEN):
-            IF = 0.25 * pi * DEN * D** 2 * L * (A + CA * (A - VDOT))
-            if A < 0:
-                IF = -IF
-            return IF
-        def windPowerLaw(uref,href,alpha,H) :
-            return uref*(H/href)**alpha
-        def pipeBuoyancy(D):
-            return pi/4 * D**2 *WDEN 
-        def dragForce(D,CD,L,V,DEN):
-            DF = 0.5 * DEN * CD * D * L * V**2
-            if V < 0 :
-                DF = -DF 
-            return DF
-        def calcPsi(F):
-            dum = FY/2
-            if F <= dum:
-                return 1.2
-            elif F > dum and F < FY:
-                return 1.4 - 0.4*F/FY
-            else: return 1
-        def currentSpeed(XNEW):
-            CDEPTH = [0.000, 61.000, 91.000, 130.000]
-            CSPEED = [0.570, 0.570, 0.100, 0.100]
-            return np.interp(abs(XNEW),CDEPTH,CSPEED)
-        def curWaveDrag(Hs,Tp,WD,ODT,ODB,ELS,SL,CG,VDOT): 
-            if Hs != 0: 
-                H,per,k = waveProperties(Hs,Tp,WD)
-            # calculate current and wave drag 
-            DL = SL /10.     # step sizes
-            dtheta = pi/30. 
-            S = (ODB - ODT)/SL 
-            b = ODT 
-            L = 0
-            m = 0 
-            for i in range(1,11):
-                L2 = L + DL/2
-                D2 = ELS -L2 
-                D = S * L2 +b 
-                fmax = 0.
-                if (JMAX[i-1] == 0.):
-                    JS = 1
-                    JE = 31
-                else: 
-                    JS = JMAX[i-1]
-                    JE = JMAX[i-1]
-                for j in range(JS,JE+1):
-                    V = currentSpeed(L2)
-                    A = 0. 
-                    if Hs != 0.: 
-                        V = V + waveU(H,Tp,k,D2,WD,dtheta*(j-1))
-                        A = waveUdot(H,Tp,k,D2,WD,dtheta*(j-1))
-                    if V != 0.: 
-                        CDT = CD(V,D,WDEN) 
-                        f = dragForce(D,CDT,DL,V,WDEN) 
-                        
-                    else:
-                        f = 0.
-                    if Hs != 0:
-                       
-                        f = f + inertialForce(D,1,DL,A,VDOT,WDEN) 
-                        
-                    if f > fmax :
-                        fmax = f
-                        JMAX[i-1] =j
-                m = m + fmax*L2 
-                L = DL*i
-            return m/(SL-CG)
-        def windDrag(TLEN,TBOD,TTOD,WREFS,WREFH,ALPHA,FB,ADEN):
-            DL = TLEN/100.
-            S = -(TBOD-TTOD)/TLEN
-            b = TBOD 
-            if WREFS != 0:
-                L = 0
-                m = 0
-                for i in range(1,101): 
-                    L2 = L +DL/2.
-                    V = windPowerLaw(WREFS,WREFH,ALPHA,L2+FB)*GF
-                    D = S*L2+b
-                    CDT = CD(V,D,ADEN)
-                    f = dragForce(D,CDT,DL,V,ADEN)
-                    m = m+f*L2
-                    L=DL*i
-            TWF = m/TCG
-            return TWF
         def calculateWindCurrentForces (VD): 
             ODT = OD # outer diameter - top
             ODB = np.append(OD[1:NSEC],OD[-1]) # outer diameter - bottom
@@ -246,11 +97,11 @@ class Spar(Component):
             COD = WOD # center outer diameter
             IDT = ID(ODT,T)
             IDB = ID(ODB,T)
-            OV = frustrumVol(ODT,ODB,LB)
-            IV = frustrumVol(IDT,IDB,LB)
+            OV = frustumVol(ODT,ODB,LB)
+            IV = frustumVol(IDT,IDB,LB)
             MV = OV - IV # shell volume 
             SHM = MV * MDEN # shell mass 
-            SCG = frustrumCG(ODB,ODT,LB) # shell center of gravity
+            SCG = frustumCG(ODB,ODT,LB) # shell center of gravity
             KCG = DRAFT + ELE + SCG # keel to shell center of gravity
             KCB = DRAFT + ELE + SCG
             SHB = OV*WDEN #  outer volume --> displaced water mass
@@ -276,7 +127,7 @@ class Spar(Component):
                         HWL = abs(ELE[i]) 
                         if HWL >= LB[i]: # COMPLETELY UNDERWATER 
                             
-                            SCF[i] = curWaveDrag(Hs,Tp,WD,OD[i],OD[i+1],ELS[i],LB[i],SCG[i],VD)
+                            SCF[i] = curWaveDrag(Hs,Ts,WD,OD[i],OD[i+1],ELS[i],LB[i],SCG[i],VD,G,WDEN)
                             KCS[i] = KCB[i]
                             if SCF[i] == 0: 
                                 KCS[i] = 0.
@@ -286,19 +137,19 @@ class Spar(Component):
                             SWM[i] = 0.
                         else: # PARTIALLY UNDER WATER 
                             if ODT[i] == ODB[i]:  # cylinder
-                                SHB[i] = pipeBuoyancy(ODT[i])*HWL # redefine
+                                SHB[i] = pipeBuoyancy(ODT[i],WDEN)*HWL # redefine
                                 SCG[i] = HWL/2 # redefine
                                 KCB[i] = DRAFT + ELE[i] + SCG[i] # redefine 
                                 ODW = ODT[i] # assign single variable
-                            else: # frustrum
+                            else: # frustum
                                 ODW = ODB[i]*(coneH[i]-HWL)/coneH[i] # assign single variable 
                                 WOD[i] = (ODT[i]+ODW[i])/2  # redefine 
                                 COD[i] = (ODW[i]+ODB[i])/2 # redefine 
-                                SHB[i] = frustrumVol(ODW[i],ODB[i],HWL) # redefine 
-                                SCG[i] = frustrumCG(ODW,ODB[i],HWL) # redefine 
+                                SHB[i] = frustumVol(ODW[i],ODB[i],HWL) # redefine 
+                                SCG[i] = frustumCG(ODW,ODB[i],HWL) # redefine 
                                 KCB[i] = DRAFT + ELE[i] + SCG[i] # redefine 
                             
-                            SCF[i] = curWaveDrag(Hs,Tp,WD,ODW,ODB[i],0.,HWL,SCG[i],VD)
+                            SCF[i] = curWaveDrag(Hs,Ts,WD,ODW,ODB[i],0.,HWL,SCG[i],VD,G,WDEN)
                             KCS[i] = KCB[i]
                             if SCF[i] == 0 : 
                                 KCS[i] = 0.
@@ -336,7 +187,7 @@ class Spar(Component):
                     # SHB already calculated 
                     # KCB already calculated 
                    
-                    SCF[i] = curWaveDrag(Hs,Tp,WD,OD[i],OD[i],ELS[i],LB[i],KCG[i],VD)
+                    SCF[i] = curWaveDrag(Hs,Ts,WD,OD[i],OD[i],ELS[i],LB[i],KCG[i],VD,G,WDEN)
                     KCS[i] = KCG [i] # redefines
                     if SCF[i] ==0: 
                         KCS[i] = 0.
@@ -354,67 +205,12 @@ class Spar(Component):
                 else: 
                     KCG[i] = KCG[i]
             #total_mass = sum(SHM)+sum(RGM)+sum(BHM)
-
-            TWF = windDrag(TLEN,TBOD,TTOD,WREFS,WREFH,ALPHA,FB,ADEN)
-            wind,Ct,thrust = thrust_table(self.turbine_size,ADEN,RWA)
-            thrust = map(lambda x: (x), thrust);
-            Ct = map(lambda x: (x), Ct);
-            max_thrust = max(thrust)
-            max_index = thrust.index(max_thrust)
-            CT = Ct[max_index]
-            if WSPEED < VOUT:
-                RWF = 0.5*ADEN*(WSPEED*GF)**2*RWA*CT
-            else: 
-                RWF = max_thrust*1000*GF**2*0.75
+            #TCG,TWF = windDrag(TLEN,TBOD,TTOD,WREFS,WREFH,ALPHA,FB,ADEN,GF)
+            TWF = self.tower_wind_force
+            RWF = self.RNA_wind_force
             VD = (RWF+TWF+sum(SWF)+sum(SCF))/(SMASS+RMASS+TMASS+FBM+PBM+WBM)
-            return (VD,SHM,RGM,BHM)
-        def rootsearch(f,a,b,dx):
-            x1 = a; f1 = f(a)
-            x2 = a + dx; f2 = f(x2)
-            while f1*f2 > 0.0:
-                if x1 >= b:
-                    return None,None
-                x1 = x2; f1 = f2
-                x2 = x1 + dx; f2 = f(x2)
-            return x1,x2
-        def bisect(f,x1,x2,switch=0,epsilon=1.0e-9):
-            f1 = f(x1)
-            if f1 == 0.0:
-                return x1
-            f2 = f(x2)
-            if f2 == 0.0:
-                return x2
-            if f1*f2 > 0.0:
-                print('Root is not bracketed')
-                return None
-            n = int(math.ceil(math.log(abs(x2 - x1)/epsilon)/math.log(2.0)))
-            for i in range(n):
-                x3 = 0.5*(x1 + x2); f3 = f(x3)
-                if (switch == 1) and (abs(f3) >abs(f1)) and (abs(f3) > abs(f2)):
-                    return None
-                if f3 == 0.0:
-                    return x3
-                if f2*f3 < 0.0:
-                    x1 = x3
-                    f1 = f3
-                else:
-                    x2 =x3
-                    f2 = f3
-            return (x1 + x2)/2.0
-        def roots(f, a, b, eps=1e-3):
-            #print ('The roots on the interval [%f, %f] are:' % (a,b))
-            while 1:
-                x1,x2 = rootsearch(f,a,b,eps)
-                if x1 != None:
-                    a = x2
-                    root = bisect(f,x1,x2,1)
-                    if root != None:
-                        pass
-                        #print (round(root,-int(math.log(eps, 10))))
-                        return root
-                else:
-                    #print ('\nDone')
-                    break
+            return (VD,SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB)
+        
         # assign all varibles so its easier to read later
         G = self.gravity
         ADEN = self.air_density 
@@ -422,24 +218,24 @@ class Spar(Component):
         WD = self.water_depth
         LOADC = self.load_condition
         Hs = self.significant_wave_height
-        Tp = self.significant_wave_period
+        Ts = self.significant_wave_period
         if Hs!= 0: 
             WAVEH = 1.86*Hs
-            WAVEP = 0.71*Tp
+            WAVEP = 0.71*Ts
             WAVEL = G*WAVEP**2/(2*pi)
             WAVEN = 2*pi/WAVEL
-        KCG = self.keel_cg_mooring
+        #KCG = self.keel_cg_mooring
         KCGO = self.keel_cg_operating_system
-        WREFS = self.reference_wind_speed
-        WREFH = self.reference_height
+        WREFS = self.wind_reference_speed
+        WREFH = self.wind_reference_height
         ALPHA = self.alpha 
         MDEN = self.material_density
         E = self.E
         PR = self.nu
         FY = self.yield_stress
-        RMASS = self.rotor_mass
+        RMASS = self.RNA_mass
         TMASS = self.tower_mass
-        DRAFT = self.draft
+        DRAFT = abs(min(self.end_elevation))
         FBM = self.fixed_ballast_mass
         PBM = self.permanent_ballast_mass
         OD = np.array(self.outer_diameter)
@@ -508,15 +304,14 @@ class Spar(Component):
         else: 
             DH = 0 
         P = P + WDEN*G*DH # hydrostatic pressure + dynamic head
-        TBOD = self.tower_base_OD
-        TTOD = self.tower_top_OD
-        TLEN = self.tower_length
+        #TBOD = self.tower_base_OD
+        #TTOD = self.tower_top_OD
+        #TLEN = self.tower_length
         GF = self.gust_factor
-        TCG = (TLEN/4.)*(((TBOD/2.)**2+2.*(TBOD/2.)*(TTOD/2.)+3.*(TTOD/2.)**2.)/((TBOD/2.)**2+(TBOD/2.)*(TTOD/2.)+(TTOD/2.)**2))
+        #TCG = (TLEN/4.)*(((TBOD/2.)**2+2.*(TBOD/2.)*(TTOD/2.)+3.*(TTOD/2.)**2.)/((TBOD/2.)**2+(TBOD/2.)*(TTOD/2.)+(TTOD/2.)**2))
         VOUT = self.cut_out_speed
-        TSIZE = self.turbine_size
-        RDIA = self.rotor_diameter
-        RWA = (pi/4.)*RDIA**2
+        #TSIZE = self.turbine_size
+        
         #-----RING SECTION COMPACTNESS (SECTION 7)-----#
         self.flange_compactness = (0.5*BF/TFM)/(0.375*(E/FY)**0.5)
         self.web_compactness = (HW/TW)/((E/FY)**0.5)
@@ -547,7 +342,7 @@ class Spar(Component):
         FXEL = CXL * (pi**2 * E / (12 * (1 - PR**2))) * (T/LR)**2 # elastic 
         FXCL=np.array(NSEC*[0.])
         for i in range(0,len(FXEL)):
-            FXCL[i] = plasticityRF(FXEL[i]) # inelastic 
+            FXCL[i] = plasticityRF(FXEL[i],FY) # inelastic 
         # external pressure
         BETA = np.array([0.]*NSEC)
         ALPHATHETAL = np.array([0.]*NSEC)
@@ -574,7 +369,7 @@ class Spar(Component):
         FREL = CTHETAL * pi**2 * E * (T/LR)**2 / (12*(1-PR**2)) # elastic
         FRCL=np.array(NSEC*[0.])
         for i in range(0,len(FREL)):
-            FRCL[i] = plasticityRF(FREL[i]) # inelastic 
+            FRCL[i] = plasticityRF(FREL[i],FY) # inelastic 
         #-----GENERAL INSTABILITY (SECTION 4)-----# 
         # axial compression and bending 
         AC = AR/(LR*T) # Ar bar 
@@ -590,7 +385,7 @@ class Spar(Component):
         FXEG = ALPHAXG * 0.605 * E * T / R * (1 + AC)**0.5 # elastic
         FXCG = np.array(NSEC*[0.])
         for i in range(0,len(FXEG)):
-            FXCG[i] = plasticityRF(FXEG[i]) # inelastic  
+            FXCG[i] = plasticityRF(FXEG[i],FY) # inelastic  
         # external pressure 
         ALPHATHETAG = 0.8
         LAMBDAG = pi * R / LB 
@@ -613,7 +408,7 @@ class Spar(Component):
         FREG = ALPHATHETAG*PEG*RO*KTHETAG/T # elastic 
         FRCG = np.array(NSEC*[0.])
         for i in range(0,len(FREG)):
-            FRCG[i] = plasticityRF(FREG[i]) # inelastic  
+            FRCG[i] = plasticityRF(FREG[i],FY) # inelastic  
         # General Load Case
         NPHI = W/(2*pi*R)
         NTHETA = P * RO 
@@ -659,24 +454,36 @@ class Spar(Component):
         FEG = np.array([0.]*NSEC)
         for i in range(0,NSEC):
             # axial load    
-            FAL[i] = FPHICL[i]/(FOS*calcPsi(FPHICL[i]))
-            FAG[i] = FPHICG[i]/(FOS*calcPsi(FPHICG[i]))
+            FAL[i] = FPHICL[i]/(FOS*calcPsi(FPHICL[i],FY))
+            FAG[i] = FPHICG[i]/(FOS*calcPsi(FPHICG[i],FY))
             # external pressure
-            FEL[i] = FTHETACL[i]/(FOS*calcPsi(FTHETACL[i]))
-            FEG[i] = FTHETACG[i]/(FOS*calcPsi(FTHETACG[i]))
+            FEL[i] = FTHETACL[i]/(FOS*calcPsi(FTHETACL[i],FY))
+            FEG[i] = FTHETACG[i]/(FOS*calcPsi(FTHETACG[i],FY))
         # unity check 
         self.VAL = abs(SIGMAXA / FAL)
         self.VAG = abs(SIGMAXA / FAG)
         self.VEL = abs(FTHETAS / FEL)
         self.VEG = abs(FTHETAS / FEG)
-        global JMAX
-        JMAX = np.array([0]*10)
-        VD,SHM,RGM,BHM=calculateWindCurrentForces(0.)
-        VD_unused,SHM,RGM,BHM=calculateWindCurrentForces(VD)
+       
+
+        VD,SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB=calculateWindCurrentForces(0.)
+        VD_unused,SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB=calculateWindCurrentForces(VD)
+        
+
         self.shell_mass = SHM 
+        self.ring_mass = RGM 
+        self.bulkhead_mass = BHM 
+        self.shell_buoyancy = SHB 
+        self.spar_wind_force = SWF
+        self.spar_wind_moment = SWM
+        self.spar_current_force = SCF 
+        self.spar_current_moment = SCM 
+        self.keel_cg_shell = KCG 
+        self.keel_cb_shell = KCB
         self.shell_ring_bulkhead_mass = sum(SHM)+sum(RGM)+sum(BHM)
         self.columns_mass = sum(SHM[1::2])+sum(RGM[1::2])+sum(BHM[1::2])
         self.tapered_mass = sum(SHM[0::2])+sum(RGM[0::2])+sum(BHM[0::2])
+        
         print self.wall_thickness
         print self.number_of_rings
         print self.neutral_axis

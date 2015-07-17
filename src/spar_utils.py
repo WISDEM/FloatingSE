@@ -6,8 +6,210 @@ import numpy as np
 from math import pi, cos, sqrt, radians, sin, exp, log10, log, floor, ceil
 import algopy
 import scipy as scp
+from scipy.optimize import fmin, minimize
+from sympy.solvers import solve
+from sympy import Symbol
+import math
+pi=np.pi
 
-
+##### FOR SPAR COMPONENT 
+def rootsearch(f,a,b,dx):
+    x1 = a; f1 = f(a)
+    x2 = a + dx; f2 = f(x2)
+    while f1*f2 > 0.0:
+        if x1 >= b:
+            return None,None
+        x1 = x2; f1 = f2
+        x2 = x1 + dx; f2 = f(x2)
+    return x1,x2
+def bisect(f,x1,x2,switch=0,epsilon=1.0e-9):
+    f1 = f(x1)
+    if f1 == 0.0:
+        return x1
+    f2 = f(x2)
+    if f2 == 0.0:
+        return x2
+    if f1*f2 > 0.0:
+        print('Root is not bracketed')
+        return None
+    n = int(math.ceil(math.log(abs(x2 - x1)/epsilon)/math.log(2.0)))
+    for i in range(n):
+        x3 = 0.5*(x1 + x2); f3 = f(x3)
+        if (switch == 1) and (abs(f3) >abs(f1)) and (abs(f3) > abs(f2)):
+            return None
+        if f3 == 0.0:
+            return x3
+        if f2*f3 < 0.0:
+            x1 = x3
+            f1 = f3
+        else:
+            x2 =x3
+            f2 = f3
+    return (x1 + x2)/2.0
+def roots(f, a, b, eps=1e-3):
+    #print ('The roots on the interval [%f, %f] are:' % (a,b))
+    while 1:
+        x1,x2 = rootsearch(f,a,b,eps)
+        if x1 != None:
+            a = x2
+            root = bisect(f,x1,x2,1)
+            if root != None:
+                pass
+                #print (round(root,-int(math.log(eps, 10))))
+                return root
+        else:
+                    #print ('\nDone')
+            break
+def calcPsi(F,FY):
+    dum = FY/2
+    if F <= dum:
+        return 1.2
+    elif F > dum and F < FY:
+        return 1.4 - 0.4*F/FY
+    else: return 1
+def dragForce(D,CD,L,V,DEN):
+            DF = 0.5 * DEN * CD * D * L * V**2
+            if V < 0 :
+                DF = -DF 
+            return DF
+def curWaveDrag(Hs,Tp,WD,ODT,ODB,ELS,SL,CG,VDOT,G,WDEN): 
+    JMAX = np.array([0]*10)
+    if Hs != 0:    
+        H,Tw,k = waveProperties(Hs,Tp,WD,G)
+    # calculate current and wave drag 
+    DL = SL /10.     # step sizes
+    dtheta = pi/30. 
+    S = (ODB - ODT)/SL 
+    b = ODT 
+    L = 0
+    m = 0 
+    for i in range(1,11):
+        L2 = L + DL/2
+        D2 = ELS -L2 
+        D = S * L2 +b 
+        fmax = 0.
+        if (JMAX[i-1] == 0.):
+            JS = 1
+            JE = 31
+        else: 
+            JS = JMAX[i-1]
+            JE = JMAX[i-1]
+        for j in range(JS,JE+1):
+            V = currentSpeed(L2,WD)
+            A = 0. 
+            if Hs != 0.: 
+                V = V + waveU(H,Tp,k,D2,WD,dtheta*(j-1))
+                A = waveUdot(H,Tp,k,D2,WD,dtheta*(j-1))
+            if V != 0.: 
+                CDT = CD(V,D,WDEN) 
+                f = dragForce(D,CDT,DL,V,WDEN)   
+            else:
+                f = 0.
+            if Hs != 0:
+                f = f + inertialForce(D,1,DL,A,VDOT,WDEN)   
+            if f > fmax :
+                fmax = f
+                JMAX[i-1] =j
+        m = m + fmax*L2 
+        L = DL*i
+    return m/(SL-CG)
+def windDrag(TLEN,TBOD,TTOD,WREFS,WREFH,ALPHA,FB,ADEN,GF):
+    TCG = (TLEN/4.)*(((TBOD/2.)**2+2.*(TBOD/2.)*(TTOD/2.)+3.*(TTOD/2.)**2.)/((TBOD/2.)**2+(TBOD/2.)*(TTOD/2.)+(TTOD/2.)**2))
+    DL = TLEN/100.
+    S = -(TBOD-TTOD)/TLEN
+    b = TBOD 
+    if WREFS != 0:
+        L = 0
+        m = 0
+        for i in range(1,101): 
+            L2 = L +DL/2.
+            V = windPowerLaw(WREFS,WREFH,ALPHA,L2+FB)*GF
+            D = S*L2+b
+            CDT = CD(V,D,ADEN)
+            f = dragForce(D,CDT,DL,V,ADEN)
+            m = m+f*L2
+            L=DL*i
+    TWF = m/TCG
+    return TCG,TWF
+def plasticityRF(F,FY):
+    dum = FY/F
+    if F > FY/2:
+        return F*dum*(1+3.75*dum**2)**(-0.25)
+    else: 
+        return F*1
+def frustumVol(D1,D2,H): # array inputs
+    l = len(D1)
+    fV = np.array([0.]*l)
+    r1 = D1/2.
+    r2 = D2/2.
+    fV = pi * (H / 3) * (r1**2 + r1*r2 + r2**2)
+    return fV
+def frustumCG(D1,D2,H):  # array inputs
+    # frustum vertical CG
+    l = len(D1)
+    fCG = np.array([0.]*l)
+    r1 = D1/2.
+    r2 = D2/2.    
+    dum1 = r1**2 + 2.*r1*r2 + 3.*r2**2
+    dum2 = r1**2 + r1 * r2 + r2**2
+    fCG = H / 4. * (dum1/dum2)
+    return fCG
+def ID(D,WALL):  # array inputs
+    D = np.asarray(D)
+    is_scalar = False if D.ndim>0 else True
+    D.shape = (1,)*(1-D.ndim) + D.shape   
+    l = len(D)
+    ID = np.array([0.]*l)
+    ID = D - 2.*WALL
+    return ID if not is_scalar else (ID)
+def waveProperties(Hs,T,D,G):
+    waveHeight = 1.1*Hs
+    wavePeriod = 11.1*(waveHeight/G)**0.5
+    k0 = 2 * pi / ( T * (G * D) **0.5)
+    ktol =1 
+    while ktol > 0.001:
+        k = ( 2* pi/T) **2 / (G * np.tanh(k0*D))
+        ktol = abs(k-k0)
+        k0 = k
+    waveNumber = k 
+    return waveHeight,wavePeriod,waveNumber
+def waveU(H,T,k,z,D,theta):
+    return (pi*H/T)*(np.cosh(k*(z+D))/np.sinh(k*D))*np.cos(theta)
+def waveUdot(H,T,k,z,D,theta):
+    return (2*pi**2*H/T**2)* (np.cosh(k*(z+D))/np.sinh(k*D))*np.sin(theta)
+def windPowerLaw(uref,href,alpha,H) :
+            return uref*(H/href)**alpha
+def pipeBuoyancy(D,WDEN):
+            return pi/4 * D**2 *WDEN 
+def currentSpeed(XNEW,water_depth):
+    CDEPTH = [0.000, 61.000, 91.000, water_depth]
+    CSPEED = [0.570, 0.570, 0.100, 0.100]
+    return np.interp(abs(XNEW),CDEPTH,CSPEED)
+def CD(U,D,DEN):
+    RE = np.log10(abs(U) * D / DEN)
+    if RE <= 5.:
+        return 1.2
+    elif RE < 5.301:
+        return 1.1
+    elif RE < 5.477:
+        return  0.5
+    elif RE < 6.:
+        return 0.2
+    elif RE < 6.301:
+        return 0.4
+    elif RE < 6.477:
+        return 0.45
+    elif RE < 6.699:
+        return 0.5
+    elif RE < 7.:
+        return 0.6
+    else:
+        return 0.8
+def inertialForce(D,CA,L,A,VDOT,DEN):
+    IF = 0.25 * pi * DEN * D** 2 * L * (A + CA * (A - VDOT))
+    if A < 0:
+        IF = -IF
+    return IF
 def thrust_table(size_of_turbine,ADEN,RWA): 
     wind = np.array(range(0,26))
     if size_of_turbine == '3MW':
@@ -19,8 +221,7 @@ def thrust_table(size_of_turbine,ADEN,RWA):
     else: 
         print "examples are 3MW, 6MW, or 10MW"
     thrust = 0.5*ADEN*wind**2.*RWA*Ct/1000.
-    return (wind,Ct,thrust)
-    
+    return (wind,Ct,thrust)    
 def filtered_stiffeners_table():
     TABLE = np.zeros(125,dtype=[('name',np.str_, 16),('area','f8'),('d','f8'),('tw','f8'),('bf','f8'),('tf','f8'),('yna','f8'),('Ir','f8')])
     # name area(m^2) depth(m) web thickness(m) flange width(m) flange thickness(m) yna(m) Ir (m^4)
@@ -482,3 +683,108 @@ def full_stiffeners_table():
     TABLE [325] = ('WT22x131',38.6,21.7,0.79,15.8,1.42,16.5,1650)
     TABLE [326] = ('WT22x145',42.9,21.8,0.87,15.8,1.58,16.53,1840)
     return TABLE
+
+def ref_table(PTEN,MWPL,S,FH,AE,MBL):
+    n = 754.
+    max_a =(MBL-MWPL*FH)/MWPL
+    INC = max_a/n
+    a = np.array(np.linspace(0.0,INC*n,num=n+1))
+    H = MWPL*a
+    Ttop = H + MWPL*FH
+    Vtop = (Ttop**2-H**2)**0.5
+    ang = 90. - np.arcsin(H/Ttop)*180/np.pi
+    sp_temp = -(S/2.)+(FH/2.)*(1.+(4*a**2/(S**2.-FH**2)))**0.5 
+    sp_temp = [0 if i < 0 else i for i in sp_temp]
+    # INITIALIZE ARRanchor_yS
+    Vbot = np.array([0.]*len(a))
+    Tbot = np.array([0.]*len(a))
+    Tave = np.array([0.]*len(a))
+    stretch = np.array([0.]*len(a))
+    x = np.array([0.]*len(a))
+    s = np.array([0.]*len(a))
+    yp = np.array([0.]*len(a))
+    sp = np.array([0.]*len(a))
+    for i in range (0,len(a)):
+        if sp_temp[i] == 0.: 
+            Vbot[i] = 0.
+            Tbot[i] = H[i]
+            Tave[i] = 0.5*(Ttop[i]+Tbot[i])
+            stretch[i] = 1.+Tave[i]/AE
+            if i == 0:
+                x[i] = S*stretch[i] -FH
+            else: 
+                x[i] = S*stretch[i-1] -FH*(1.+2.*a[i]/FH)**0.5+a[i]*np.arccosh(1.+FH/a[i])
+            s[i] = (FH**2+2.*FH*a[i])**0.5
+            sp [i] = 0.
+        else: 
+            s[i] = S*stretch[i-1]
+            Vbot[i] = Vtop[i]-MWPL*s[i]
+            Tbot[i] = (H[i]**2+Vbot[i]**2)**0.5
+            Tave[i] =  0.5*(Ttop[i]+Tbot[i])
+            stretch[i] = 1.+Tave[i]/AE
+            sp[i] = sp_temp[i]*stretch[i-1]
+            x[i] = a[i]*(np.arcsinh((S+sp[i])/a[i])-np.arcsinh(sp[i]/a[i]))*stretch[i-1]
+            
+        if i == 0: 
+            yp[i] = -a[i]+(a[i]**2+sp[i]**2)**0.5
+        else: 
+            yp[i] = (-a[i]+(a[i]**2+sp[i]**2)**0.5)*stretch[i-1]
+    x0 = np.interp(PTEN,Ttop,x)
+    offset = x - x0
+    MKH = np.array([0.]*len(a))
+    MKV = np.array([0.]*len(a))
+    for i in range(1,len(a)):
+        MKH[i] = (H[i]-H[i-1])/(offset[i]-offset[i-1])
+        MKV[i] = (Vtop[i]-Vtop[i-1])/(offset[i]-offset[i-1])
+    return x0,a,x,H,sp,yp,s,Ttop,Vtop,Tbot,Vbot,Tave,stretch,ang,offset,MKH,MKV,INC
+
+def fairlead_anchor_table(NM,direction,FOFF,FD,WD,ODB,x0,NDIS,survival_mooring,Ttop,x,H):
+    # fairlead
+    fairlead_x = np.array(((ODB/2)+FOFF)*np.cos(direction*np.pi/180.))
+    fairlead_y = np.array(((ODB/2)+FOFF)*np.sin(direction*np.pi/180.))
+    fairlead_z = np.array([-FD]*len(fairlead_x))
+    # anchor 
+    anchor_x = np.array(fairlead_x+x0*np.cos(direction*np.pi/180.))
+    anchor_y = np.array(fairlead_y+x0*np.sin(direction*np.pi/180.))
+    anchor_z = np.array([-WD]*len(anchor_x))
+    # delta 
+    delta = (survival_mooring[1]-survival_mooring[0])/NDIS
+    X_Offset = np.array(np.linspace(survival_mooring[0],survival_mooring[1],num=NDIS+1))
+    # initialize arrays
+    X_Fairlead = np.empty((1,NDIS+1),dtype=np.object)
+    anchor_distance = np.empty((1,NDIS+1),dtype=np.object)
+    Ttop_tension = np.empty((1,NDIS+1),dtype=np.object)
+    H_Force = np.empty((1,NDIS+1),dtype=np.object)
+    FX = np.empty((1,NDIS+1),dtype=np.object)
+    FY = np.empty((1,NDIS+1),dtype=np.object)
+    sum_FX = np.array([0.]*(NDIS+1))
+    stiffness = np.array([0.]*(NDIS+1))
+    # fill arrays
+    for i in range(0,NDIS+1):
+        X_Fairlead[0,i] = np.array(X_Offset[i]+fairlead_x)
+        anchor_distance[0,i] = np.array((((X_Fairlead[0,i])-anchor_x)**2+(fairlead_y-anchor_y)**2)**0.5-0.00001)
+        Ttop_vect = np.array([0.]*NM)
+        H_vect = np.array([0.]*NM)
+        for j in range(0,NM):
+            Ttop_vect[j]=np.interp(anchor_distance[0,i][j],x,Ttop)/1000.
+            H_vect[j]=np.interp(anchor_distance[0,i][j],x,H)/1000.
+        Ttop_tension[0,i] = Ttop_vect
+        H_Force[0,i] = H_vect
+        FX[0,i] = np.array((anchor_x-X_Fairlead[0,i])/anchor_distance[0,i]*H_Force[0,i])
+        FY[0,i] = np.array((anchor_y-fairlead_y)/anchor_distance[0,i]*H_Force[0,i])
+        sum_FX[i] = sum(FX[0,i])
+    for i in range(0,NDIS+1):    
+        if i == NDIS:
+            stiffness[i] = abs(sum_FX[i]/X_Offset[i])
+        else: 
+            stiffness[i] = abs((sum_FX[i]-sum_FX[i+1])/(X_Offset[i]-X_Offset[i+1]))    
+    FR = np.power((np.power(FY,2)+np.power(FX,2)),0.5)
+    # pack some things 
+    fairlead_loc = [fairlead_x,fairlead_y,fairlead_z]
+    anchor_loc = [anchor_x,anchor_y,anchor_z]
+    return fairlead_loc,anchor_loc,X_Offset,X_Fairlead,anchor_distance,Ttop_tension,H_Force,FX,sum_FX,stiffness,FY,FR
+
+
+    
+    
+    
