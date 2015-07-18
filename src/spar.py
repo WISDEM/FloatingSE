@@ -6,15 +6,27 @@ from scipy.optimize import fmin, minimize
 from sympy.solvers import solve
 from sympy import Symbol
 import math
-from spar_utils import full_stiffeners_table,thrust_table,plasticityRF,frustumVol,frustumCG,ID,waveProperties,waveU,waveUdot,CD,inertialForce,windPowerLaw,pipeBuoyancy,currentSpeed,rootsearch,bisect,roots,calcPsi,dragForce,curWaveDrag,windDrag
+from spar_utils import full_stiffeners_table,thrust_table,plasticityRF,frustumVol,frustumCG,ID,waveProperties,waveU,waveUdot,CD,inertialForce,windPowerLaw,pipeBuoyancy,currentSpeed,rootsearch,bisect,roots,calcPsi,dragForce,curWaveDrag,windDrag,calculateWindCurrentForces
 pi=np.pi
 
 class Spar(Component):
+    #initial_pass = Bool(True, iotype='in', desc='initial run sets VD to 0 to get other property values')
+    #system_acceleration = Float(0.0,iotype='in',units='m',desc = 'system acceleration')
     wall_thickness = Array([0.027,0.025,0.027,0.047],iotype='in', units='m',desc = 'wall thickness of each section')
     number_of_rings = Array([1,4,4,23],iotype='in',desc = 'number of stiffeners in each section')
     neutral_axis = Float(0.285,iotype='in',units='m',desc = 'neutral axis location')
-    initial_pass = Bool(True, iotype='in', desc='flag for using optimized stiffener dimensions or discrete stiffeners')
+    stiffener_curve_fit = Bool(True, iotype='in', desc='flag for using optimized stiffener dimensions or discrete stiffeners')
     stiffener_index = Int(iotype='in',desc='index of stiffener from filtered table')
+    number_of_sections = Int(iotype='in',desc='number of sections in the spar')
+    outer_diameter = Array(iotype='in', units='m',desc = 'outer diameter of each section')
+    length = Array(iotype='in', units='m',desc = 'wlength of each section')
+    end_elevation = Array(iotype='in', units='m',desc = 'end elevation of each section')
+    start_elevation = Array(iotype='in', units='m',desc = 'start elevation of each section')
+    bulk_head = Array(iotype='in',desc = 'N for none, T for top, B for bottom') 
+    # enviroentnment inputs
+    gust_factor = Float(1.0,iotype='in', desc='gust factor')
+    straight_col_cost = Float(3490.,iotype='in',units='USD',desc='cost of straight columns in $/ton')
+    tapered_col_cost = Float(4720.,iotype='in',units='USD',desc='cost of tapered columns in $/ton')
     gravity = Float(9.806,iotype='in', units='m/s**2', desc='gravity')
     air_density = Float(1.198,iotype='in', units='kg/m**3', desc='density of air')
     water_density = Float(1025,iotype='in',units='kg/m**3',desc='density of water')
@@ -22,7 +34,6 @@ class Spar(Component):
     load_condition =  Str(iotype='in',desc='Load condition - N for normal or E for extreme')
     significant_wave_height = Float(iotype='in', units='m', desc='significant wave height')
     significant_wave_period = Float(iotype='in', units='m', desc='significant wave period')
-    keel_to_CG_operating_system = Float(iotype='in', units='m', desc='center of gravity above keel of operating system')
     wind_reference_speed = Float(iotype='in', units='m/s', desc='reference wind speed')
     wind_reference_height = Float(iotype='in', units='m', desc='reference height')
     alpha = Float(iotype='in', desc='power law exponent')
@@ -30,24 +41,39 @@ class Spar(Component):
     E = Float(200.e9,iotype='in', units='Pa', desc='young"s modulus of spar material')
     nu = Float(0.3,iotype='in', desc='poisson"s ratio of spar material')
     yield_stress = Float(345000000.,iotype='in', units='Pa', desc='yield stress of spar material')
-    RNA_mass = Float(iotype='in', units='kg', desc='rotor mass')
-    tower_mass = Float(iotype='in', units='kg', desc='tower mass')
-    fixed_ballast_mass = Float(iotype='in', units='kg', desc='fixed ballast mass')
-    hull_mass = Float(iotype='in', units='kg', desc='hull mass')
-    permanent_ballast_mass = Float(iotype='in', units='kg', desc='permanent ballast mass')
-    variable_ballast_mass = Float(iotype='in', units='kg', desc='variable ballast mass')
-    number_of_sections = Int(iotype='in',desc='number of sections in the spar')
-    outer_diameter = Array(iotype='in', units='m',desc = 'outer diameter of each section')
-    length = Array(iotype='in', units='m',desc = 'wlength of each section')
-    end_elevation = Array(iotype='in', units='m',desc = 'end elevation of each section')
-    start_elevation = Array(iotype='in', units='m',desc = 'start elevation of each section')
-    bulk_head = Array(iotype='in',desc = 'N for none, T for top, B for bottom')
+    # ballast stuff inputs
+    shell_mass_factor = Float(1.0,iotype='in',desc='shell mass factor')
+    bulkhead_mass_factor = Float(1.0,iotype='in',desc='bulkhead mass factor')
+    ring_mass_factor = Float(1.0,iotype='in',desc='ring mass factor')
+    outfitting_factor = Float(0.06,iotype='in',desc='outfitting factor')
+    spar_mass_factor = Float(1.05,iotype='in',desc='spar mass factor')
+    permanent_ballast_height = Float(3.,iotype='in',units='m',desc='height of permanent ballast')
+    fixed_ballast_height = Float(5.,iotype='in',units='m',desc='height of fixed ballast')
+    permanent_ballast_density = Float(4492.,iotype='in',units='kg/m**3',desc='density of permanent ballast')
+    fixed_ballast_density = Float(4000.,iotype='in',units='kg/m**3',desc='density of fixed ballast')
+    offset_amplification_factor = Float(1.0,iotype='in',desc='amplification factor for offsets') 
+    
+
+
+    # from tower_RNA.py
+    RNA_keel_to_CG = Float(iotype='in',units='m',desc='RNA keel to center of gravity')
+    RNA_mass = Float(iotype='in',units='kg',desc='RNA mass')
+    tower_mass = Float(iotype='in',units='kg',desc='tower mass')
+    tower_center_of_gravity = Float(iotype='in',units='m',desc='tower center of gravity')
     tower_wind_force = Float(iotype='in',units='N',desc='wind force on tower')
     RNA_wind_force = Float(iotype='in',units='N',desc='wind force on RNA')
-    gust_factor = Float(iotype='in', desc='gust factor')
-    straight_col_cost = Float(3490.,iotype='in',units='USD',desc='cost of straight columns in $/ton')
-    tapered_col_cost = Float(4720.,iotype='in',units='USD',desc='cost of tapered columns in $/ton')
-    mooring_total_cost = Float(0.,iotype='in',units='USD',desc='cost of mooring')
+    RNA_center_of_gravity_x = Float(iotype='in',units='m',desc='RNA center of gravity in x-direction')
+
+    # from mooring 
+    mooring_total_cost = Float(iotype='in',units='USD',desc='total cost for anchor + legs + miscellaneous costs')
+    mooring_keel_to_CG = Float(iotype='in',units='N',desc='KGM used in spar.py')
+    mooring_vertical_load = Float(iotype='in',units='N',desc='mooring vertical load in all mooring lines')
+    mooring_horizontal_stiffness = Float(iotype='in',units='N/m',desc='horizontal stiffness of one single mooring line')
+    mooring_vertical_stiffness = Float(iotype='in',units='N/m',desc='vertical stiffness of all mooring lines')
+    sum_forces_x = Array(iotype='in',units='N',desc='sume of forces in x direction')
+    offset_x = Array(iotype='in',units='m',desc='X offsets in discretization')
+    damaged_mooring = Array(iotype='in',units='m',desc='range of damaged mooring')
+    intact_mooring = Array(iotype='in',units='m',desc='range of intact mooring')
     # outputs
     flange_compactness = Float(iotype='out',desc = 'check for flange compactness')
     web_compactness = Float(iotype='out',desc = 'check for web compactness')
@@ -55,148 +81,22 @@ class Spar(Component):
     VAG = Array(iotype='out',desc = 'unity check for axial load - genenral instability')
     VEL = Array(iotype='out',desc = 'unity check for external pressure - local buckling')
     VEG = Array(iotype='out',desc = 'unity check for external pressure - general instability')
-    columns_mass = Float(iotype='out', units='kg',desc='total mass of straight columns/sections')
-    tapered_mass = Float(iotype='out', units='kg',desc='total mass od tapered columns/sections')
-    spar_total_cost = Float(iotype='out', units='USD',desc='total cost of spar')
-    shell_ring_bulkhead_mass = Float(iotype='out',desc = 'mass to be minimized')
-    shell_mass = Array(iotype='out', units='kg',desc = 'shell mass by section')
-    shell_buoyancy = Array(iotype='out',units='kg',desc = 'shell shell buoyancy')
-    spar_wind_force = Array(iotype='out', units='N',desc = 'SWF by section')
-    spar_wind_moment = Array(iotype='out', units='N*m',desc = 'SWM by section')
-    spar_current_force = Array(iotype='out', units='N',desc = 'SCF by section')
-    spar_current_moment = Array(iotype='out', units='N*m',desc = 'SCM by section')
-    bulkhead_mass = Array(iotype='out', units='kg',desc = 'bulkhead mass by section')
-    ring_mass = Array(iotype='out', units='kg',desc = 'ring mass by section')
-    keel_cg_shell = Array(iotype='out', units='m',desc = 'KCG by section')
-    keel_cb_shell = Array(iotype='out', units='m',desc = 'KCB by section')
-    spar_mooring_cost = Array(iotype='out', units='USD',desc = 'cost of mooring+spar')
+    platform_stability_check = Float(iotype='out',desc = 'check for platform stability')
+    heel_angle = Float(iotype='out',desc='heel angle unity check')
+    min_offset_unity = Float(iotype='out',desc='minimum offset unity check')
+    max_offset_unity = Float(iotype='out',desc='maximum offset unity check')
+    spar_and_mooring_cost = Float(iotype='out',units='USD',desc='cost of mooring and spar')
+   
+    #spar_current_force = Array(iotype='out', units='N',desc = 'SCF by section')
+    
 
     def __init__(self):
         super(Spar,self).__init__()
     def execute(self):
         ''' 
         '''
-        def calculateWindCurrentForces (VD): 
-            ODT = OD # outer diameter - top
-            ODB = np.append(OD[1:NSEC],OD[-1]) # outer diameter - bottom
-            WOD = (ODT+ODB)/2 # average outer diameter 
-            COD = WOD # center outer diameter
-            IDT = ID(ODT,T)
-            IDB = ID(ODB,T)
-            OV = frustumVol(ODT,ODB,LB)
-            IV = frustumVol(IDT,IDB,LB)
-            MV = OV - IV # shell volume 
-            SHM = MV * MDEN # shell mass 
-            SCG = frustumCG(ODB,ODT,LB) # shell center of gravity
-            KCG = DRAFT + ELE + SCG # keel to shell center of gravity
-            KCB = DRAFT + ELE + SCG
-            SHB = OV*WDEN #  outer volume --> displaced water mass
-            coneH = np.array([0.]*NSEC)
-            for i in range(0,len(LB)):
-                if ODB[i]==ODT[i]:
-                    coneH[i]=LB[i]
-                else:
-                    coneH[i] = -LB[i] * (ODB[i]/ODT[i]) / (1 - ODB[i]/ODT[i]) # cone height 
-            # initialize arrays 
-            SCF = np.array([0.]*NSEC)
-            KCS = np.array([0.]*NSEC)
-            SCM = np.array([0.]*NSEC)
-            SWF = np.array([0.]*NSEC)
-            KWS = np.array([0.]*NSEC)
-            SWM = np.array([0.]*NSEC)
-            BHM = np.array([0.]*NSEC)
-            RGM = np.array([0.]*NSEC)
-            for i in range (0,NSEC): 
-            #for i in range(0,NSEC) :  # iterate through the sections
-                if i <(NSEC-1) : # everything but the last section 
-                    if ELE[i] <0 : # if bottom end underwater
-                        HWL = abs(ELE[i]) 
-                        if HWL >= LB[i]: # COMPLETELY UNDERWATER 
-                            
-                            SCF[i] = curWaveDrag(Hs,Ts,WD,OD[i],OD[i+1],ELS[i],LB[i],SCG[i],VD,G,WDEN)
-                            KCS[i] = KCB[i]
-                            if SCF[i] == 0: 
-                                KCS[i] = 0.
-                            SCM[i] = SCF[i] * (KCS[i]-KCGO)
-                            SWF[i] = 0.
-                            KWS[i] = 0.
-                            SWM[i] = 0.
-                        else: # PARTIALLY UNDER WATER 
-                            if ODT[i] == ODB[i]:  # cylinder
-                                SHB[i] = pipeBuoyancy(ODT[i],WDEN)*HWL # redefine
-                                SCG[i] = HWL/2 # redefine
-                                KCB[i] = DRAFT + ELE[i] + SCG[i] # redefine 
-                                ODW = ODT[i] # assign single variable
-                            else: # frustum
-                                ODW = ODB[i]*(coneH[i]-HWL)/coneH[i] # assign single variable 
-                                WOD[i] = (ODT[i]+ODW[i])/2  # redefine 
-                                COD[i] = (ODW[i]+ODB[i])/2 # redefine 
-                                SHB[i] = frustumVol(ODW[i],ODB[i],HWL) # redefine 
-                                SCG[i] = frustumCG(ODW,ODB[i],HWL) # redefine 
-                                KCB[i] = DRAFT + ELE[i] + SCG[i] # redefine 
-                            
-                            SCF[i] = curWaveDrag(Hs,Ts,WD,ODW,ODB[i],0.,HWL,SCG[i],VD,G,WDEN)
-                            KCS[i] = KCB[i]
-                            if SCF[i] == 0 : 
-                                KCS[i] = 0.
-                            SCM[i] = SCF[i]*(KCS[i]-KCGO)
-                            if WREFS != 0: # if there is wind 
-                                WSPEED = windPowerLaw(WREFS,WREFH,ALPHA,(LB[i]-HWL)/2) # assign single variable 
-                                CDW = CD(WSPEED,WOD[i],ADEN) # assign single variable 
-                                SWF[i] = dragForce(WOD[i],CDW,LB[i]-HWL,WSPEED,ADEN)
-                                KWS[i]= KCG[i]
-                                SWM[i] = SWF[i]*(KWS[i]-KCGO) 
-                            else: # no wind 
-                                SWF[i] = 0.
-                                KWS[i] = 0.
-                                SWM[i] = 0.
-                    else: # FULLY ABOVE WATER 
-                        SHB[i] = 0. # redefines 
-                        KCB[i] = 0.
-                        SCF[i] = 0.
-                        KCS[i] = 0.
-                        SCM[i] = 0.
-                        if WREFS != 0: # if there is wind 
-                            WSPEED = windPowerLaw(WREFS,WREFH,ALPHA,ELE[i]+LB[i]/2) # assign single variable 
-                            CDW = CD(WSPEED,WOD[i],ADEN) # assign single variable 
-                            SWF[i] = dragForce(WOD[i],CDW,LB[i],WSPEED,ADEN)
-                            KWS[i]= KCG[i]
-                            SWM[i] = SWF[i]*(KWS[i]-KCGO) 
-                        else: # no wind 
-                            SWF[i] = 0.
-                            KWS[i] = 0.
-                            SWM[i] = 0.
-                    RGM[i] = N[i]*(pi*ID(WOD[i],T[i])*AR)*MDEN # ring mass
-                else: # last section 
-                    # SHM unchanged 
-                    KCG[i] = DRAFT + ELE[i] + LB[i]/2  #redefine
-                    # SHB already calculated 
-                    # KCB already calculated 
-                   
-                    SCF[i] = curWaveDrag(Hs,Ts,WD,OD[i],OD[i],ELS[i],LB[i],KCG[i],VD,G,WDEN)
-                    KCS[i] = KCG [i] # redefines
-                    if SCF[i] ==0: 
-                        KCS[i] = 0.
-                    SCM[i] = SCF[i]*(KCS[i]-KCGO)
-                    SWF[i] = 0.
-                    KWS[i] = 0.
-                    SWM[i] = 0.
-                    RGM[i] = N[i]*(pi*ID(OD[i],T[i])*AR)*MDEN # ring mass
-                if BH[i] == 'T':
-                    BHM[i] = pi / 4 * IDT[i]**2 * T[i] * MDEN 
-                    KCG[i] = (KCG[i] * SHM[i] + (DRAFT + ELS[i] - 0.5 * T[i]) * BHM[i]) / (SHM[i] + BHM[i])
-                elif BH[i] == 'B' :
-                    BHM[i] = pi / 4 * IDB[i]**2 * T[i] * MDEN
-                    KCG[i] = (KCG[i] * SHM[i] + (DRAFT + ELE[i] + 0.5 * T[i]) * BHM[i]) / (SHM[i] + BHM[i])
-                else: 
-                    KCG[i] = KCG[i]
-            #total_mass = sum(SHM)+sum(RGM)+sum(BHM)
-            #TCG,TWF = windDrag(TLEN,TBOD,TTOD,WREFS,WREFH,ALPHA,FB,ADEN,GF)
-            TWF = self.tower_wind_force
-            RWF = self.RNA_wind_force
-            VD = (RWF+TWF+sum(SWF)+sum(SCF))/(SMASS+RMASS+TMASS+FBM+PBM+WBM)
-            return (VD,SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB)
-        
+    
+
         # assign all varibles so its easier to read later
         G = self.gravity
         ADEN = self.air_density 
@@ -209,9 +109,7 @@ class Spar(Component):
             WAVEH = 1.86*Hs
             WAVEP = 0.71*Ts
             WAVEL = G*WAVEP**2/(2*pi)
-            WAVEN = 2*pi/WAVEL
-        #KCG = self.keel_cg_mooring
-        KCGO = self.keel_to_CG_operating_system
+            WAVEN = 2*pi/WAVEL  
         WREFS = self.wind_reference_speed
         WREFH = self.wind_reference_height
         ALPHA = self.alpha 
@@ -219,12 +117,30 @@ class Spar(Component):
         E = self.E
         PR = self.nu
         FY = self.yield_stress
+        PBH = self.permanent_ballast_height 
+        PBDEN = self.permanent_ballast_density
+        FBH = self.fixed_ballast_height
+        FBDEN = self.fixed_ballast_density
         RMASS = self.RNA_mass
+        KGR = self.RNA_keel_to_CG
         TMASS = self.tower_mass
+        TCG = self.tower_center_of_gravity
+        TWF = self.tower_wind_force
+        RWF = self.RNA_wind_force
+        RCGX = self.RNA_center_of_gravity_x
+        VTOP = self.mooring_vertical_load
+        MHK = self.mooring_horizontal_stiffness
+        MVK = self.mooring_vertical_stiffness
+        KGM = self.mooring_keel_to_CG
         DRAFT = abs(min(self.end_elevation))
-        FBM = self.fixed_ballast_mass
-        PBM = self.permanent_ballast_mass
+        #FBM = self.fixed_ballast_mass
+        #PBM = self.permanent_ballast_mass
+        #WBM = self.variable_ballast_mass
         OD = np.array(self.outer_diameter)
+        ODB = OD[-1]
+        for i in range(0,len(OD)):
+            if  self.end_elevation[i] >0:
+                ODTW = OD[i+1]
         T = np.array(self.wall_thickness)
         LB = np.array(self.length)
         ELE = np.array(self.end_elevation)
@@ -233,7 +149,7 @@ class Spar(Component):
         BH = self.bulk_head
         N = np.array(self.number_of_rings)
         NSEC = self.number_of_sections
-        if self.initial_pass: # curve fits
+        if self.stiffener_curve_fit: # curve fits
             YNA=self.neutral_axis
             D = 0.0029+1.3345977*YNA
             IR =0.051*YNA**3.7452
@@ -241,10 +157,8 @@ class Spar(Component):
             AR =np.exp(4.6980391+0.36049717*YNA**0.5-2.2503113/(TW**0.5))
             TFM =1.2122528*YNA**0.13430232*YNA**1.069737
             BF = (0.96105249*TW**-0.59795001*AR**0.73163096)
-            IR = 0.47602202*TW**0.99500847*YNA**2.9938134
-            SMASS = self.hull_mass
-        else: # discrete, actual stiffener
-            SMASS = 1.11*self.shell_ring_bulkhead_mass
+            IR = 0.47602202*TW**0.99500847*YNA**2.9938134    
+        else: # discrete, actual stiffener 
             allStiffeners = full_stiffeners_table()
             stiffener = allStiffeners[self.stiffener_index]
             stiffenerName = stiffener[0]
@@ -257,7 +171,113 @@ class Spar(Component):
             self.neutral_axis=YNA
             IR = convert_units(stiffener[7],'inch**4','m**4')
         HW = D - TFM
-        WBM = self.variable_ballast_mass
+        SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB=calculateWindCurrentForces(0.,0.,N,AR,BH,OD,NSEC,T,LB,MDEN,DRAFT,ELE,ELS,WDEN,ADEN,G,Hs,Ts,WD,WREFS,WREFH,ALPHA)     
+        SHBUOY = sum(SHB)
+        SHMASS = sum(SHM)*self.shell_mass_factor
+        BHMASS = sum(BHM)*self.bulkhead_mass_factor
+        RGMASS = sum(RGM)*self.ring_mass_factor
+        SHRMASS = SHMASS + BHMASS + RGMASS
+        SHRM = np.array(SHM)+np.array(BHM)+np.array(RGM)
+        percent_shell_mass = RGMASS/SHMASS *100. 
+        outfitting_mass = SHRMASS*self.outfitting_factor
+        SMASS = SHRMASS*self.spar_mass_factor + outfitting_mass
+        KCG = np.dot(SHRM,np.array(KCG))/SHRMASS
+        KB = np.dot(np.array(SHB),np.array(KCB))/SHBUOY
+        BM = ((np.pi/64)*ODTW**4)/(SHBUOY/WDEN)
+        SWFORCE = sum(SWF)
+        SCFORCE = sum(SCF) # NOTE: inaccurate; reruns later
+        BVL = np.pi/4.*(ODB-2*T[-1])**2.  # ballast volume per length
+        KGPB = (PBH/2.)+T[-1] 
+        PBM = BVL*PBH*PBDEN
+        KGFB = (FBH/2.)+PBH+T[-1] 
+        FBM = BVL*FBH*FBDEN
+        WPA = np.pi/4*(ODTW)**2
+        KGT = TCG+FB+DRAFT
+        WBM = SHBUOY-SMASS-RMASS-TMASS-VTOP/G-FBM-PBM
+        WBH = WBM/(WDEN*BVL)
+        KGWB = WBH/2.+PBH+FBH+T[-1]
+        KGB = (SMASS*KCG+WBM*KGWB+FBM*KGFB+PBM*KGPB+TMASS*KGT+RMASS*KGR)/(SMASS+WBM+FBM+PBM+TMASS+RMASS)
+        KG = (SMASS*KCG+WBM*KGWB+FBM*KGFB+PBM*KGPB+TMASS*KGT+RMASS*KGR+VTOP/G*KGM)/SHBUOY
+        GM = KB+BM-KG
+        self.platform_stability_check = KG/KB 
+        total_mass = SMASS+RMASS+TMASS+WBM+FBM+PBM
+        VD = (RWF+TWF+SWFORCE+SCFORCE)/(SMASS+RMASS+TMASS+FBM+PBM+WBM)
+        print VD
+        SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB=calculateWindCurrentForces(KG,VD,N,AR,BH,OD,NSEC,T,LB,MDEN,DRAFT,ELE,ELS,WDEN,ADEN,G,Hs,Ts,WD,WREFS,WREFH,ALPHA)     
+        SCFORCE = sum(SCF)
+        # calculate moments 
+        RWM = RWF*(KGR-KG)
+        TWM = TWF*(KGT-KG)
+        columns_mass = sum(SHM[1::2])+sum(RGM[1::2])+sum(BHM[1::2])
+        tapered_mass = sum(SHM[0::2])+sum(RGM[0::2])+sum(BHM[0::2])
+        COSTCOL = self.straight_col_cost
+        COSTTAP = self.tapered_col_cost
+        spar_total_cost = COSTCOL*columns_mass/1000. + COSTTAP*tapered_mass/1000.
+        self.spar_and_mooring_cost = self.mooring_total_cost + spar_total_cost
+
+
+
+
+        ##### SIZING TAB #####    
+        # [TOP MASS(RNA+TOWER)]
+        top_mass = RMASS+TMASS 
+        KG_top = (RMASS*KGR+TMASS*KGT)
+        # [INERTIA PROPERTIES - LOCAL]
+        I_top_loc = (1./12.)*top_mass*KG_top**2
+        I_hull_loc = (1./12.)*SMASS*(DRAFT+FB)**2
+        I_WB_loc = (1./12.)*WBM*WBH**2
+        I_FB_loc = (1./12.)*FBM*FBH**2
+        I_PB_loc = (1./12.)*PBM*PBH**2
+        # [INERTIA PROPERTIES - SYSTEM]
+        I_top_sys = I_top_loc + top_mass*(KG_top-KG)**2
+        I_hull_sys = I_hull_loc + SMASS*(KCG-KG)**2
+        I_WB_sys = I_WB_loc + WBM*(KGWB-KGB)**2 
+        I_FB_sys = I_FB_loc + FBM*(KGFB-KGB)**2
+        I_PB_sys = I_PB_loc + PBM*(KGPB-KGB)**2
+        I_total = I_top_sys + I_hull_sys + I_WB_sys + I_FB_sys + I_PB_sys
+        I_yaw =  total_mass*(ODB/2.)**2
+        # [ADDED MASS]
+        surge = (pi/4.)*ODB**2*DRAFT*WDEN
+        heave = (1/6.)*WDEN*ODB**3
+        pitch = (surge*((KG-DRAFT)-(KB-DRAFT))**2+surge*DRAFT**2/12.)*I_total
+        # [OTHER SYSTEM PROPERTIES]
+        r_gyration = (I_total/total_mass)**0.5
+        CM = (SMASS*KCG+WBM*KGWB+FBM*KGFB+PBM*KGPB)/(SMASS+WBM+FBM+PBM)
+        surge_period = 2*pi*((total_mass+surge)/MHK)**0.5
+        # [PLATFORM STIFFNESS]
+        K33 = WDEN*G*(pi/4.)**ODTW**2+MVK  #heave
+        K44 = abs(WDEN*G*((pi/4.)*(ODTW/2.)**4-(KB-KG)*SHBUOY/WDEN)) #roll
+        K55 = abs(WDEN*G*((pi/4.)*(ODTW/2.)**4-(KB-KG)*SHBUOY/WDEN)) #pitch
+        # 
+        T_surge = 2*pi*((total_mass+surge)/MHK)**0.5
+        T_heave = 2*pi*((total_mass+heave)/K33)**0.5
+        K_pitch = GM*SHBUOY*G
+        T_pitch = 2*pi*(pitch/K_pitch)**0.5
+        F_total = RWF+TWF+sum(SWF)+sum(SCF)
+        #print sum_FX
+        sum_FX = self.sum_forces_x
+        X_Offset = self.offset_x
+        for j in range(1,len(sum_FX)): 
+            if sum_FX[j]< (-F_total/1000.): 
+                X2 = sum_FX[j]
+                X1 = sum_FX[j-1]
+                Y2 = X_Offset[j]
+                Y1 = X_Offset[j-1]
+        max_offset = (Y1+(-F_total/1000.-X1)*(Y2-Y1)/(X2-X1))*self.offset_amplification_factor
+        i=0
+        while sum_FX[i]> (F_total/1000.):
+                i+=1
+        min_offset = (X_Offset[i-1]+(F_total/1000.-sum_FX[i-1])*(X_Offset[i]-X_Offset[i-1])/(sum_FX[i]-sum_FX[i-1]))*self.offset_amplification_factor
+        M_total = RWM+TWM+sum(SWM)+sum(SCM)+(-F_total*(KGM-KG))+(RMASS*G*-RCGX)
+        self.heel_angle = (M_total/K_pitch)*180./pi
+        # unity checks! 
+        if self.load_condition == 'E': 
+            self.max_offset_unity = max_offset/self.damaged_mooring[1]
+            self.min_offset_unity = min_offset/self.damaged_mooring[0]
+        elif self.load_condition == 'N': 
+            self.max_offset_unity = max_offset/self.intact_mooring[1]
+            self.min_offset_unity = min_offset/self.intact_mooring[0]
+
         # shell data
         RO = OD/2.  # outer radius 
         R = RO-T/2. # radius to centerline of wall/mid fiber radius 
@@ -279,23 +299,16 @@ class Spar(Component):
         IER = IR+AR*(YNA+T/2.)**2*LE*T/AER+LE*T**3/12. # moment of inertia
         RC = RO-YENA-T/2. # radius to centroid of ring stiffener 
         # set loads (0 mass loads for external pressure) 
-        MTURBINE = RMASS 
-        MTOWER = TMASS 
         MBALLAST = PBM + FBM + WBM # sum of all ballast masses
-        MHULL = SMASS 
-        W = (MTURBINE + MTOWER + MBALLAST + MHULL) * G
+        W = (RMASS + TMASS + MBALLAST + SMASS) * G
         P = WDEN * G* abs(ELE)  # hydrostatic pressure at depth of section bottom 
         if Hs != 0: # dynamic head 
             DH = WAVEH/2*(np.cosh(WAVEN*(WD-abs(ELE)))/np.cosh(WAVEN*WD)) 
         else: 
             DH = 0 
         P = P + WDEN*G*DH # hydrostatic pressure + dynamic head
-        #TBOD = self.tower_base_OD
-        #TTOD = self.tower_top_OD
-        #TLEN = self.tower_length
         GF = self.gust_factor
-        #TCG = (TLEN/4.)*(((TBOD/2.)**2+2.*(TBOD/2.)*(TTOD/2.)+3.*(TTOD/2.)**2.)/((TBOD/2.)**2+(TBOD/2.)*(TTOD/2.)+(TTOD/2.)**2))
-        #TSIZE = self.turbine_size
+
         
         #-----RING SECTION COMPACTNESS (SECTION 7)-----#
         self.flange_compactness = (0.5*BF/TFM)/(0.375*(E/FY)**0.5)
@@ -449,37 +462,4 @@ class Spar(Component):
         self.VAG = abs(SIGMAXA / FAG)
         self.VEL = abs(FTHETAS / FEL)
         self.VEG = abs(FTHETAS / FEG)
-       
-
-        VD,SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB=calculateWindCurrentForces(0.)
-        VD_unused,SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB=calculateWindCurrentForces(VD)
-        self.shell_mass = SHM 
-        self.ring_mass = RGM 
-        self.bulkhead_mass = BHM 
-        self.shell_buoyancy = SHB 
-        self.spar_wind_force = SWF
-        self.spar_wind_moment = SWM
-        self.spar_current_force = SCF 
-        self.spar_current_moment = SCM 
-        self.keel_cg_shell = KCG 
-        self.keel_cb_shell = KCB
-        self.shell_ring_bulkhead_mass = sum(SHM)+sum(RGM)+sum(BHM)
-        self.columns_mass = sum(SHM[1::2])+sum(RGM[1::2])+sum(BHM[1::2])
-        self.tapered_mass = sum(SHM[0::2])+sum(RGM[0::2])+sum(BHM[0::2])
-        COSTCOL = self.straight_col_cost
-        COSTTAP = self.tapered_col_cost
-        self.spar_total_cost = COSTCOL*self.columns_mass/1000. + COSTTAP*self.tapered_mass/1000.
-        self.spar_mooring_cost = self.mooring_total_cost + self.spar_total_cost
-        print self.wall_thickness
-        print self.number_of_rings
-        print self.neutral_axis
-        print self.VAL
-        print self.VAG
-        print self.VEL
-        print self.VEG
-        print self.web_compactness
-        print self.flange_compactness
-        print self.shell_ring_bulkhead_mass
-        print self.columns_mass
-        print self.tapered_mass
 #------------------------------------------------------------------

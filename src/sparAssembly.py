@@ -175,7 +175,7 @@ class sparAssembly(Assembly):
         self.connect('spar.ring_mass','mooring.ring_mass')
         self.connect('spar.keel_cg_shell','mooring.spar_keel_to_CG')
         self.connect('spar.keel_cb_shell','mooring.spar_keel_to_CB')
-        self.connect('mooring.keel_to_CG_operating_system',['spar.keel_cg_operating_system','tower_RNA.keel_to_CG_operating_system'])
+        self.connect('mooring.keel_to_CG_operating_system',['spar.keel_to_CG_operating_system','tower_RNA.keel_to_CG_operating_system'])
         self.connect('mooring.fixed_ballast_mass','spar.fixed_ballast_mass')
         self.connect('mooring.permanent_ballast_mass','spar.permanent_ballast_mass')
         self.connect('mooring.variable_ballast_mass','spar.variable_ballast_mass')  

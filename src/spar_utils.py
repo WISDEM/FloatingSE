@@ -178,9 +178,9 @@ def waveU(H,T,k,z,D,theta):
 def waveUdot(H,T,k,z,D,theta):
     return (2*pi**2*H/T**2)* (np.cosh(k*(z+D))/np.sinh(k*D))*np.sin(theta)
 def windPowerLaw(uref,href,alpha,H) :
-            return uref*(H/href)**alpha
+    return uref*(H/href)**alpha
 def pipeBuoyancy(D,WDEN):
-            return pi/4 * D**2 *WDEN 
+    return pi/4 * D**2 *WDEN 
 def currentSpeed(XNEW,water_depth):
     CDEPTH = [0.000, 61.000, 91.000, water_depth]
     CSPEED = [0.570, 0.570, 0.100, 0.100]
@@ -210,6 +210,135 @@ def inertialForce(D,CA,L,A,VDOT,DEN):
     if A < 0:
         IF = -IF
     return IF
+
+
+
+def calculateWindCurrentForces (KCGO,VD,N,AR,BH,OD,NSEC,T,LB,MDEN,DRAFT,ELE,ELS,WDEN,ADEN,G,Hs,Ts,WD,WREFS,WREFH,ALPHA): 
+    ODT = OD # outer diameter - top
+    ODB = np.append(OD[1:NSEC],OD[-1]) # outer diameter - bottom
+    WOD = (ODT+ODB)/2 # average outer diameter 
+    COD = WOD # center outer diameter
+    IDT = ID(ODT,T)
+    IDB = ID(ODB,T)
+    OV = frustumVol(ODT,ODB,LB)
+    IV = frustumVol(IDT,IDB,LB)
+    MV = OV - IV # shell volume 
+    SHM = MV * MDEN # shell mass 
+    SCG = frustumCG(ODB,ODT,LB) # shell center of gravity
+    KCG = DRAFT + ELE + SCG # keel to shell center of gravity
+    KCB = DRAFT + ELE + SCG
+    SHB = OV*WDEN #  outer volume --> displaced water mass
+    coneH = np.array([0.]*NSEC)
+    for i in range(0,len(LB)):
+        if ODB[i]==ODT[i]:
+            coneH[i]=LB[i]
+        else:
+            coneH[i] = -LB[i] * (ODB[i]/ODT[i]) / (1 - ODB[i]/ODT[i]) # cone height 
+    # initialize arrays 
+    SCF = np.array([0.]*NSEC)
+    KCS = np.array([0.]*NSEC)
+    SCM = np.array([0.]*NSEC)
+    SWF = np.array([0.]*NSEC)
+    KWS = np.array([0.]*NSEC)
+    SWM = np.array([0.]*NSEC)
+    BHM = np.array([0.]*NSEC)
+    RGM = np.array([0.]*NSEC)
+    for i in range (0,NSEC): 
+    #for i in range(0,NSEC) :  # iterate through the sections
+        if i <(NSEC-1) : # everything but the last section 
+            if ELE[i] <0 : # if bottom end underwater
+                HWL = abs(ELE[i]) 
+                if HWL >= LB[i]: # COMPLETELY UNDERWATER  
+                    SCF[i] = curWaveDrag(Hs,Ts,WD,OD[i],OD[i+1],ELS[i],LB[i],SCG[i],VD,G,WDEN)
+                    KCS[i] = KCB[i]
+                    if SCF[i] == 0: 
+                        KCS[i] = 0.
+                    SCM[i] = SCF[i] * (KCS[i]-KCGO)
+                    SWF[i] = 0.
+                    KWS[i] = 0.
+                    SWM[i] = 0.
+                else: # PARTIALLY UNDER WATER 
+                    if ODT[i] == ODB[i]:  # cylinder
+                        SHB[i] = pipeBuoyancy(ODT[i],WDEN)*HWL # redefine
+                        SCG[i] = HWL/2 # redefine
+                        KCB[i] = DRAFT + ELE[i] + SCG[i] # redefine 
+                        ODW = ODT[i] # assign single variable
+                    else: # frustum
+                        ODW = ODB[i]*(coneH[i]-HWL)/coneH[i] # assign single variable 
+                        WOD[i] = (ODT[i]+ODW[i])/2  # redefine 
+                        COD[i] = (ODW[i]+ODB[i])/2 # redefine 
+                        SHB[i] = frustumVol(ODW[i],ODB[i],HWL) # redefine 
+                        SCG[i] = frustumCG(ODW,ODB[i],HWL) # redefine 
+                        KCB[i] = DRAFT + ELE[i] + SCG[i] # redefine 
+            
+                    SCF[i] = curWaveDrag(Hs,Ts,WD,ODW,ODB[i],0.,HWL,SCG[i],VD,G,WDEN)
+                    KCS[i] = KCB[i]
+                    if SCF[i] == 0 : 
+                        KCS[i] = 0.
+                    SCM[i] = SCF[i]*(KCS[i]-KCGO)
+                    if WREFS != 0: # if there is wind 
+                        WSPEED = windPowerLaw(WREFS,WREFH,ALPHA,(LB[i]-HWL)/2) # assign single variable 
+                        CDW = CD(WSPEED,WOD[i],ADEN) # assign single variable 
+                        SWF[i] = dragForce(WOD[i],CDW,LB[i]-HWL,WSPEED,ADEN)
+                        KWS[i]= KCG[i]
+                        SWM[i] = SWF[i]*(KWS[i]-KCGO) 
+                    else: # no wind 
+                        SWF[i] = 0.
+                        KWS[i] = 0.
+                        SWM[i] = 0.
+            else: # FULLY ABOVE WATER 
+                SHB[i] = 0. # redefines 
+                KCB[i] = 0.
+                SCF[i] = 0.
+                KCS[i] = 0.
+                SCM[i] = 0.
+                if WREFS != 0: # if there is wind 
+                    WSPEED = windPowerLaw(WREFS,WREFH,ALPHA,ELE[i]+LB[i]/2) # assign single variable 
+                    CDW = CD(WSPEED,WOD[i],ADEN) # assign single variable 
+                    SWF[i] = dragForce(WOD[i],CDW,LB[i],WSPEED,ADEN)
+                    KWS[i]= KCG[i]
+                    SWM[i] = SWF[i]*(KWS[i]-KCGO) 
+                else: # no wind 
+                    SWF[i] = 0.
+                    KWS[i] = 0.
+                    SWM[i] = 0.
+            RGM[i] = N[i]*(pi*ID(WOD[i],T[i])*AR)*MDEN # ring mass
+        else: # last section 
+            # SHM unchanged 
+            KCG[i] = DRAFT + ELE[i] + LB[i]/2  #redefine
+            # SHB already calculated 
+            # KCB already calculated 
+           
+            SCF[i] = curWaveDrag(Hs,Ts,WD,OD[i],OD[i],ELS[i],LB[i],KCG[i],VD,G,WDEN)
+            KCS[i] = KCG [i] # redefines
+            if SCF[i] ==0: 
+                KCS[i] = 0.
+            SCM[i] = SCF[i]*(KCS[i]-KCGO)
+            SWF[i] = 0.
+            KWS[i] = 0.
+            SWM[i] = 0.
+            RGM[i] = N[i]*(pi*ID(OD[i],T[i])*AR)*MDEN # ring mass
+        if BH[i] == 'T':
+            BHM[i] = pi / 4 * IDT[i]**2 * T[i] * MDEN 
+            KCG[i] = (KCG[i] * SHM[i] + (DRAFT + ELS[i] - 0.5 * T[i]) * BHM[i]) / (SHM[i] + BHM[i])
+        elif BH[i] == 'B' :
+            BHM[i] = pi / 4 * IDB[i]**2 * T[i] * MDEN
+            KCG[i] = (KCG[i] * SHM[i] + (DRAFT + ELE[i] + 0.5 * T[i]) * BHM[i]) / (SHM[i] + BHM[i])
+        else: 
+            KCG[i] = KCG[i]
+    #total_mass = sum(SHM)+sum(RGM)+sum(BHM)
+    #TCG,TWF = windDrag(TLEN,TBOD,TTOD,WREFS,WREFH,ALPHA,FB,ADEN,GF)
+    return (SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB)
+
+
+
+
+
+
+
+
+
+
 def thrust_table(size_of_turbine,ADEN,RWA): 
     wind = np.array(range(0,26))
     if size_of_turbine == '3MW':

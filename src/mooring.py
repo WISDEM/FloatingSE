@@ -1,20 +1,19 @@
 from openmdao.main.api import Component, Assembly,convert_units
 from openmdao.lib.datatypes.api import Float, Array, Str, Int, Bool
+from openmdao.lib.drivers.api import SLSQPdriver
 import numpy as np
 from scipy.optimize import fmin, minimize
 from sympy.solvers import solve
 from sympy import Symbol
 import math
-from spar_utils import ref_table, fairlead_anchor_table
-pi=np.pi
+from spar_utils import fairlead_anchor_table,ref_table
+
 
 class Mooring(Component):
-    #design variables
     fairlead_depth = Float(13.0,iotype='in',units='m',desc = 'fairlead depth')
     scope_ratio = Float(1.5,iotype='in',units='m',desc = 'scope to fairlead height ratio')
     pretension_percent = Float(5.0,iotype='in',desc='Pre-Tension Percentage of MBL (match PreTension)')
     mooring_diameter = Float(0.09,iotype='in',units='m',desc='diameter of mooring chain')
-    # inputs 
     number_of_mooring_lines = Int(3,iotype='in',desc='number of mooring lines')
     water_depth = Float(iotype='in',units='m',desc='water depth')
     mooring_type = Str('CHAIN',iotype='in',desc='CHAIN, STRAND, IWRC, or FIBER')
@@ -29,54 +28,24 @@ class Mooring(Component):
     number_of_discretizations = Int(20,iotype='in',desc='number of segments for mooring discretization')
     spar_start_elevation = Array(iotype='in', units='m',desc = 'start elevation of each section')
     spar_end_elevation = Array(iotype='in', units='m',desc = 'end elevation of each section')
-    shell_buoyancy = Array(iotype='in', units='kg',desc = 'shell buoyancy by section')
-    shell_mass = Array(iotype='in', units='kg',desc = 'shell mass by section')
-    bulkhead_mass = Array(iotype='in', units='kg',desc = 'bulkhead mass by section')
-    ring_mass = Array(iotype='in', units='kg',desc = 'ring mass by section')
-    shell_mass_factor = Float(1.0,iotype='in',desc='shell mass factor')
-    bulkhead_mass_factor = Float(1.0,iotype='in',desc='bulkhead mass factor')
-    ring_mass_factor = Float(1.0,iotype='in',desc='ring mass factor')
-    outfitting_factor = Float(0.06,iotype='in',desc='outfitting factor')
-    spar_mass_factor = Float(1.05,iotype='in',desc='spar mass factor')
-    spar_keel_to_CG = Array(iotype='in', units='m',desc = 'KCG by section from spar')
-    spar_keel_to_CB = Array(iotype='in', units='m',desc = 'KCB by section from spar')
-    water_density = Float(1025,iotype='in',units='kg/m**3',desc='density of water')
     spar_outer_diameter = Array(iotype='in',units='m',desc='top outer diameter')
-    spar_wind_force = Array(iotype='in', units='N',desc = 'SWF by section from spar')
-    spar_wind_moment = Array(iotype='in', units='N*m',desc = 'SWM by section from spar')
-    spar_current_force = Array(iotype='in', units='N',desc = 'SCF by section from spar')
-    spar_current_moment = Array(iotype='in', units='N*m',desc = 'SCM by section from spar')
-    wall_thickness = Array(iotype='in', units='m',desc = 'wall thickness by section from spar')
-    permanent_ballast_height = Float(3.,iotype='in',units='m',desc='height of permanent ballast')
-    fixed_ballast_height = Float(5.,iotype='in',units='m',desc='height of fixed ballast')
-    permanent_ballast_density = Float(iotype='in',units='kg/m**3',desc='density of permanent ballast')
-    fixed_ballast_density = Float(iotype='in',units='kg/m**3',desc='density of fixed ballast')
-    RNA_mass = Float(iotype='in',units='kg',desc='RNA mass')
-    tower_mass = Float(iotype='in',units='kg',desc='tower mass')
-    gravity = Float(9.806,iotype='in', units='m/s**2', desc='gravity')
-    tower_center_of_gravity = Float(iotype='in',units='m',desc='tower center of gravity')
-    RNA_keel_to_CG = Float(iotype='in',units='m',desc='RNA keel to center of gravity')
-    tower_wind_force = Float(iotype='in',units='N',desc='wind force on tower')
-    tower_wind_moment =Float(iotype='in',units='N*m',desc='wind moment on tower')
-    RNA_wind_force = Float(iotype='in',units='N',desc='wind force on RNA')
-    RNA_wind_moment = Float(iotype='in',units='N*m',desc='wind moment on tower')
-    RNA_center_of_gravity_x = Float(iotype='in', units='m',desc='rotor center of gravity') 
-    amplification_factor = Float(1.0,iotype='in',desc='amplification factor for offsets') 
-    load_condition =  Str(iotype='in',desc='Load condition - N for normal or E for extreme')
+    water_density = Float(1025,iotype='in',units='kg/m**3',desc='density of water')
     # outputs 
     mooring_total_cost = Float(iotype='out',units='USD',desc='total cost for anchor + legs + miscellaneous costs')
-    heel_angle = Float(iotype='out',desc='heel angle unity check')
-    min_offset_unity = Float(iotype='out',desc='minimum offset unity check')
-    max_offset_unity = Float(iotype='out',desc='maximum offset unity check')
-    keel_to_CG_operating_system = Float(iotype='out',desc='keel tp venter of gravity of whole system')
-    fixed_ballast_mass = Float(iotype='out',units='kg',desc='fixed ballast mass')
-    permanent_ballast_mass = Float(iotype='out',units='kg',desc='permanenet ballast mass')
-    variable_ballast_mass = Float(iotype='out',units='kg',desc='variable ballast mass')
+    mooring_keel_to_CG = Float(iotype='out',units='m',desc='KGM used in spar.py')
+    mooring_vertical_load = Float(iotype='out',units='N',desc='mooring vertical load in all mooring lines')
+    mooring_horizontal_stiffness = Float(iotype='out',units='N/m',desc='horizontal stiffness of one single mooring line')
+    mooring_vertical_stiffness = Float(iotype='out',units='N/m',desc='vertical stiffness of all mooring lines')
+    sum_forces_x = Array(iotype='out',units='N',desc='sume of forces in x direction')
+    offset_x = Array(iotype='out',units='m',desc='X offsets in discretization')
+    damaged_mooring = Array(iotype='out',units='m',desc='range of damaged mooring')
+    intact_mooring = Array(iotype='out',units='m',desc='range of intact mooring')
+
+
 
     def __init__(self):
         super(Mooring,self).__init__()
     def execute(self):
-        ##### MOORING TAB ##### 
         WD = self.water_depth
         FD = self.fairlead_depth
         MDIA = self.mooring_diameter
@@ -89,11 +58,6 @@ class Mooring(Component):
         NDIS= self.number_of_discretizations
         WDEN = self.water_density
         DRAFT = abs(min(self.spar_end_elevation))
-        RMASS = self.RNA_mass
-        SWF = self.spar_wind_force
-        SWM = self.spar_wind_moment
-        SCF = self.spar_current_force
-        SCM = self.spar_current_moment
         FH = WD-FD 
         S = FH*SR
         if MTYPE == 'CHAIN':    
@@ -147,10 +111,12 @@ class Mooring(Component):
         XEXT = np.interp(TEXT,Ttop,x)
         # OFFSETS 
         direction =  np.array(np.linspace(0.0,360-360/NM,num=NM))
-        intact_mooring = [-(XALL-x0), XALL/np.sin(direction[1]/180.*np.pi)*np.sin(np.pi-direction[1]/180*np.pi-np.arcsin(x0/XALL*np.sin(direction[1]/180.*np.pi)))]
-        damaged_mooring = [-(XEXT-x0), XEXT/np.sin(direction[1]/180.*np.pi)*np.sin(np.pi-direction[1]/180*np.pi-np.arcsin(x0/XEXT*np.sin(direction[1]/180.*np.pi)))]
+        self.intact_mooring = [-(XALL-x0), XALL/np.sin(direction[1]/180.*np.pi)*np.sin(np.pi-direction[1]/180*np.pi-np.arcsin(x0/XALL*np.sin(direction[1]/180.*np.pi)))]
+        self.damaged_mooring = [-(XEXT-x0), XEXT/np.sin(direction[1]/180.*np.pi)*np.sin(np.pi-direction[1]/180*np.pi-np.arcsin(x0/XEXT*np.sin(direction[1]/180.*np.pi)))]
         survival_mooring = [-(XMAX-x0), XMAX/np.sin(direction[1]/180.*np.pi)*np.sin(np.pi-direction[1]/180*np.pi-np.arcsin(x0/XMAX*np.sin(direction[1]/180.*np.pi)))]
         fairlead_loc,anchor_loc,X_Offset,X_Fairlead,anchor_distance,Ttop_tension,H_Force,FX,sum_FX,stiffness,FY,FR = fairlead_anchor_table(NM,direction,FOFF,FD,WD,ODB,x0,NDIS,survival_mooring,Ttop,x,H)
+        self.sum_forces_x = sum_FX
+        self.offset_x = X_Offset
         # COST
         each_leg = MCPL*S
         legs_total = each_leg*NM
@@ -169,134 +135,7 @@ class Mooring(Component):
         MHK = np.interp(PTEN,Ttop,mkh)
         MVK = np.interp(PTEN,Ttop,mkv)*NM
         TMM = (WML+np.pi*MDIA**2/4*WDEN)*S*NM
-
-        ###### PLATFORM TAB #####
-        for i in range(0,len(self.spar_outer_diameter)):
-            if  self.spar_end_elevation[i] >0:
-                ODT = self.spar_outer_diameter[i+1]
-        T = self.wall_thickness
-        FB = self.spar_start_elevation[0]
-        SHBUOY = sum(self.shell_buoyancy)
-        SHMASS = sum(self.shell_mass)*self.shell_mass_factor
-        BHMASS = sum(self.bulkhead_mass)*self.bulkhead_mass_factor
-        RGMASS = sum(self.ring_mass)*self.ring_mass_factor
-        SHRMASS = SHMASS + BHMASS + RGMASS
-        SHRM = np.array(self.shell_mass)+np.array(self.bulkhead_mass)+np.array(self.ring_mass)
-        percent_shell_mass = RMASS/SHMASS *100. 
-        outfitting_mass = SHRMASS*self.outfitting_factor
-        SMASS = SHRMASS*self.spar_mass_factor + outfitting_mass
-        KCG = sum(np.dot(SHRM,np.array(self.spar_keel_to_CG)))/SHRMASS
-        KB = sum(np.dot(np.array(self.shell_buoyancy),np.array(self.spar_keel_to_CB)))/SHBUOY
-        BM = ((np.pi/64)*ODT**4)/(SHBUOY/WDEN)
-        SWFORCE = sum(self.spar_wind_force)
-        SWMOM = sum(self.spar_wind_moment)
-        SCFORCE = sum(self.spar_current_force)
-        SCMOM = sum(self.spar_current_moment)
-        BVL = np.pi/4.*(ODB-2*T[-1])**2.  # ballast volume per length
-        PBH = self.permanent_ballast_height 
-        PBDEN = self.permanent_ballast_density
-        KGPB = (PBH/2.)+T[-1] 
-        PBM = BVL*PBH*PBDEN
-        FBH = self.fixed_ballast_height
-        FBDEN = self.fixed_ballast_density
-        KGFB = (FBH/2.)+PBH+T[-1] 
-        FBM = BVL*FBH*FBDEN
-        WPA = np.pi/4*(ODT)**2
-
-        ##### SIZING TAB #####
-        G = self.gravity
-        KGR = self.RNA_keel_to_CG
-        TMASS = self.tower_mass
-        TCG = self.tower_center_of_gravity
-        TWF = self.tower_wind_force
-        TWM = self.tower_wind_moment
-        RWF = self.RNA_wind_force
-        RWM = self.RNA_wind_moment
-        RCGX = self.RNA_center_of_gravity_x
-        KGT = TCG+FB+DRAFT
-        WBM = SHBUOY-SMASS-RMASS-TMASS-VTOP/G-FBM-PBM
-        WBH = WBM/(WDEN*BVL)
-        KGWB = WBH/2.+PBH+FBH+T[-1]
-        KGB = (SMASS*KCG+WBM*KGWB+FBM*KGFB+PBM*KGPB+TMASS*KGT+RMASS*KGR)/(SMASS+WBM+FBM+PBM+TMASS+RMASS)
-        KG = (SMASS*KCG+WBM*KGWB+FBM*KGFB+PBM*KGPB+TMASS*KGT+RMASS*KGR+VTOP/G*KGM)/SHBUOY
-        GM = KB+BM-KG
-        if KG <KB: 
-            stability_check = 'pass'
-        weight = SMASS+RMASS+TMASS+WBM+FBM+PBM
-        # [TOP MASS(RNA+TOWER)]
-        top_mass = RMASS+TMASS 
-        KG_top = (RMASS*KGR+TMASS*KGT)
-        # [INERTIA PROPERTIES - LOCAL]
-        I_top_loc = (1./12.)*top_mass*KG_top**2
-        I_hull_loc = (1./12.)*SMASS*(DRAFT+FB)**2
-        I_WB_loc = (1./12.)*WBM*WBH**2
-        I_FB_loc = (1./12.)*FBM*FBH**2
-        I_PB_loc = (1./12.)*PBM*PBH**2
-        # [INERTIA PROPERTIES - SYSTEM]
-        I_top_sys = I_top_loc + top_mass*(KG_top-KG)**2
-        I_hull_sys = I_hull_loc + SMASS*(KCG-KG)**2
-        I_WB_sys = I_WB_loc + WBM*(KGWB-KGB)**2 
-        I_FB_sys = I_FB_loc + FBM*(KGFB-KGB)**2
-        I_PB_sys = I_PB_loc + PBM*(KGPB-KGB)**2
-        I_total = I_top_sys + I_hull_sys + I_WB_sys + I_FB_sys + I_PB_sys
-        I_yaw =  weight*(ODB/2.)**2
-        # [ADDED MASS]
-        surge = (pi/4.)*ODB**2*DRAFT*WDEN
-        heave = (1/6.)*WDEN*ODB**3
-        pitch = (surge*((KG-DRAFT)-(KB-DRAFT))**2+surge*DRAFT**2/12.)*I_total
-        # [OTHER SYSTEM PROPERTIES]
-        r_gyration = (I_total/weight)**0.5
-        CM = (SMASS*KCG+WBM*KGWB+FBM*KGFB+PBM*KGPB)/(SMASS+WBM+FBM+PBM)
-        surge_period = 2*pi*((weight+surge)/MHK)**0.5
-        # [PLATFORM STIFFNESS]
-        K33 = WDEN*G*(pi/4.)**ODT**2+MVK  #heave
-        K44 = abs(WDEN*G*((pi/4.)*(ODT/2.)**4-(KB-KG)*SHBUOY/WDEN)) #roll
-        K55 = abs(WDEN*G*((pi/4.)*(ODT/2.)**4-(KB-KG)*SHBUOY/WDEN)) #pitch
-        # 
-        T_surge = 2*pi*((weight+surge)/MHK)**0.5
-        T_heave = 2*pi*((weight+heave)/K33)**0.5
-        K_pitch = GM*SHBUOY*G
-        T_pitch = 2*pi*(pitch/K_pitch)**0.5
-        F_total = RWF+TWF+sum(SWF)+sum(SCF)
-        #print sum_FX
-        for j in range(1,len(sum_FX)): 
-            if sum_FX[j]< (-F_total/1000.): 
-                X2 = sum_FX[j]
-                X1 = sum_FX[j-1]
-                Y2 = X_Offset[j]
-                Y1 = X_Offset[j-1]
-        max_offset = (Y1+(-F_total/1000.-X1)*(Y2-Y1)/(X2-X1))*self.amplification_factor
-        i=0
-        while sum_FX[i]> (F_total/1000.):
-                i+=1
-        min_offset = (X_Offset[i-1]+(F_total/1000.-sum_FX[i-1])*(X_Offset[i]-X_Offset[i-1])/(sum_FX[i]-sum_FX[i-1]))*self.amplification_factor
-        M_total = RWM+TWM+sum(SWM)+sum(SCM)+(-F_total*(KGM-KG))+(RMASS*G*-RCGX)
-        self.heel_angle = (M_total/K_pitch)*180./pi
-        # unity checks! 
-        if self.load_condition == 'E': 
-            self.max_offset_unity = max_offset/damaged_mooring[1]
-            self.min_offset_unity = min_offset/damaged_mooring[0]
-        elif self.load_condition == 'N': 
-            self.max_offset_unity = max_offset/intact_mooring[1]
-            self.min_offset_unity = min_offset/intact_mooring[0]
-        self.keel_to_CG_operating_system = KG
-        self.fixed_ballast_mass = FBM
-        self.permanent_ballast_mass = PBM
-        self.variable_ballast_mass = WBM
-
-
-
-        
-
-        
-
-
-        
-
-
-
-
-
-
-
- 
+        self.mooring_keel_to_CG = KGM
+        self.mooring_vertical_load = VTOP 
+        self.mooring_horizontal_stiffness = MHK
+        self.mooring_vertical_stiffness = MVK

@@ -13,8 +13,6 @@ class Tower_RNA(Component):
     base_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower base')
     top_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower top')
     length = Float(iotype='in',units='m',desc='tower length')
-    #RNA_mass = Float(iotype='in', units='kg',desc='mass of RNA')
-    #tower_mass =  Float(iotype='in',units='kg',desc='tower mass')
     air_density = Float(1.198,iotype='in', units='kg/m**3', desc='density of air') 
     wind_reference_speed = Float(iotype='in', units='m/s', desc='reference wind speed')
     wind_reference_height = Float(iotype='in', units='m', desc='reference height')
@@ -22,21 +20,19 @@ class Tower_RNA(Component):
     alpha = Float(iotype='in', desc='power law exponent')
     spar_start_elevation = Array(iotype='in', units='m',desc = 'start elevation of each section')
     spar_end_elevation = Array(iotype='in', units='m',desc = 'end elevation of each section')
-    keel_to_CG_operating_system = Float(iotype='in',units='m',desc='keel to center of gravity of overall system')
     example_turbine_size = Str(iotype='in',desc='for example cases, 3MW, 6MW, or 10 MW')
     rotor_diameter = Float(iotype='in', units='m',desc='rotor diameter')
     RNA_center_of_gravity_x = Float(iotype='in', units='m',desc='rotor center of gravity') 
     RNA_center_of_gravity_y = Float(iotype='in', units='m',desc='rotor center of gravity') 
     cut_out_speed = Float(25.,iotype='in', units='m/s',desc='cut-out speed of turbine') 
-    
+    tower_mass = Float(iotype='in', units='kg',desc='tower mass') 
+    RNA_mass = Float(iotype='in', units='kg',desc='RNA mass') 
     # outputs
     tower_center_of_gravity = Float(iotype='out',units='m',desc='tower center of gravity')
     tower_keel_to_CG = Float(iotype='out',units='m',desc='keel to tower center of gravity')
     tower_wind_force = Float(iotype='out',units='N',desc='wind force on tower')
-    tower_wind_moment = Float(iotype='out',units='N*m',desc='wind moment on tower')
     RNA_keel_to_CG = Float(iotype='out',units='m',desc='keel to RNA center of gravity')
     RNA_wind_force = Float(iotype='out',units='N',desc='wind force on RNA')
-    RNA_wind_moment = Float(iotype='out',units='N*m',desc='wind moment on RNA')
     thrust_coefficient = Float(iotype='out',desc='thrust coefficient')
     def __init__(self):
         super(Tower_RNA,self).__init__()
@@ -53,14 +49,11 @@ class Tower_RNA(Component):
         WREFH = self.wind_reference_height
         ALPHA = self.alpha
         ADEN = self.air_density
-        KCGO = self.keel_to_CG_operating_system
         TCG,TWF = windDrag(TLEN,TBOD,TTOD,WREFS,WREFH,ALPHA,FB,ADEN,GF)
         KGT = TCG+FB+DRAFT
-        TWM = TWF*(KGT-KCGO)
         self.tower_center_of_gravity=TCG 
         self.tower_keel_to_CG = KGT 
         self.tower_wind_force = TWF 
-        self.tower_wind_moment = TWM
 
         # RNA
         RDIA = self.rotor_diameter
@@ -81,8 +74,6 @@ class Tower_RNA(Component):
             RWF = 0.5*ADEN*(WSPEED*GF)**2*RWA*CT
         else: 
             RWF = max_thrust*1000*GF**2*0.75
-        RWM = RWF*(KGR-KCGO)
         self.thrust_coefficient = CT
         self.RNA_keel_to_CG = KGR
         self.RNA_wind_force = RWF 
-        self.RNA_wind_moment = RWM
