@@ -33,7 +33,7 @@ class Tower_RNA(Component):
     tower_wind_force = Float(iotype='out',units='N',desc='wind force on tower')
     RNA_keel_to_CG = Float(iotype='out',units='m',desc='keel to RNA center of gravity')
     RNA_wind_force = Float(iotype='out',units='N',desc='wind force on RNA')
-    thrust_coefficient = Float(iotype='out',desc='thrust coefficient')
+    
     def __init__(self):
         super(Tower_RNA,self).__init__()
     def execute(self):
@@ -74,6 +74,5 @@ class Tower_RNA(Component):
             RWF = 0.5*ADEN*(WSPEED*GF)**2*RWA*CT
         else: 
             RWF = max_thrust*1000*GF**2*0.75
-        self.thrust_coefficient = CT
         self.RNA_keel_to_CG = KGR
         self.RNA_wind_force = RWF 

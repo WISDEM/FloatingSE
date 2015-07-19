@@ -12,9 +12,9 @@ pi=np.pi
 class Spar(Component):
     #initial_pass = Bool(True, iotype='in', desc='initial run sets VD to 0 to get other property values')
     #system_acceleration = Float(0.0,iotype='in',units='m',desc = 'system acceleration')
-    wall_thickness = Array([0.027,0.025,0.027,0.047],iotype='in', units='m',desc = 'wall thickness of each section')
-    number_of_rings = Array([1,4,4,23],iotype='in',desc = 'number of stiffeners in each section')
-    neutral_axis = Float(0.285,iotype='in',units='m',desc = 'neutral axis location')
+    wall_thickness = Array([0.0362,0.03427,0.03427,0.0526],iotype='in', units='m',desc = 'wall thickness of each section')
+    number_of_rings = Array([1,4,5,38],iotype='in',desc = 'number of stiffeners in each section')
+    neutral_axis = Float(0.38,iotype='in',units='m',desc = 'neutral axis location')
     stiffener_curve_fit = Bool(True, iotype='in', desc='flag for using optimized stiffener dimensions or discrete stiffeners')
     stiffener_index = Int(iotype='in',desc='index of stiffener from filtered table')
     number_of_sections = Int(iotype='in',desc='number of sections in the spar')
@@ -27,6 +27,8 @@ class Spar(Component):
     gust_factor = Float(1.0,iotype='in', desc='gust factor')
     straight_col_cost = Float(3490.,iotype='in',units='USD',desc='cost of straight columns in $/ton')
     tapered_col_cost = Float(4720.,iotype='in',units='USD',desc='cost of tapered columns in $/ton')
+    outfitting_cost = Float(6980.,iotype='in',units='USD',desc='cost of tapered columns in $/ton')
+    ballast_cost = Float(100.,iotype='in',units='USD',desc='cost of tapered columns in $/ton')
     gravity = Float(9.806,iotype='in', units='m/s**2', desc='gravity')
     air_density = Float(1.198,iotype='in', units='kg/m**3', desc='density of air')
     water_density = Float(1025,iotype='in',units='kg/m**3',desc='density of water')
@@ -85,7 +87,7 @@ class Spar(Component):
     heel_angle = Float(iotype='out',desc='heel angle unity check')
     min_offset_unity = Float(iotype='out',desc='minimum offset unity check')
     max_offset_unity = Float(iotype='out',desc='maximum offset unity check')
-    spar_and_mooring_cost = Float(iotype='out',units='USD',desc='cost of mooring and spar')
+    total_cost = Float(iotype='out',units='USD',desc='cost of mooring and spar')
    
     #spar_current_force = Array(iotype='out', units='N',desc = 'SCF by section')
     
@@ -95,8 +97,6 @@ class Spar(Component):
     def execute(self):
         ''' 
         '''
-    
-
         # assign all varibles so its easier to read later
         G = self.gravity
         ADEN = self.air_density 
@@ -202,7 +202,6 @@ class Spar(Component):
         self.platform_stability_check = KG/KB 
         total_mass = SMASS+RMASS+TMASS+WBM+FBM+PBM
         VD = (RWF+TWF+SWFORCE+SCFORCE)/(SMASS+RMASS+TMASS+FBM+PBM+WBM)
-        print VD
         SHM,RGM,BHM,SHB,SWF,SWM,SCF,SCM,KCG,KCB=calculateWindCurrentForces(KG,VD,N,AR,BH,OD,NSEC,T,LB,MDEN,DRAFT,ELE,ELS,WDEN,ADEN,G,Hs,Ts,WD,WREFS,WREFH,ALPHA)     
         SCFORCE = sum(SCF)
         # calculate moments 
@@ -212,8 +211,16 @@ class Spar(Component):
         tapered_mass = sum(SHM[0::2])+sum(RGM[0::2])+sum(BHM[0::2])
         COSTCOL = self.straight_col_cost
         COSTTAP = self.tapered_col_cost
-        spar_total_cost = COSTCOL*columns_mass/1000. + COSTTAP*tapered_mass/1000.
-        self.spar_and_mooring_cost = self.mooring_total_cost + spar_total_cost
+        COSTOUT = self.outfitting_cost
+        COSTBAL = self.ballast_cost
+        spar_cost = COSTCOL*columns_mass/1000. + COSTTAP*tapered_mass/1000.
+        outfit_cost = COSTOUT*outfitting_mass/1000.
+        ballast_cost = COSTBAL*(FBM+PBM)/1000.
+
+        
+
+
+        self.total_cost =spar_cost+outfit_cost+ballast_cost+self.mooring_total_cost
 
 
 
@@ -254,7 +261,6 @@ class Spar(Component):
         K_pitch = GM*SHBUOY*G
         T_pitch = 2*pi*(pitch/K_pitch)**0.5
         F_total = RWF+TWF+sum(SWF)+sum(SCF)
-        #print sum_FX
         sum_FX = self.sum_forces_x
         X_Offset = self.offset_x
         for j in range(1,len(sum_FX)): 
@@ -417,7 +423,6 @@ class Spar(Component):
         CST = K * KPHIL /KTHETAL 
         FTHETACL = np.array([0.]*NSEC)
         bnds = (0,None)
-        #print FRCL
         for i in range(0,NSEC):
             cst = CST[i]
             fxcl = FXCL[i]
@@ -462,4 +467,15 @@ class Spar(Component):
         self.VAG = abs(SIGMAXA / FAG)
         self.VEL = abs(FTHETAS / FEL)
         self.VEG = abs(FTHETAS / FEG)
+        print 'YNA: ',self.neutral_axis
+        print 'number of stiffeners: ',self.number_of_rings
+        print 'wall thickness: ',self.wall_thickness
+        print 'VAL: ',self.VAL
+        print 'VAG: ',self.VAG
+        print 'VEL: ',self.VEL
+        print 'VEG: ',self.VEG
+        print 'web compactness: ',self.web_compactness
+        print 'flange compactness: ',self.flange_compactness
+        print 'heel angle: ', self.heel_angle
+        print 'cost: ', self.total_cost
 #------------------------------------------------------------------
