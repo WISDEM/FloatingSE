@@ -9,17 +9,17 @@ from spar_utils import windPowerLaw,dragForce,CD,windDrag,thrust_table
 pi=np.pi
 
 class Tower_RNA(Component):
-    #design variables
-    base_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower base')
-    top_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower top')
-    length = Float(iotype='in',units='m',desc='tower length')
+    # environmental inputs
     air_density = Float(1.198,iotype='in', units='kg/m**3', desc='density of air') 
     wind_reference_speed = Float(iotype='in', units='m/s', desc='reference wind speed')
     wind_reference_height = Float(iotype='in', units='m', desc='reference height')
     gust_factor = Float(1.0,iotype='in', desc='gust factor')
     alpha = Float(iotype='in', desc='power law exponent')
-    spar_start_elevation = Array(iotype='in', units='m',desc = 'start elevation of each section')
-    spar_end_elevation = Array(iotype='in', units='m',desc = 'end elevation of each section')
+    # inputs
+    base_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower base')
+    top_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower top')
+    length = Float(iotype='in',units='m',desc='tower length')
+    spar_elevations = Array(iotype='in', units='m',desc = 'elevations of each section')
     example_turbine_size = Str(iotype='in',desc='for example cases, 3MW, 6MW, or 10 MW')
     rotor_diameter = Float(iotype='in', units='m',desc='rotor diameter')
     RNA_center_of_gravity_x = Float(iotype='in', units='m',desc='rotor center of gravity') 
@@ -39,12 +39,13 @@ class Tower_RNA(Component):
     def execute(self):
        
         # tower
-        FB = self.spar_start_elevation[0]
+        FB = self.spar_elevations[0]
         TBOD = self.base_outer_diameter
         TTOD = self.top_outer_diameter
         TLEN = self.length
         GF = self.gust_factor
-        DRAFT = abs(min(self.spar_end_elevation))
+        ELE = self.spar_elevations[1:]
+        DRAFT = abs(min(ELE))
         WREFS = self.wind_reference_speed
         WREFH = self.wind_reference_height
         ALPHA = self.alpha

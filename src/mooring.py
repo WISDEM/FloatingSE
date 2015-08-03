@@ -10,12 +10,14 @@ from spar_utils import fairlead_anchor_table,ref_table
 
 
 class Mooring(Component):
-    fairlead_depth = Float(13.0,iotype='in',units='m',desc = 'fairlead depth')
+    # environment 
+    water_density = Float(1025,iotype='in',units='kg/m**3',desc='density of water')
+    water_depth = Float(iotype='in',units='m',desc='water depth')
     scope_ratio = Float(1.5,iotype='in',units='m',desc = 'scope to fairlead height ratio')
     pretension_percent = Float(5.0,iotype='in',desc='Pre-Tension Percentage of MBL (match PreTension)')
     mooring_diameter = Float(0.09,iotype='in',units='m',desc='diameter of mooring chain')
+    fairlead_depth = Float(13.0,iotype='in',units='m',desc = 'fairlead depth')
     number_of_mooring_lines = Int(3,iotype='in',desc='number of mooring lines')
-    water_depth = Float(iotype='in',units='m',desc='water depth')
     mooring_type = Str('CHAIN',iotype='in',desc='CHAIN, STRAND, IWRC, or FIBER')
     anchor_type = Str('PILE',iotype='in',desc='PILE or DRAG')
     fairlead_offset_from_shell = Float(0.5,iotype='in',units='m',desc='fairlead offset from shell')
@@ -26,10 +28,8 @@ class Mooring(Component):
     user_anchor_cost = Float(0.0,iotype='in',units='USD',desc='user defined cost per anchor')
     misc_cost_factor = Float(10.0,iotype='in',desc='miscellaneous cost factor in percent')
     number_of_discretizations = Int(20,iotype='in',desc='number of segments for mooring discretization')
-    spar_start_elevation = Array(iotype='in', units='m',desc = 'start elevation of each section')
-    spar_end_elevation = Array(iotype='in', units='m',desc = 'end elevation of each section')
+    spar_elevations = Array(iotype='in', units='m',desc = 'end elevation of each section')
     spar_outer_diameter = Array(iotype='in',units='m',desc='top outer diameter')
-    water_density = Float(1025,iotype='in',units='kg/m**3',desc='density of water')
     # outputs 
     mooring_total_cost = Float(iotype='out',units='USD',desc='total cost for anchor + legs + miscellaneous costs')
     mooring_keel_to_CG = Float(iotype='out',units='m',desc='KGM used in spar.py')
@@ -40,7 +40,7 @@ class Mooring(Component):
     offset_x = Array(iotype='out',units='m',desc='X offsets in discretization')
     damaged_mooring = Array(iotype='out',units='m',desc='range of damaged mooring')
     intact_mooring = Array(iotype='out',units='m',desc='range of intact mooring')
-
+    mooring_mass = Float(iotype='out',units='kg',desc='total mass of mooring')
 
 
     def __init__(self):
@@ -57,7 +57,8 @@ class Mooring(Component):
         ODB = self.spar_outer_diameter[-1]
         NDIS= self.number_of_discretizations
         WDEN = self.water_density
-        DRAFT = abs(min(self.spar_end_elevation))
+        ELE = self.spar_elevations[1:]
+        DRAFT = abs(min(ELE))
         FH = WD-FD 
         S = FH*SR
         if MTYPE == 'CHAIN':    
@@ -129,7 +130,7 @@ class Mooring(Component):
         anchor_total = each_anchor*NM
         misc_cost = (anchor_total+legs_total)*self.misc_cost_factor/100.
         self.mooring_total_cost = legs_total+anchor_total+misc_cost 
-        # initial conditions
+        # INITIAL CONDITIONS
         KGM = DRAFT - FD 
         VTOP =  np.interp(PTEN,Ttop,Vtop)*NM
         MHK = np.interp(PTEN,Ttop,mkh)
@@ -139,3 +140,4 @@ class Mooring(Component):
         self.mooring_vertical_load = VTOP 
         self.mooring_horizontal_stiffness = MHK
         self.mooring_vertical_stiffness = MVK
+        self.mooring_mass = (WML+math.pi*MDIA**2/4*WDEN)*S*NM

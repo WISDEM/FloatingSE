@@ -4,7 +4,6 @@
 """
 import numpy as np
 from math import pi, cos, sqrt, radians, sin, exp, log10, log, floor, ceil
-import algopy
 import scipy as scp
 from scipy.optimize import fmin, minimize
 from sympy.solvers import solve
@@ -60,7 +59,7 @@ def roots(f, a, b, eps=1e-3):
         else:
                     #print ('\nDone')
             break
-def calcPsi(F,FY):
+def calcPsi(F,FY): # for calculating allowable stresses
     dum = FY/2
     if F <= dum:
         return 1.2
@@ -68,10 +67,10 @@ def calcPsi(F,FY):
         return 1.4 - 0.4*F/FY
     else: return 1
 def dragForce(D,CD,L,V,DEN):
-            DF = 0.5 * DEN * CD * D * L * V**2
-            if V < 0 :
-                DF = -DF 
-            return DF
+    DF = 0.5 * DEN * CD * D * L * V**2
+    if V < 0 :
+        DF = -DF 
+    return DF
 def curWaveDrag(Hs,Tp,WD,ODT,ODB,ELS,SL,CG,VDOT,G,WDEN): 
     JMAX = np.array([0]*10)
     if Hs != 0:    
@@ -131,30 +130,34 @@ def windDrag(TLEN,TBOD,TTOD,WREFS,WREFH,ALPHA,FB,ADEN,GF):
             L=DL*i
     TWF = m/TCG
     return TCG,TWF
-def plasticityRF(F,FY):
+def plasticityRF(F,FY): # plasticity reduction factor
     dum = FY/F
     if F > FY/2:
         return F*dum*(1+3.75*dum**2)**(-0.25)
     else: 
         return F*1
-def frustumVol(D1,D2,H): # array inputs
+def frustumVol(D1,D2,H): # calculates frustum volume - array or scalar inputs
+    D1 = np.asarray(D1)
+    D2 = np.asarray(D2)
+    is_scalar=False if D1.ndim>0 else True
+    D1.shape=(1,)*(1-D1.ndim) + D1.shape
+    D2.shape=(1,)*(1-D2.ndim) + D2.shape
     l = len(D1)
     fV = np.array([0.]*l)
-    r1 = D1/2.
-    r2 = D2/2.
-    fV = pi * (H / 3) * (r1**2 + r1*r2 + r2**2)
-    return fV
-def frustumCG(D1,D2,H):  # array inputs
+    fV = pi * (H / 3) * ((D1/2.)**2 + (D1/2.)*(D2/2.) + (D2/2.)**2)
+    return fV if not is_scalar else (fV)
+def frustumCG(D1,D2,H):  # calculates frustum center of gravity - array or scalar inputs
     # frustum vertical CG
+    D1 = np.asarray(D1)
+    D2 = np.asarray(D2)
+    is_scalar=False if D1.ndim>0 else True
+    D1.shape=(1,)*(1-D1.ndim) + D1.shape
+    D2.shape=(1,)*(1-D2.ndim) + D2.shape
     l = len(D1)
     fCG = np.array([0.]*l)
-    r1 = D1/2.
-    r2 = D2/2.    
-    dum1 = r1**2 + 2.*r1*r2 + 3.*r2**2
-    dum2 = r1**2 + r1 * r2 + r2**2
-    fCG = H / 4. * (dum1/dum2)
-    return fCG
-def ID(D,WALL):  # array inputs
+    fCG = H / 4. * (((D1/2.)**2 + 2.*(D1/2.)*(D2/2.) + 3.*(D2/2.)**2)/((D1/2.)**2 + (D1/2.) * (D2/2.)+ (D2/2.)**2))
+    return fCG if not is_scalar else (fCG)
+def ID(D,WALL):  # calculates inner diameter - array or scalar inputs
     D = np.asarray(D)
     is_scalar = False if D.ndim>0 else True
     D.shape = (1,)*(1-D.ndim) + D.shape   
@@ -181,9 +184,11 @@ def windPowerLaw(uref,href,alpha,H) :
     return uref*(H/href)**alpha
 def pipeBuoyancy(D,WDEN):
     return pi/4 * D**2 *WDEN 
-def currentSpeed(XNEW,water_depth):
+def currentSpeed(XNEW,water_depth): # dummy linear profile; replace with actual site info if available
     CDEPTH = [0.000, 61.000, 91.000, water_depth]
     CSPEED = [0.570, 0.570, 0.100, 0.100]
+    #CDEPTH = [0.000, 61.000, 91.000, water_depth]
+    #CSPEED = [.51125, 0.51125, 0.15875,0.15875]
     return np.interp(abs(XNEW),CDEPTH,CSPEED)
 def CD(U,D,DEN):
     RE = np.log10(abs(U) * D / DEN)
@@ -210,9 +215,6 @@ def inertialForce(D,CA,L,A,VDOT,DEN):
     if A < 0:
         IF = -IF
     return IF
-
-
-
 def calculateWindCurrentForces (KCGO,VD,N,AR,BH,OD,NSEC,T,LB,MDEN,DRAFT,ELE,ELS,WDEN,ADEN,G,Hs,Ts,WD,WREFS,WREFH,ALPHA): 
     ODT = OD # outer diameter - top
     ODB = np.append(OD[1:NSEC],OD[-1]) # outer diameter - bottom
@@ -265,9 +267,9 @@ def calculateWindCurrentForces (KCGO,VD,N,AR,BH,OD,NSEC,T,LB,MDEN,DRAFT,ELE,ELS,
                         ODW = ODT[i] # assign single variable
                     else: # frustum
                         ODW = ODB[i]*(coneH[i]-HWL)/coneH[i] # assign single variable 
-                        WOD[i] = (ODT[i]+ODW[i])/2  # redefine 
-                        COD[i] = (ODW[i]+ODB[i])/2 # redefine 
-                        SHB[i] = frustumVol(ODW[i],ODB[i],HWL) # redefine 
+                        WOD[i] = (ODT[i]+ODW)/2  # redefine 
+                        COD[i] = (ODW+ODB[i])/2 # redefine 
+                        SHB[i] = frustumVol(ODW,ODB[i],HWL) # redefine 
                         SCG[i] = frustumCG(ODW,ODB[i],HWL) # redefine 
                         KCB[i] = DRAFT + ELE[i] + SCG[i] # redefine 
             
@@ -304,7 +306,7 @@ def calculateWindCurrentForces (KCGO,VD,N,AR,BH,OD,NSEC,T,LB,MDEN,DRAFT,ELE,ELS,
                     SWM[i] = 0.
             RGM[i] = N[i]*(pi*ID(WOD[i],T[i])*AR)*MDEN # ring mass
         else: # last section 
-            # SHM unchanged 
+            SHM[i] = pi*T[i] * (OD[i] - T[i]) * MDEN*LB[i]
             KCG[i] = DRAFT + ELE[i] + LB[i]/2  #redefine
             # SHB already calculated 
             # KCB already calculated 
