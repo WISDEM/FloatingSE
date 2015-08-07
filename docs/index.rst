@@ -1,11 +1,11 @@
-[CodeName]
+FloatingSE
 ==========
 
 .. only:: html
 
-    [Short Description of Code]
+    Internal structural analysis of the spar structure.
 
-    Author: `Your Name <mailto:email@domain.com>`_
+    Author: `Kelly Huang <mailto:yh393@cornell.edu>`_
 
     .. rubric:: Table of Contents
 

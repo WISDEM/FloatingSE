@@ -1,21 +1,23 @@
 Installation
 ------------
 
-.. admonition:: Prerequisites
+.. admonition:: prerequisites
    :class: warning
 
-   C compiler, Fortran compiler, NumPy, SciPy
+	General: NumPy, SciPy, OpenMDAO
 
-Clone the repository at `<https://github.com/WISDEM/RotorSE>`_ or download the releases and uncompress/unpack
-(RotorSE.py-|release|.tar.gz or RotorSE.py-|release|.zip)
+	Supporting python packages: Sphinx, PyOpt
 
-Install RotorSE with the following command.
+Clone the repository at `<https://github.com/WISDEM/FloatingSE>`
+
+
+To install FloatingSE, first activate the OpenMDAO environment and then install with the following command.
 
 .. code-block:: bash
 
-   $ python setup.py install
+   $ plugin install
 
-To check if installation was successful try to import the module
+To check if installation was successful try to import the module from within an activated OpenMDAO environment:
 
 .. code-block:: bash
 
@@ -23,17 +25,12 @@ To check if installation was successful try to import the module
 
 .. code-block:: python
 
-    > import rotorse.rotor
+	> import mooring
+	> import tower_RNA
+	> import spar
 
-or run the unit tests for the gradient checks
-
-.. code-block:: bash
-
-   $ python src/towerse/test/test_rotor_gradients.py
-   $ python src/towerse/test/test_rotoraero_gradients.py
-
-An "OK" signifies that all the tests passed.
+For software issues please use `<https://github.com/WISDEM/FloatingSE/issues>`_.  For functionality and theory related questions and comments please use the NWTC forum for `Systems Engineering Software Questions <https://wind.nrel.gov/forum/wind/viewtopic.php?f=34&t=1002>`_.
 
 .. only:: latex
 
-    An HTML version of this documentation that contains further details and links to the source code is available at `<http://wisdem.github.io/RotorSE>`_
+    An HTML version of this documentation that contains further details and links to the source code is available at `<http://wisdem.github.io/FloatingSE>`_

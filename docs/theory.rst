@@ -3,17 +3,8 @@
 Theory
 ------
 
-.. note::
+The theory for the models in this software are based on the API Bulletin 2U for Stability of Cylindrical Shells and idealistic force-moment equations. The sizing tool requires input from adjacent compoenents, such as rotor and tower mass.
 
-    If you need a call out
-
-Put a description of your theory in this page.  You may need full line math
-
-.. math::
-
-    (a, a^\prime) = f_{fp}(a, a^\prime)
-
-You can reference entires in your bibliography on any of the pages using :cite:`Ning2013A-simple-soluti`, where the BibTeX citation key is used.  The code below will generate your bibliography assuming you have put your references in references.bib.
 
 .. only:: html
 

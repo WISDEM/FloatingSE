@@ -1,107 +1,85 @@
-.. module:: ccblade
+.. _documentation-label:
 
-.. _interfaces-label:
+Documentation
+-------------
 
-Module Documentation
---------------------
+Documentation for FloatingSE
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The main methodology is contained in :ref:`CCBlade <ccblade-class-label>`.  Airfoil data is provided by any object that implements :ref:`AirfoilInterface <airfoil-interface-label>`.  The helper class :ref:`CCAirfoil <ccairfoil-class-label>` is provided as a useful default implementation for AirfoilInterface.  If CCAirfoil is not used, the user must provide an implementation that produces :math:`C^1` continuous output (or else accept non-smooth aerodynamic calculations from CCBlade).  Some of the underlying implementation for CCBlade is written in Fortran for computational efficiency.
+The following inputs and outputs are defined for NREL_CSM_BOS:
 
-.. only:: latex
+.. literalinclude:: ../src/plant_costsse/nrel_csm_bos/nrel_csm_bos.py
+    :language: python
+    :start-after: bos_csm_assembly(Assembly)
+    :end-before: def configure(self)
+    :prepend: class bos_csm_assembly(Assembly):
 
-    An HTML version of this documentaion is available that is better formatted for reading the code documentation and contains hyperlinks to the source code.
+Referenced Balance of Station Cost Modules
+===========================================
+.. module:: plant_costsse.nrel_csm_bos.nrel_csm_bos
+.. class:: bos_csm_component
+.. class:: bos_csm_assembly
 
-.. _airfoil-interface-label:
-
-Airfoil Interface
-^^^^^^^^^^^^^^^^^
-The airfoil objects used in CCBlade need only implement the following evaluate() method.  Although using :ref:`CCAirfoil <ccairfoil-class-label>` for the implementation is recommended, any custom class can be used.
-
-
-.. rubric:: Class Summary:
-
-.. autointerface:: AirfoilInterface
-
-
-
-.. _ccairfoil-class-label:
-
-CCAirfoil Class
-^^^^^^^^^^^^^^^
-CCAirfoil is a helper class used to evaluate airfoil data with a continuously differentiable bivariate spline across the angle of attack and Reynolds number.  The degree of the spline polynomials across the Reynolds number is summarized in the following table (the same applies to the angle of attack although generally, the number of points for the angle of attack is much larger).
-
-.. only:: latex
-
-    TABLE CAPTION:: Degree of spline across Reynolds number.
-
-========= =====================
-len(Re)    degree of spline
-========= =====================
-1            constant
-2            linear
-3            quadratic
-4+           cubic
-========= =====================
-
-
-.. rubric:: Class Summary:
-
-.. only:: latex
-
-    .. autoclass:: CCAirfoil
-        :members:
-
-
-.. only:: html
-
-    .. autoclass:: CCAirfoil
-
-        .. rubric:: Methods
-        .. autosummary::
-            :nosignatures:
-
-            ~CCAirfoil.initFromAerodynFile
-            ~CCAirfoil.evaluate
-
-
-.. autogenerate
-    .. autosummary::
-        :toctree: generated
-
-        ~CCAirfoil.initFromAerodynFile
-        ~CCAirfoil.evaluate
+Referenced PPI Index Models (via commonse.config)
+=================================================
+.. module:: commonse.csmPPI
+.. class:: PPI
 
 
 
+.. currentmodule:: plant_costsse.nrel_csm_opex.nrel_csm_opex
 
-.. _ccblade-class-label:
+Documentation for NREL_CSM_OPEX
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-CCBlade Class
-^^^^^^^^^^^^^
-This class provides aerodynamic analysis of wind turbine rotor blades using BEM theory.  It can compute distributed aerodynamic loads and integrated quantities such as power, thrust, and torque.  An emphasis is placed on convergence robustness and differentiable output so that it can be used with gradient-based optimization.
+The following inputs and outputs are defined for NREL_CSM_OPEX:
 
-.. rubric:: Class Summary:
+.. literalinclude:: ../src/plant_costsse/nrel_csm_opex/nrel_csm_opex.py
+    :language: python
+    :start-after: opex_csm_assembly(Assembly)
+    :end-before: def configure(self)
+    :prepend: class opex_csm_assembly(Assembly):
+
+Referenced Operational Expenditure Modules
+===========================================
+.. module:: plant_costsse.nrel_csm_opex.nrel_csm_opex
+.. class:: opex_csm_component
+.. class:: opex_csm_assembly
+
+Referenced PPI Index Models (via commonse.config)
+=================================================
+.. module:: commonse.csmPPI
+.. class:: PPI
 
 
-.. only:: latex
+.. currentmodule:: plant_costsse.ecn_offshore_opex.ecn_offshore_opex
 
-    .. autoclass:: CCBlade
-        :members:
+Documentation for ECN_Offshore_OPEX
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. only:: html
+The following inputs and outputs are defined for NREL_CSM_OPEX:
 
-    .. autoclass:: CCBlade
+.. literalinclude:: ../src/plant_costsse/ecn_offshore_opex/ecn_offshore_opex.py
+    :language: python
+    :start-after: opex_ecn_assembly(Assembly)
+    :end-before: def __init__(self, ssfile=None)
+    :prepend: class opex_ecn_assembly(Assembly):
 
-        .. rubric:: Methods
-        .. autosummary::
-            :nosignatures:
+Referenced Operational Expenditure Modules
+===========================================
+.. module:: plant_costsse.ecn_offshore_opex.ecn_offshore_opex
+.. class:: opex_ecn_offshore_component
+.. class:: opex_ecn_assembly
 
-            ~CCBlade.distributedAeroLoads
-            ~CCBlade.evaluate
+Supporting Models Including Excel Wrapper (via CommonSE)
+=========================================================
+.. module:: plant_costsse.ecn_offshore_opex.ecnomXLS
+.. class:: ecnomXLS
 
-.. autogenerate
-    .. autosummary::
-        :toctree: generated
+.. module:: commonse.xcel_wrapper
+.. class:: ExcelWrapper
 
-        ~CCBlade.distributedAeroLoads
-        ~CCBlade.evaluate
+Referenced PPI Index Models (via commonse.config)
+=================================================
+.. module:: commonse.csmPPI
+.. class:: PPI
