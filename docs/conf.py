@@ -19,9 +19,9 @@ import sys, os
 sys.path.insert(0, os.path.abspath('.'))
 # sys.path.append(os.path.abspath('exts'))
 
-codeName = u'CCBlade'
-authorName = u'S. Andrew Ning'
-copyright = u'2014, NREL'
+codeName = u'FloatingSE'
+authorName = u'Kelly Huang'
+copyright = u'2015, NREL'
 version = '0.1'
 release = '0.1.0'
 

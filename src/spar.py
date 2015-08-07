@@ -90,6 +90,9 @@ class Spar(Component):
     spar_mass = Float(iotype='out',units='kg',desc='mass of spar')
     ballast_mass = Float(iotype='out',units='kg',desc='ballasts mass')
     system_total_mass = Float(iotype='out',units='kg',desc='total mass of spar system')
+    shell_mass = Float(iotype='out',units='kg',desc='total mass of spar system')
+    bulkhead_mass = Float(iotype='out',units='kg',desc='total mass of spar system')
+    stiffener_mass = Float(iotype='out',units='kg',desc='total mass of spar system')
     def __init__(self):
         super(Spar,self).__init__()
     def execute(self):
@@ -135,15 +138,16 @@ class Spar(Component):
         T = np.array(self.wall_thickness)
         ELE = np.array(self.elevations[1:]) # end elevation
         ELS = np.array(self.elevations[0:-1]) # start elevation
-        for i in range(0,len(OD)):
-            if  ELE[i] >0:
+        NSEC = self.number_of_sections
+        for i in range(0,NSEC+1):
+            if  self.elevations[i] >0:
                 ODTW = OD[i+1]
+        print ODTW
         LB = ELS-ELE # lengths of each section
         DRAFT = abs(min(ELE))
         FB = ELS [0] # freeboard
         BH = self.bulk_head 
         N = np.array(self.number_of_rings)
-        NSEC = self.number_of_sections
         if self.stiffener_curve_fit: # curve fits
             YNA=self.neutral_axis
             D = 0.0029+1.3345977*YNA
@@ -473,5 +477,11 @@ class Spar(Component):
         self.spar_mass = SHRMASS
         self.ballast_mass = PBM + FBM + WBM
         self.system_total_mass = SHRMASS + PBM + FBM + WBM + self.mooring_mass
-        print 'total mass: ', self.system_total_mass
-#------------------------------------------------------------------
+        self.shell_mass = SHMASS 
+        self.bulkhead_mass = BHMASS
+        self.stiffener_mass = RGMASS
+        print 'spar mass: ', self.spar_mass
+        print 'shell mass: ', self.shell_mass
+        print 'bulkhead mass: ', self.bulkhead_mass
+        print 'stiffener mass: ', self.stiffener_mass
+#-----------------------------------------------------------------

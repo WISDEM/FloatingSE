@@ -188,7 +188,7 @@ def currentSpeed(XNEW,water_depth): # dummy linear profile; replace with actual 
     CDEPTH = [0.000, 61.000, 91.000, water_depth]
     CSPEED = [0.570, 0.570, 0.100, 0.100]
     #CDEPTH = [0.000, 61.000, 91.000, water_depth]
-    #CSPEED = [.51125, 0.51125, 0.15875,0.15875]
+    #CSPEED = [.6875, .6875, -.0175,-0.0175]
     return np.interp(abs(XNEW),CDEPTH,CSPEED)
 def CD(U,D,DEN):
     RE = np.log10(abs(U) * D / DEN)
