@@ -2,8 +2,8 @@ from openmdao.main.api import Component, Assembly, convert_units
 from openmdao.main.datatypes.api import Float, Array, Enum, Str, Int, Bool
 from openmdao.lib.drivers.api import COBYLAdriver,SLSQPdriver
 from spar import Spar
-from mooring import Mooring
 from tower_RNA import Tower_RNA
+from mapMooring import MapMooring
 #from spar_discrete import spar_discrete
 import numpy as np
 import time
@@ -24,10 +24,10 @@ class sparAssembly(Assembly):
         """Select component instances."""
         self.add('tower_RNA',Tower_RNA())
         self.add('spar',Spar())
-        self.add('mooring',Mooring())
+        self.add('mapMooring',MapMooring())
 
         """Define iteration hierarchy."""
-        self.driver.workflow.add(['tower_RNA', 'mooring', 'spar'])
+        self.driver.workflow.add(['tower_RNA', 'mapMooring', 'spar'])
         
         """Create a variable in the assembly and connects it to an internal
         component variable. If the variable is used again in a different 
@@ -89,45 +89,44 @@ class sparAssembly(Assembly):
         self.create_passthrough('spar.water_depth','water_depth')
         # self.create_passthrough('spar.stiffener_curve_fit', 'stiffener_curve_fit')
         
-        #mooring connections
-        self.create_passthrough('mooring.fairlead_depth','fairlead_depth')
-        self.connect('spar_elevations',['tower_RNA.spar_elevations','mooring.spar_elevations'])
-        self.connect('spar_outer_diameter','mooring.spar_outer_diameter')
-        self.create_passthrough('mooring.scope_ratio','scope_ratio')
-        self.create_passthrough('mooring.pretension_percent','pretension_percent')
-        self.create_passthrough('mooring.mooring_diameter','mooring_diameter')
-        self.create_passthrough('mooring.number_of_mooring_lines','number_of_mooring_lines')
-        self.connect('water_depth','mooring.water_depth')
-        self.create_passthrough('mooring.mooring_type','mooring_type')
-        self.create_passthrough('mooring.anchor_type','anchor_type')
-        self.create_passthrough('mooring.fairlead_offset_from_shell','fairlead_offset_from_shell')
-        self.create_passthrough('mooring.user_MBL','user_MBL')
-        self.create_passthrough('mooring.user_WML','user_WML')
-        self.create_passthrough('mooring.user_AE_storm','user_AE_storm')
-        self.create_passthrough('mooring.user_MCPL','user_MCPL')
-        self.create_passthrough('mooring.user_anchor_cost','user_anchor_cost')
-        self.create_passthrough('mooring.misc_cost_factor','misc_cost_factor')
-        self.create_passthrough('mooring.number_of_discretizations','number_of_discretizations')
-        self.connect('water_density','mooring.water_density')
+        #mapMooring connections
+        self.create_passthrough('mapMooring.fairlead_depth','fairlead_depth')
+        self.connect('spar_elevations',['tower_RNA.spar_elevations','mapMooring.spar_elevations'])
+        self.connect('spar_outer_diameter','mapMooring.spar_outer_diameter')
+        self.create_passthrough('mapMooring.scope_ratio','scope_ratio')
+        self.create_passthrough('mapMooring.mooring_diameter','mooring_diameter')
+        self.create_passthrough('mapMooring.number_of_mooring_lines','number_of_mooring_lines')
+        self.connect('water_depth','mapMooring.water_depth')
+        self.create_passthrough('mapMooring.mooring_type','mooring_type')
+        self.create_passthrough('mapMooring.anchor_type','anchor_type')
+        self.create_passthrough('mapMooring.fairlead_offset_from_shell','fairlead_offset_from_shell')
+        self.create_passthrough('mapMooring.user_MBL','user_MBL')
+        self.create_passthrough('mapMooring.user_WML','user_WML')
+        self.create_passthrough('mapMooring.user_AE_storm','user_AE_storm')
+        self.create_passthrough('mapMooring.user_MCPL','user_MCPL')
+        self.create_passthrough('mapMooring.user_anchor_cost','user_anchor_cost')
+        self.create_passthrough('mapMooring.misc_cost_factor','misc_cost_factor')
+        self.connect('water_density','mapMooring.water_density')
+        self.connect('gravity','mapMooring.gravity')
+
         
         """Connect outputs to inputs."""
         self.connect('tower_RNA.RNA_keel_to_CG','spar.RNA_keel_to_CG')
         self.connect('tower_RNA.tower_center_of_gravity','spar.tower_center_of_gravity')
         self.connect('tower_RNA.tower_wind_force','spar.tower_wind_force')
         self.connect('tower_RNA.RNA_wind_force','spar.RNA_wind_force')
-        
-        #mooring connections
-        self.connect('mooring.mooring_total_cost','spar.mooring_total_cost')
-        self.connect('mooring.mooring_keel_to_CG','spar.mooring_keel_to_CG')
-        self.connect('mooring.mooring_vertical_load','spar.mooring_vertical_load')
-        self.connect('mooring.mooring_horizontal_stiffness','spar.mooring_horizontal_stiffness')
-        self.connect('mooring.mooring_vertical_stiffness','spar.mooring_vertical_stiffness')
-        self.connect('mooring.sum_forces_x','spar.sum_forces_x')
-        self.connect('mooring.offset_x','spar.offset_x')
-        self.connect('mooring.damaged_mooring','spar.damaged_mooring')
-        self.connect('mooring.intact_mooring','spar.intact_mooring')
-        self.connect('mooring.mooring_mass','spar.mooring_mass')
-        
+
+        #mapMooring connections
+        self.connect('mapMooring.mooring_total_cost','spar.mooring_total_cost')
+        self.connect('mapMooring.mooring_keel_to_CG','spar.mooring_keel_to_CG')
+        self.connect('mapMooring.mooring_vertical_load','spar.mooring_vertical_load')
+        self.connect('mapMooring.mooring_horizontal_stiffness','spar.mooring_horizontal_stiffness')
+        self.connect('mapMooring.mooring_vertical_stiffness','spar.mooring_vertical_stiffness')
+        self.connect('mapMooring.sum_forces_x','spar.sum_forces_x')
+        self.connect('mapMooring.offset_x','spar.offset_x')
+        self.connect('mapMooring.damaged_mooring','spar.damaged_mooring')
+        self.connect('mapMooring.intact_mooring','spar.intact_mooring')
+        self.connect('mapMooring.mooring_mass','spar.mooring_mass')
 
        
         """Design variables by adding a range of validity for certain variables."""
@@ -183,10 +182,12 @@ class sparAssemblyCalculation(sparAssembly):
         """Select component instances."""
         self.add('tower_RNA',Tower_RNA())
         self.add('spar',Spar())
-        self.add('mooring',Mooring())
+        # self.add('mooring',Mooring())
+        self.add('mapMooring',MapMooring())
 
         """Define iteration hierarchy."""
-        self.driver.workflow.add(['tower_RNA', 'mooring', 'spar'])
+        # self.driver.workflow.add(['tower_RNA', 'mooring', 'spar'])
+        self.driver.workflow.add(['tower_RNA', 'mapMooring', 'spar'])
 
         """Create a variable in the assembly and connects it to an internal
         component variable. If the variable is used again in a different 
@@ -248,26 +249,25 @@ class sparAssemblyCalculation(sparAssembly):
         self.create_passthrough('spar.water_depth','water_depth')
         # self.create_passthrough('spar.stiffener_curve_fit', 'stiffener_curve_fit')
 
-        #mooring connections
-        self.create_passthrough('mooring.fairlead_depth','fairlead_depth')
-        self.connect('spar_elevations',['tower_RNA.spar_elevations','mooring.spar_elevations'])
-        self.connect('spar_outer_diameter','mooring.spar_outer_diameter')
-        self.create_passthrough('mooring.scope_ratio','scope_ratio')
-        self.create_passthrough('mooring.pretension_percent','pretension_percent')
-        self.create_passthrough('mooring.mooring_diameter','mooring_diameter')
-        self.create_passthrough('mooring.number_of_mooring_lines','number_of_mooring_lines')
-        self.connect('water_depth','mooring.water_depth')
-        self.create_passthrough('mooring.mooring_type','mooring_type')
-        self.create_passthrough('mooring.anchor_type','anchor_type')
-        self.create_passthrough('mooring.fairlead_offset_from_shell','fairlead_offset_from_shell')
-        self.create_passthrough('mooring.user_MBL','user_MBL')
-        self.create_passthrough('mooring.user_WML','user_WML')
-        self.create_passthrough('mooring.user_AE_storm','user_AE_storm')
-        self.create_passthrough('mooring.user_MCPL','user_MCPL')
-        self.create_passthrough('mooring.user_anchor_cost','user_anchor_cost')
-        self.create_passthrough('mooring.misc_cost_factor','misc_cost_factor')
-        self.create_passthrough('mooring.number_of_discretizations','number_of_discretizations')
-        self.connect('water_density','mooring.water_density')
+        #mapMooring connections
+        self.create_passthrough('mapMooring.fairlead_depth','fairlead_depth')
+        self.connect('spar_elevations',['tower_RNA.spar_elevations','mapMooring.spar_elevations'])
+        self.connect('spar_outer_diameter','mapMooring.spar_outer_diameter')
+        self.create_passthrough('mapMooring.scope_ratio','scope_ratio')
+        self.create_passthrough('mapMooring.mooring_diameter','mooring_diameter')
+        self.create_passthrough('mapMooring.number_of_mooring_lines','number_of_mooring_lines')
+        self.connect('water_depth','mapMooring.water_depth')
+        self.create_passthrough('mapMooring.mooring_type','mooring_type')
+        self.create_passthrough('mapMooring.anchor_type','anchor_type')
+        self.create_passthrough('mapMooring.fairlead_offset_from_shell','fairlead_offset_from_shell')
+        self.create_passthrough('mapMooring.user_MBL','user_MBL')
+        self.create_passthrough('mapMooring.user_WML','user_WML')
+        self.create_passthrough('mapMooring.user_AE_storm','user_AE_storm')
+        self.create_passthrough('mapMooring.user_MCPL','user_MCPL')
+        self.create_passthrough('mapMooring.user_anchor_cost','user_anchor_cost')
+        self.create_passthrough('mapMooring.misc_cost_factor','misc_cost_factor')
+        self.connect('water_density','mapMooring.water_density')
+        self.connect('gravity','mapMooring.gravity')
 
         
         """Connect outputs to inputs."""
@@ -276,17 +276,17 @@ class sparAssemblyCalculation(sparAssembly):
         self.connect('tower_RNA.tower_wind_force','spar.tower_wind_force')
         self.connect('tower_RNA.RNA_wind_force','spar.RNA_wind_force')
         
-        #mooring connections
-        self.connect('mooring.mooring_total_cost','spar.mooring_total_cost')
-        self.connect('mooring.mooring_keel_to_CG','spar.mooring_keel_to_CG')
-        self.connect('mooring.mooring_vertical_load','spar.mooring_vertical_load')
-        self.connect('mooring.mooring_horizontal_stiffness','spar.mooring_horizontal_stiffness')
-        self.connect('mooring.mooring_vertical_stiffness','spar.mooring_vertical_stiffness')
-        self.connect('mooring.sum_forces_x','spar.sum_forces_x')
-        self.connect('mooring.offset_x','spar.offset_x')
-        self.connect('mooring.damaged_mooring','spar.damaged_mooring')
-        self.connect('mooring.intact_mooring','spar.intact_mooring')
-        self.connect('mooring.mooring_mass','spar.mooring_mass')
+        #mapMooring connections
+        self.connect('mapMooring.mooring_total_cost','spar.mooring_total_cost')
+        self.connect('mapMooring.mooring_keel_to_CG','spar.mooring_keel_to_CG')
+        self.connect('mapMooring.mooring_vertical_load','spar.mooring_vertical_load')
+        self.connect('mapMooring.mooring_horizontal_stiffness','spar.mooring_horizontal_stiffness')
+        self.connect('mapMooring.mooring_vertical_stiffness','spar.mooring_vertical_stiffness')
+        self.connect('mapMooring.sum_forces_x','spar.sum_forces_x')
+        self.connect('mapMooring.offset_x','spar.offset_x')
+        self.connect('mapMooring.damaged_mooring','spar.damaged_mooring')
+        self.connect('mapMooring.intact_mooring','spar.intact_mooring')
+        self.connect('mapMooring.mooring_mass','spar.mooring_mass')
 
 
 def example_218WD_3MW():

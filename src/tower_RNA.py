@@ -5,17 +5,17 @@ from scipy.optimize import fmin, minimize
 from sympy.solvers import solve
 from sympy import Symbol
 import math
-from spar_utils import windPowerLaw,dragForce,CD,windDrag,thrust_table
+from utils import windPowerLaw,dragForce,CD,windDrag,thrust_table
 pi=np.pi
 
 class Tower_RNA(Component):
-    # environmental inputs
-    air_density = Float(1.198,iotype='in', units='kg/m**3', desc='density of air') 
+    """Environmental factor inputs."""
+    air_density = Float(1.198, iotype='in', units='kg/m**3', desc='density of air') 
     wind_reference_speed = Float(iotype='in', units='m/s', desc='reference wind speed')
     wind_reference_height = Float(iotype='in', units='m', desc='reference height')
-    gust_factor = Float(1.0,iotype='in', desc='gust factor')
+    gust_factor = Float(1.0, iotype='in', desc='gust factor')
     alpha = Float(iotype='in', desc='power law exponent')
-    # inputs
+    """Additional inputs."""
     base_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower base')
     top_outer_diameter = Float(iotype='in',units='m',desc='outer diameter of tower top')
     length = Float(iotype='in',units='m',desc='tower length')
@@ -24,10 +24,10 @@ class Tower_RNA(Component):
     rotor_diameter = Float(iotype='in', units='m',desc='rotor diameter')
     RNA_center_of_gravity_x = Float(iotype='in', units='m',desc='rotor center of gravity') 
     RNA_center_of_gravity_y = Float(iotype='in', units='m',desc='rotor center of gravity') 
-    cut_out_speed = Float(25.,iotype='in', units='m/s',desc='cut-out speed of turbine') 
+    cut_out_speed = Float(25.0, iotype='in', units='m/s',desc='cut-out speed of turbine') 
     tower_mass = Float(iotype='in', units='kg',desc='tower mass') 
     RNA_mass = Float(iotype='in', units='kg',desc='RNA mass') 
-    # outputs
+    """Outputs."""
     tower_center_of_gravity = Float(iotype='out',units='m',desc='tower center of gravity')
     tower_keel_to_CG = Float(iotype='out',units='m',desc='keel to tower center of gravity')
     tower_wind_force = Float(iotype='out',units='N',desc='wind force on tower')
@@ -36,8 +36,8 @@ class Tower_RNA(Component):
     
     def __init__(self):
         super(Tower_RNA,self).__init__()
-    def execute(self):
-       
+    
+    def execute(self):   
         # tower
         FB = self.spar_elevations[0]
         TBOD = self.base_outer_diameter

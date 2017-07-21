@@ -5,7 +5,7 @@ from spar import Spar
 #from spar_discrete import spar_discrete
 import numpy as np
 import time
-from spar_utils import filtered_stiffeners_table, full_stiffeners_table
+from utils import filtered_stiffeners_table, full_stiffeners_table
 
 class optimizationSpar(Assembly):
     
