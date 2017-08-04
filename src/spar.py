@@ -6,24 +6,21 @@ import utils
 from constants import gravity
 from commonse.WindWaveDrag import cylinderDrag
 
-def interp1d_local(y0, y1, X, x):
-    return (y0 + (y1-y0) * (x/X))
+def frustumVol_radius(r1, r2, h):
+    return ( np.pi * (h/3.0) * (r1*r1 + r2*r2 + r1*r2) )
+def frustumVol_diameter(diam1, diam2, h):
+    return frustumVol_radius(0.5*diam1, 0.5*diam2, h)
 
-def frustumVol(diam1, diam2, h): # calculates frustum volume - array or scalar inputs
-    r1 = 0.5*diam1
-    r2 = 0.5*diam2
-    return (np.pi * (h / 3) * (r1**2 + r1*r2 + r2**2))
-
-def frustumCG(diam1, diam2, h):  # calculates frustum center of gravity - array or scalar inputs
+def frustumCG_radius(r1, r2, h)
     # NOTE THIS IS FOR A SOLID FRUSTUM, NOT A SHELL
-    r1 = 0.5*diam1
-    r2 = 0.5*diam2
     return (0.25*h * (r1**2 + 2.*r1*r2 + 3.*r2**2) / (r1**2 + r1*r2 + r2**2))
+def frustumCG_diameter(diam1, diam2, h)
+    return frustumCG_radius(0.5*diam1, 0.5*diam2, h)
 
-def frustumShellCG(diam1, diam2, h):  # calculates frustum center of gravity - array or scalar inputs
-    r1 = 0.5*diam1
-    r2 = 0.5*diam2
+def frustumShellCG_radius(r1, r2, h):
     return (h/3 * (r1 + 2.*r2) / (r1 + r2))
+def frustumShellCG_diameter(diam1, diam2, h)
+    return frustumShellCG_radius(0.5*diam1, 0.5*diam2, h)
 
 def cylinder_drag_per_length(U, r, rho, mu):
     # dynamic pressure
@@ -100,11 +97,7 @@ def compute_bulkhead_mass(params):
 
     # Zero out nodes where there is no bulkhead
     m_bulk[np.logical_not(bulkheadTF)] = 0.0
-
-    # Assign each bulkhead to a section
-    m_bulk_section      = m_bulk[:-1]
-    m_bulk_section[-1] += m_bulk[-1]
-    return m_bulk_section
+    return m_bulk
 
 
 def compute_shell_mass(params):
@@ -160,9 +153,6 @@ def compute_stiffener_mass(params):
     # Number of stiffener rings per section (height of section divided by spacing)
     nring_per_section = h_section / L_stiffener
     return (nring_per_section*m_ring_section)
-
-def frustumVol_radius(r1, r2, h):
-    return ( np.pi * (h/3.0) * (r1*r1 + r2*r2 + r1*r2) )
 
 def TBeamProperties(baseHeight, baseThickness, flangeWidth, flangeThickness):
     '''
@@ -249,25 +239,248 @@ class Spar(Component):
 
         
     def solve_nonlinear(self, params, unknowns, resids):
-        # Compute total mass of spar substructure
-        self.compute_mass(params, unknowns)
+        # Set geometry of design in coordinate system with z=0 at waterline
+        self.set_geometry(params, unknowns)
 
-        # Stability in terms of can the spar's buyouncy support the whole structure
-        # Also computers center of bouyancy
-        self.compute_bouyancy(params, unknowns)
+        # Balance the design by adding ballast to achieve desired draft and freeboard heights
+        # This requires a full mass tally as well.
+        # Compute the CG, CB, and metacentric heights- use these for a static stability check
+        self.balance_spar(params, unknowns)
 
-        # Static stability in that the CG should be below the Center of Bouyancy
-        # This first computes the CG
-        self.compute_static_stability(params, unknowns)
-        
-        # Preliminaries
-        self.compute_pressure(params)
+        # Sum all forces and moments on the sytem to determine offsets and heel angles
+        self.compute_forces_moments(params)
         
         # Check that axial and hoop loads don't exceed limits
         self.check_stresses(params, unknowns)
 
         # Compute costs of spar substructure
         self.compute_cost(params, unknowns)
+
+
+
+    def set_geometry(self, params):
+        # Unpack variables
+        R_od             = params['outer_diameter']
+        twall            = params['wall_thickness']
+        h_section        = params['section_height']
+        draft            = params['draft'] # length of spar under water
+
+        # With waterline at z=0, set the z-position of section nodes
+        self.z_nodes = np.r_[0.0, np.cumsum(h_section)] - draft
+
+        # With waterline at z=0, set the z-position of section centroids
+        t_wall_ave     = 0.5*(t_wall[1:] + t_wall[:-1])
+        cm_section     = frustumShellCM_radius(R_od[:-1], R_od[1:], t_wall_ave, h_section)
+        self.z_section = self.z_nodes[:-1] + cm_section
+
+        unknowns['freeboard'] = self.z_nodes[-1]
+        
+    def compute_spar_mass_cg(self, params, unknowns):
+        '''
+        This function computes the spar mass by section from its components
+        '''
+        # Unpack variables
+        coeff        = params['spar_mass_factor']
+
+        m_spar = 0.0
+        z_cg = 0.0
+        
+        # Find mass of all of the sub-components of the spar
+        # Masses assumed to be focused at section centroids
+        m_shell     = compute_shell_mass(params)
+        m_stiffener = compute_stiffener_mass(params)
+        m_spar     += (m_shell + m_stifener).sum()
+        z_cg       += np.dot(m_shell+m_stiffener, self.z_section)
+
+        # Masses assumed to be centered at nodes
+        m_bulkhead  = compute_bulkhead_mass(params)
+        m_spar     += m_bulkhead.sum()
+        z_cg       += np.dot(m_bulkhead, self.z_nodes)
+
+        # Account for components not explicitly calculated here
+        m_spar     *= coeff
+
+        # Compute CG position of the spar
+        z_cg       *= coeff / m_spar
+
+        # Apportion every mass to a section for buckling stress computation later
+        self.section_mass = coeff*(m_shell + m_stifener + m_bulkhead[:-1])
+        self.section_mass[-1] += coeff*m_bulkhead[-1])
+        
+        # Store outputs addressed so far
+        unknowns['spar_mass']         = m_spar
+        unknowns['shell_mass']        = m_shell.sum()
+        unknowns['stiffener_mass']    = m_stiffener.sum()
+
+        # Return total spar mass and position of spar cg
+        return m_spar, z_cg
+        
+    def balance_spar(self, params, unknowns):
+        # Unpack variables
+        R_od             = params['outer_diameter']
+        twall            = params['wall_thickness']
+        h_section        = params['section_height']
+        rho_water        = params['water_density']
+        h_ballast_perm   = params['permanent_ballast_height']
+        h_ballast_fix    = params['fixed_ballast_height']
+        rho_ballast_perm = params['permanent_ballast_density']
+        rho_ballast_fix  = params['fixed_ballast_density']
+        m_tower          = params['tower_mass']
+        tower_cg         = params['tower_center_of_gravity']
+        m_rna            = params['rna_mass']
+        rna_cg           = params['rna_center_of_gravity'] # From base of tower
+        m_mooring        = params['mooring_mass']
+
+        # Geometry of the spar in our coordinate system (z=0 at waterline)
+        z_freeboard = self.z_nodes[-1]
+        z_draft     = self.z_nodes[0]
+
+        # Initialize counters
+        m_system = 0.0
+        z_cg     = 0.0
+
+        # Add in contributions from the spar
+        m_spar, spar_cg = self_compute_spar_mass_cg(params, unknowns)
+        m_system       += m_spar
+        z_cg           += m_spar * spar_cg
+
+        # Add in fixed and total ballast contributions
+        # Assume they are bottled in cylinders a the keel of the spar- first the permanent then the fixed
+        baseArea       = np.pi * (R_od[0] - t_wall[0])**2
+        V_ballast_perm = baseArea * h_ballast_perm
+        V_ballast_fix  = baseArea * h_ballast_fix
+        m_ballast_perm = rho_ballast_perm * V_ballast_perm
+        m_ballast_fix  = rho_ballast_fix  * V_ballast_fix
+        z_ballast_perm = 0.5*h_ballast_perm + z_draft
+        z_ballast_fix  = 0.5*h_ballast_fix  + z_draft + h_ballast_perm
+        m_system      += m_ballast_perm + m_ballast_fix
+        z_cg          += m_ballast_perm*z_ballast_perm + m_ballast_fix*z_ballast_fix
+
+        # Put tower and rna cg in our coordinate system for CG calculations
+        tower_cg += z_freeboard
+        rna_cg   += z_freeboard
+        m_turbine = m_tower + m_rna
+        z_cg     += m_tower*tower_cg + m_rna*rna_cg
+
+        # Compute volume of each section and mass of displaced water by section
+        # Find the radius at the waterline so that we can compute the submerged volume as a sum of frustum sections
+        r_waterline = np.interp(0.0, self.z_nodes, R_od)
+        z_under = np.r_[self.z_nodes[self.z_nodes < 0.0], 0.0]
+        r_under = np.r_[R_od[self.z_nodes < 0.0], r_waterline]
+        V_under = frustumVol_radius(r_under[:-1], r_under[1:], np.diff(z_under))
+        m_displaced = rho_water * V_under.sum()
+
+        # Compute Center of Bouyancy in z-coordinates (0=waterline)
+        z_cg_under = frustumCG_radius(r_under[:-1], r_under[1:], np.diff(z_under))
+        self.center_bouyancy = np.dot(V_under, z_cg_under) / V_under.sum()
+        self.bouyancy_force  = m_displaced * gravity
+        
+        # Add in water ballast to ballace the system
+        m_ballast_water = m_displaced - m_system - m_turbine - Fvert_mooring/gravity
+        h_ballast_water = m_ballast_water / rho_water / baseArea
+        z_ballast_water = 0.5*h_ballast_water + z_draft + h_ballast_perm + h_ballast_fix
+        m_system       += m_ballast_water
+        z_cg           += m_ballast_water * z_ballast_water
+
+        # Compute the distance from the center of bouyancy to the metacentre (BM is naval architecture)
+        # BM = Iw / V where V is the displacement volume (just computed)
+        # Iw is the moment of inertia of the water-plane cross section about the heel axis (without mass)
+        # For a spar, we assume this is just the I of a ring about x or y
+        # See https://en.wikipedia.org/wiki/Metacentric_height
+        # https://en.wikipedia.org/wiki/List_of_moments_of_inertia
+        # and http://farside.ph.utexas.edu/teaching/336L/Fluidhtml/node30.html
+        Iwater                 = 0.25 * np.pi * r_waterline**4.0 
+        bouyancy_metacentre_BM = Iwater / V_under.sum()
+        self.metacentre        = bouyancy_metacentre_BM + self.center_bouyancy
+        
+        # Add in mooring mass to total substruture mass
+        # Note that the contributions to the effective system CG is the "mass" of the downward pull
+        # Note that we're doing this after the ballast computation otherwise we would be
+        # double counting the mooring mass with the mooring vertical load force
+        m_system   += m_mooring
+        z_cg       += Fvert_mooring/gravity * (mooring_keel_to_CG + z_draft)
+
+        # TODO: SHOULD MOORING MASS BE IN THE DENOMINATOR?  IN SYSTEM MASS?
+        self.system_cg = z_cg / (m_system + m_turbine)
+
+        # Compute metacentric height: the distance from the CG to the metacentre
+        self.metacentric_height = self.metacentre - self.system_cg
+
+        # Store in output dictionary and class variable
+        unknowns['ballast_mass']         = m_water_ballast
+        unknowns['water_ballast_height'] = h_water_ballast # All ballast heights must be less than draft
+        unknowns['system_total_mass']    = m_system # Does not include weight of turbine- MOORING?
+        
+        # Measure static stability:
+        # 1. Center of bouyancy should be above CG
+        # 2. Metacentric height should be positive
+        unknown['static_stability'  ] = self.system_cg < self.center_bouyancy
+        unknown['metacentric_height'] = self.metacentric_height
+        
+
+    def compute_forces_moments(self, params):
+        # Unpack variables
+        rhoWater = params['water_density']
+        rhoAir   = params['air_density']
+        muWater  = params['water_viscosity']
+        muAir    = params['air_viscosity']
+        Dwater   = params['water_depth']
+        hwave    = params['wave_height']
+        Twave    = params['wave_period']
+        uref     = params['wind_reference_speed']
+        href     = params['wind_reference_height']
+        alpha    = params['shear_coefficient']
+        Cm       = params['morison_mass_coefficient']
+        Ftower   = params['tower_wind_force']
+        tower_cg = params['tower_center_of_gravity'] # from base of tower
+        rna_mass = params['rna_mass']
+        Frna     = params['rna_wind_force'] # Drag or thrust?
+        rna_cg   = params['rna_center_of_gravity'] # z-direction From base of tower
+        rna_cg_x = params['rna_center_of_gravity_x'] # x-direction from centerline
+        
+        npts = 100
+        
+        # Spar contribution
+        zpts = np.linspace(self.z_nodes[0], self.z_nodes[-1], npts)
+        rho = rhoWater * np.ones(zpts.shape)
+        mu  = muWater  * np.ones(zpts.shape)
+        rho[zpts>=0.0] = rhoAir
+        mu[ zpts>=0.0] = muAir
+        U, A, pressure = linear_waves(zpts, Dwater, hwave, Twave, rho, np.zeros(zpts.shape))
+        # In air, set velocity to air speed instead
+        A[zpts>=0.0] = 0.0
+        U[zpts>=0.0] = windPowerLaw(uref, href, alpha, zpts[zpts>=0])
+        # Radius along the spar
+        r = np.interp(zpts, self.z_nodes, R_od)
+        # Get forces along spar- good for water or wind with our vectorized inputs
+        F = cylinder_forces_per_length(U, A, r, rho, mu, Cm)
+        # Compute pitch moments from spar forces about CG
+        M = np.trapz((zpts-self.system_cg)*F, zpts)
+
+        # Tower contribution
+        F += Ftower
+        M += Ftower*(tower_cg + self.freeboard)
+
+        # RNA contribution: wind force
+        F += Frna
+        M += Frna*(rna_cg + self.freeboard)
+
+        # RNA contribution: moment due to offset mass
+        # Note this is in the opposite moment direction as the wind forces
+        # TODO: WHAT ABOUT THRUST?
+        M -= rna_mass*gravity*rna_cg_x
+
+        # Compute restoring moment under small angle assumptions
+        M_restoring = self.metacentric_height * self.bouyancy_force
+        
+        # Comput heel angle
+        unknown['heel_angle'] = np.rad2deg( M / M_restoring )
+
+        # Now compute offsets from the applied force
+        # First use added mass (the mass of the water that must be displaced in movement)
+        # http://www.iaea.org/inis/collection/NCLCollectionStore/_Public/09/411/9411273.pdf
+        mass_add_surge = rhoWater * np.pi * R_od.max() * self.draft
+        # TODO!!
 
 
     def check_stresses(self, params, unknowns):
@@ -301,14 +514,11 @@ class Spar(Component):
         area_stiff, y_cg, Ixx, Iyy = TBeamProperties(h_web, t_web, h_flange, t_flange)
         t_stiff  = area_stiff / h_web # effective thickness(width) of stiffener section
         
-        # Compute mass of each section
-        section_mass = self.compute_spar_mass(params)
-
         # APPLIED STRESSES (Section 11 of API Bulletin 2U)
         # Applied axial stresss at each section node 
         axial_load = np.ones((nsections,)) * (params['tower_mass'] + params['RNA_mass'])
         # Add in weight of sections above it
-        axial_load[1:] += np.cumsum( section_mass[:-1] )
+        axial_load[1:] += np.cumsum( self.section_mass[:-1] )
         # Divide by shell cross sectional area to get stress
         axial_stress = axial_load / (2 * np.pi * R * t_wall)
         
@@ -433,204 +643,11 @@ class Spar(Component):
         unknown['extern_local_unity']   = hoop_stress_between / extern_limit_local_FthL
         unknown['extern_general_unity'] = hoop_stress_between / extern_limit_general_FthG
 
-
-    
-        
-    def compute_mass(self, params, unknowns):
-        '''
-        This function computes the spar mass by section from its components
-        '''
-        # Unpack variables
-        coeff        = params['spar_mass_factor']
-
-        # Find mass of all of the sub-components of the spar
-        m_shell     = compute_shell_mass(params)
-        m_stiffener = compute_stiffener_mass(params)
-        m_bulkhead  = compute_bulkhead_mass(params)
-        m_spar      = coeff*(m_shell + m_stiffener + m_bulkhead)
-        # TODO: BALLAST
-        m_ballast   = compute_ballast_mass(params)
-        m_spar     += m_ballast
-        # TODO: MOORING
-        m_mooring   = params['mooring_mass']
-        # Add up all contributions (this is still by section)
-        m_system    = m_spar.sum() + m_ballast.sum() + m_mooring
-
-        # Store in output dictionary and class variable
-        unknowns['spar_mass']         = m_spar.sum()
-        unknowns['ballas_mass']       = m_ballast.sum()
-        unknowns['shell_mass']        = m_shell.sum()
-        unknowns['stiffener_mass']    = m_stiffener.sum()
-        unknowns['system_total_mass'] = m_system
-        self.system_mass = m_system
-        self.spar_mass   = m_spar
-
-    
-    def compute_bouyancy(self, params, unknowns):
-        # Unpack variables
-        R_od         = params['outer_diameter']
-        twall        = params['wall_thickness']
-        h_section    = params['section_height']
-        rho_water    = params['water_density']
-        
-        # Mass of the turbine is tower plus RNA plus spar substructure
-        m_turbine = (params['tower_mass'] + params['RNA_mass'])
-        m_total   = m_turbine + self.system_mass.sum()
-
-        # Compute volume of each section and mass of displaced water by section
-        V_section   = frustumVol_radius(R_od[:-1], R_od[1:], h_section)
-        m_displaced = rho_water * V_section
-
-        # Compute the bouyancy force as a cumulative sum starting from the keel on up
-        total_bouyancy = np.r_[0.0, np.cumsum(m_displaced)]
-        # Find the section where the bouyancy force equals the weight- the exact point will be the waterline
-        iSection       = np.argmax(total_bouyancy > m_total)
-        # If the spar cannot hold the turbine, then iSection=0
-        # We set freeboard = 0 to that the constraint freeboard>0 will be violated
-        if iSection == 0: unknown['freeboard'] = 0.0
-
-        # Have to now solve exactly where in this section is the waterline
-        # Start with the remaining mass budget that must be supported
-        m_remain = m_total - total_bouyancy[iSection-1]
-        # Define a function that takes in the height local to this section and returns the bouyancy budget
-        def solve_water_line(x):
-            # Section radius as a function of height
-            r = interp1d_local(R_od[iSection-1], R_od[iSection], h_section[iSection], x)
-            return (rho_water*frustumVol_radius(R_od[iSection-1], r, x) - m_remain)
-        # Solve this equation for the relative height in this section
-        z_local = brentq(solve_water_line, 0.0, H)
-        z_temp = np.interp(m_total, total_bouyancy, np.r_[0.0, np.cumsum(h_section)])
-        print z_local, z_temp
-        
-        # Get cumulative height of spar along sections (keel is first node, bottom of first section)
-        height_sum     = np.cumsum(h_section)
-        # The draft is the whole sections below water and the
-        # fractional piece of the water-line section just computerd
-        self.draft     = height_sum[iSection-1] + z_local
-        # Now that we know the draft, we can find the z-position of all the section nodes (keel is first node)
-        self.z_nodes   = np.r_[0, height_sum] - self.draft
-        # The spar length above the water line is the z-position of the top most node
-        self.freeboard = self.z_nodes[-1]
-        unknown['freeboard'] = self.freeboard
-
-        # Now compute center of bouyancy- the center of mass of the displaced volume
-        t_wall_ave = 0.5*(t_wall[1:] + t_wall[:-1])
-        self.cm_section = frustumShellCM_radius(R_od[:-1], R_od[1:], t_wall_ave, h_section)
-        # Convert local CM section heights to absolute z-position
-        self.cm_section += self.z_nodes[:-1]
-        # Set the volumes of every section under water
-        r_od_waterline = interp1d_local(R_od[iSection-1], R_od[iSection], h_section[iSection], z_local)
-        V_section[iSection] = frustumVol_radius(R_od[iSection-1], r_od_waterline, z_local)
-        V_section[(iSection+1):] = 0.0
-        # Compute Center of Bouyancy in z-coordinates (0=waterline)
-        self.center_bouyancy = np.dot(V_section, cm_section) / V_section.sum()
-        self.bouyancy_force  = rho_water * V_section.sum() * gravity
-
-        # Compute the distance from the center of bouyancy to the metacentre (BM is naval architecture)
-        # BM = Iw / V where V is the displacement volume (just computed)
-        # Iw is the moment of inertia of the water-plane cross section about the heel axis (without mass)
-        # For a spar, we assume this is just the I of a ring about x or y
-        # See https://en.wikipedia.org/wiki/Metacentric_height
-        # https://en.wikipedia.org/wiki/List_of_moments_of_inertia
-        # and http://farside.ph.utexas.edu/teaching/336L/Fluidhtml/node30.html
-        t_wall_waterline       = interp1d_local(t_wall[iSection-1], t_wall[iSection], h_section[iSection], z_local)
-        r_waterline            = r_od_waterline - 0.5*t_wall_waterline
-        Iwater                 = 0.25 * np.pi * r_waterline**4.0 
-        bouyancy_metacentre_BM = Iwater / V_section.sum()
-        self.metacentre = bouyancy_metacentre_BM + self.center_bouyancy
-        
-
-    def compute_static_stability(self, params, unknowns):
-        # Unpack variables
-        R_od         = params['outer_diameter']
-        tower_mass   = params['tower_mass']
-        tower_cg     = params['tower_center_of_gravity']
-        rna_mass     = params['rna_mass']
-        rna_cg       = params['rna_center_of_gravity'] # From base of tower
-
-        # Put tower and rna cg in our coordinate system
-        tower_cg += self.freeboard
-        rna_cg   += self.freeboard
-        
-        # Compute CG
-        # TODO: SHOULD THIS INCLUDE MOORING?
-        self.system_cg = ( (np.dot(self.cm_section, self.spar_mass) + tower_mass*tower_cg + rna_mass*rna_cg) /
-                           (self.spar_mass.sum() + tower_mass + rna_mass) )
-
-        # Compute metacentric height: the distance from the CG to the metacentre
-        self.metacentric_height = self.metacentre - self.system_cg
-        
-        # Measure static stability:
-        # 1. Center of bouyancy should be above CG
-        # 2. Metacentric height should be positive
-        unknown['static_stability'  ] = self.system_cg < self.center_bouyancy
-        unknown['metacentric_height'] = self.metacentric_height
-        
-
-    def compute_forces_moments(self, params):
-        # Unpack variables
-        rhoWater = params['water_density']
-        rhoAir   = params['air_density']
-        muWater  = params['water_viscosity']
-        muAir    = params['air_viscosity']
-        Dwater   = params['water_depth']
-        hwave    = params['wave_height']
-        Twave    = params['wave_period']
-        uref     = params['wind_reference_speed']
-        href     = params['wind_reference_height']
-        alpha    = params['shear_coefficient']
-        Cm       = params['morison_mass_coefficient']
-        Ftower   = params['tower_wind_force']
-        tower_cg = params['tower_center_of_gravity'] # from base of tower
-        rna_mass = params['rna_mass']
-        Frna     = params['rna_wind_force'] # Drag or thrust?
-        rna_cg   = params['rna_center_of_gravity'] # z-direction From base of tower
-        rna_cg_x = params['rna_center_of_gravity_x'] # x-direction from centerline
-        
-        npts = 100
-        
-        # Spar contribution
-        zpts = np.linspace(self.z_nodes[0], self.z_nodes[-1], npts)
-        rho = rhoWater * np.ones(zpts.shape)
-        mu  = muWater  * np.ones(zpts.shape)
-        rho[zpts>=0.0] = rhoAir
-        mu[ zpts>=0.0] = muAir
-        U, A, pressure = linear_waves(zpts, Dwater, hwave, Twave, rho, np.zeros(zpts.shape))
-        # In air, set velocity to air speed instead
-        A[zpts>=0.0] = 0.0
-        U[zpts>=0.0] = windPowerLaw(uref, href, alpha, zpts[zpts>=0])
-        # Radius along the spar
-        r = np.interp(zpts, self.z_nodes, R_od)
-        # Get forces along spar- good for water or wind with our vectorized inputs
-        F = cylinder_forces_per_length(U, A, r, rho, mu, Cm)
-        # Compute pitch moments from spar forces about CG
-        M = np.trapz((zpts-self.system_cg)*F, zpts)
-
-        # Tower contribution
-        F += Ftower
-        M += Ftower*(tower_cg + self.freeboard)
-
-        # RNA contribution: wind force
-        F += Frna
-        M += Frna*(rna_cg + self.freeboard)
-
-        # RNA contribution: moment due to offset mass
-        # Note this is in the opposite moment direction as the wind forces
-        # TODO: WHAT ABOUT THRUST?
-        M -= rna_mass*gravity*rna_cg_x
-
-        # Compute restoring moment under small angle assumptions
-        M_restoring = self.metacentric_height * self.bouyancy_force
-        
-        # Comput heel angle
-        unknown['heel_angle'] = np.rad2deg( M / M_restoring )
-
-        # Now compute offsets from the applied force
-        # First use added mass (the mass of the water that must be displaced in movement)
-        # http://www.iaea.org/inis/collection/NCLCollectionStore/_Public/09/411/9411273.pdf
-        mass_add_surge = rhoWater * np.pi * R_od.max() * self.draft
-        # TODO!!
         
     def compute_cost(self, params, unknowns):
-        pass
+        # Unpack variables
+        cost_straight_col = params['straight_col_cost']
+        cost_tapered_col  = params['tapered_col_cost']
+        cost_outfitting   = params['outfitting_cost']
+        cost_ballast      = params['ballast_cost']
         
