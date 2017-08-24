@@ -23,12 +23,17 @@ import sys
 from ctypes import *
 import os
 
-
-class Map(object):
+from sys import platform
+if platform == "linux" or platform == "linux2":
+    maplib = libmap-1.20.10.so
+elif platform == "darwin":
+    maplib = libmap-1.20.10.dylib
+elif platform == "win32":
+    maplib = map_x64.dll
+    
+class MapAPI(object):
     """A collection of methods for the MAP++ program"""
-    lib = cdll.LoadLibrary("MAP_Win32.dll")
-    # lib = cdll.LoadLibrary('../MAP/osx/libmap-1.20.10.dylib')
-
+    lib = cdll.LoadLibrary(maplib)
 
     # these are the fortran derived types created by the FAST registry.
     f_type_init = None

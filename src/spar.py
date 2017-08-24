@@ -622,6 +622,7 @@ class Spar(Component):
         
         # Design variables
         self.add_param('freeboard', val=25.0, units='m', desc='Length of spar above water line')
+        self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('section_height', val=np.zeros((3,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
         self.add_param('outer_radius', val=np.zeros((4,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('wall_thickness', val=np.zeros((4,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
@@ -691,7 +692,7 @@ class Spar(Component):
         self.add_output('offset_surge', val=0.0, units='m', desc='maximum surge offset')
         self.add_output('heel_angle', val=0.0, units='deg', desc='static angle of heel for turbine and spar substructure')
         
-        # TODO: Constraints draft<depth, draft>0, bulkhead keep in ballast?, R_od_top=tower base diam?, unity checks, compactness checks, heel<10 extreme, heel<6 ordinary, static_stability, metacentric, water_ballast_height>0, surge<10%depth, heave<input (will be zero)
+        # TODO: Constraints draft<depth, draft>0, bulkhead keep in ballast?, R_od_top=tower base diam?, unity checks, compactness checks, heel<10 extreme, heel<6 ordinary, static_stability, metacentric, water_ballast_height>0, surge<10%depth, heave<input (will be zero), mooring stress@max surge<80%breaking limit, pass spar radius at fairlead
         
         
     def solve_nonlinear(self, params, unknowns, resids):
