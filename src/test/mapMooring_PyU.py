@@ -75,9 +75,7 @@ class TestMapMooring(unittest.TestCase):
         self.params['anchor_type'] = 'pile'
         self.params['max_offset'] = 10.0
 
-        self.params['mooring_cost_rate'] = 1.5
-        self.params['anchor_cost_rate'] = 2.0
-        self.params['misc_cost_factor'] = 10.0
+        self.params['mooring_cost_rate'] = 1.1
         
         self.set_geometry()
 

@@ -3,6 +3,7 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import spar
+import sparGeometry
 import commonse.Frustum as frustum
 
 from constants import gravity as g
@@ -20,13 +21,14 @@ class TestSpar(unittest.TestCase):
         self.params['section_height'] = np.array([20.0, 30.0])
         self.params['freeboard'] = 15.0
         self.params['fairlead'] = 10.0
+        self.params['fairlead_offset_from_shell'] = 0.0
         
         self.params['material_density'] = 5.0
         self.params['bulkhead_mass_factor'] = 1.5
         self.params['shell_mass_factor'] = 1.5
         self.params['ring_mass_factor'] = 1.25
         self.params['spar_mass_factor'] = 1.1
-        self.params['outfitting_mass_factor'] = 0.05
+        self.params['outfitting_mass_fraction'] = 0.05
 
         self.params['stiffener_web_thickness'] = np.array([0.5, 0.5])
         self.params['stiffener_flange_thickness'] = np.array([0.3, 0.3])
@@ -40,7 +42,7 @@ class TestSpar(unittest.TestCase):
         self.params['mooring_mass'] = 50.0
         self.params['mooring_vertical_load'] = 25.0
         self.params['mooring_horizontal_stiffness'] = 1e5
-        self.params['mooring_total_cost'] = 1e4
+        self.params['mooring_cost'] = 1e4
 
         self.params['ballast_cost_rate'] = 10.0
         self.params['tapered_col_cost_rate'] = 100.0
@@ -66,13 +68,19 @@ class TestSpar(unittest.TestCase):
         self.params['rna_center_of_gravity'] = 15.0
         self.params['rna_center_of_gravity_x'] = 0.5
 
+        self.set_geometry()
+
         self.myspar = spar.Spar()
-        self.myspar.set_geometry(self.params, self.unknowns)
+
         
+    def set_geometry(self):
+        sparGeom = sparGeometry.SparGeometry()
+        tempUnknowns = {}
+        sparGeom.solve_nonlinear(self.params, tempUnknowns, None)
+        for pairs in tempUnknowns.items():
+            self.params[pairs[0]] = pairs[1]
+            
         
-    def testNodal2Sectional(self):
-        npt.assert_equal(spar.nodal2sectional(np.array([8.0, 10.0, 12.0])), np.array([9.0, 11.0]))
-    
     def testCylinderForces(self):
         U   = 2.0
         A   = 4.0
@@ -214,15 +222,6 @@ class TestSpar(unittest.TestCase):
         self.assertAlmostEqual(spar.safety_factor(80.0, Fy), k*1.08)
         npt.assert_almost_equal(spar.safety_factor(80.0*myones, Fy), k*1.08*myones)
     
-    def testSetGeometry(self):
-        npt.assert_equal(self.myspar.z_nodes, np.array([-35.0, -15.0, 15.0]))
-        self.assertEqual(self.params['freeboard'], self.myspar.z_nodes[-1])
-        self.assertEqual(self.unknowns['draft'], np.sum(self.params['section_height'])-self.params['freeboard'])
-        self.assertEqual(self.unknowns['draft'], 35.0)
-        self.assertEqual(self.unknowns['draft'], np.abs(self.myspar.z_nodes[0]))
-        self.assertEqual(self.myspar.z_fairlead, -10.0)
-        self.assertEqual(self.myspar.z_fairlead, -self.params['fairlead'])
-        npt.assert_equal(self.myspar.z_section, np.array([-25.0, 0.0]))
 
     def testSparMassCG(self):
         m_spar, cg_spar = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
@@ -230,7 +229,7 @@ class TestSpar(unittest.TestCase):
         bulk  = spar.compute_bulkhead_mass(self.params)
         stiff = spar.compute_stiffener_mass(self.params)
         shell = spar.compute_shell_mass(self.params)
-        mycg  = 1.1*(np.dot(bulk, self.myspar.z_nodes) + np.dot(stiff+shell, self.myspar.z_section))/m_spar
+        mycg  = 1.1*(np.dot(bulk, self.params['z_nodes']) + np.dot(stiff+shell, self.params['z_section']))/m_spar
         mysec = stiff+shell+bulk[:-1]
         mysec[-1] += bulk[-1]
         mysec *= 1.1
@@ -249,7 +248,7 @@ class TestSpar(unittest.TestCase):
 
         area = np.pi * 9.5**2
         m_expect = area * 1.0 * 2e3
-        cg_expect = self.myspar.z_nodes[0] + 0.5
+        cg_expect = self.params['z_nodes'][0] + 0.5
         self.assertEqual(m_ballast, m_expect)
         self.assertEqual(cg_ballast, cg_expect)
         self.assertEqual(z_ballast_water, cg_expect+0.5)
@@ -321,7 +320,7 @@ class TestSpar(unittest.TestCase):
         self.params['rna_center_of_gravity_x'] = 0.5
         self.unknowns['metacentric_height'] = 20.0
         self.unknowns['total_mass'] = 100.0
-        self.myspar.set_geometry(self.params, self.unknowns)
+        self.set_geometry()
         self.myspar.system_cg = -25.0
         self.myspar.bouyancy_force = 100.0
 
@@ -349,7 +348,7 @@ class TestSpar(unittest.TestCase):
         self.params['rna_center_of_gravity_x'] = 0.5
         self.unknowns['metacentric_height'] = 20.0
         self.unknowns['total_mass'] = 100.0
-        self.myspar.set_geometry(self.params, self.unknowns)
+        self.set_geometry()
         self.myspar.system_cg = 25.0
         self.myspar.bouyancy_force = 100.0
 
@@ -405,7 +404,7 @@ class TestSpar(unittest.TestCase):
         self.params['tower_mass'] = 0.5 * 9000 * kip_to_si
         self.params['rna_mass'] = 0.5 * 9000 * kip_to_si
         
-        self.myspar.set_geometry(self.params, self.unknowns)
+        self.set_geometry()
         self.myspar.section_mass = np.zeros((3,))
 
         expect = 9000 * kip_to_si / (2*np.pi*(self.params['outer_radius'][0]-0.5*self.params['wall_thickness'][0])*self.params['wall_thickness'][0])
@@ -503,7 +502,7 @@ class TestSpar(unittest.TestCase):
         z = 60 * ft_to_si
         self.params['freeboard'] = np.sum(self.params['section_height']) - z - 1.5*(self.params['section_height'])[0]
         
-        self.myspar.set_geometry(self.params, self.unknowns)
+        self.set_geometry()
         self.myspar.section_mass = np.zeros((3,))
         self.myspar.check_stresses(self.params, self.unknowns, loading='radial')
         

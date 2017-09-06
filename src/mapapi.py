@@ -25,11 +25,11 @@ import os
 
 from sys import platform
 if platform == "linux" or platform == "linux2":
-    maplib = libmap-1.20.10.so
+    maplib = 'libmap-1.20.10.so'
 elif platform == "darwin":
-    maplib = libmap-1.20.10.dylib
+    maplib = 'libmap-1.20.10.dylib'
 elif platform == "win32":
-    maplib = map_x64.dll
+    maplib = 'map_x64.dll'
     
 class MapAPI(object):
     """A collection of methods for the MAP++ program"""
@@ -272,26 +272,26 @@ class MapAPI(object):
         self.f_type_z       = self.CreateConstraintState( )
         self.f_type_init    = self.CreateInitState( )
         self.f_type_initout = self.CreateInitoutState( )
-        Map.lib.set_init_to_null(self.f_type_init, self.status, pointer(self.ierr) )
-        Map.lib.map_initialize_msqs_base(self.f_type_u, self.f_type_p, self.f_type_x, self.f_type_z, self.f_type_d, self.f_type_y, self.f_type_initout)
+        MapAPI.lib.set_init_to_null(self.f_type_init, self.status, pointer(self.ierr) )
+        MapAPI.lib.map_initialize_msqs_base(self.f_type_u, self.f_type_p, self.f_type_x, self.f_type_z, self.f_type_d, self.f_type_y, self.f_type_initout)
         self.summary_file("outlist.map.sum")
 
 
     def init( self ):
-        Map.lib.map_init( self.f_type_init, self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, self.f_type_y, self.f_type_initout, pointer(self.ierr), self.status )
+        MapAPI.lib.map_init( self.f_type_init, self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, self.f_type_y, self.f_type_initout, pointer(self.ierr), self.status )
         if self.ierr.value != 0 :
             print self.status.value        
 
 
     def size_lines(self):
-        size = Map.lib.map_size_lines(self.f_type_d, pointer(self.ierr), self.status )
+        size = MapAPI.lib.map_size_lines(self.f_type_d, pointer(self.ierr), self.status )
         if self.ierr.value != 0 :
             print self.status.value        
         return size
 
 
     def update_states(self, t, interval):
-        Map.lib.map_update_states(c_float(t), c_int(interval), self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, pointer(self.ierr), self.status )
+        MapAPI.lib.map_update_states(c_float(t), c_int(interval), self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, pointer(self.ierr), self.status )
         if self.ierr.value != 0 :
             print self.status.value        
 
@@ -307,21 +307,21 @@ class MapAPI(object):
     # MAP_EXTERNCALL void MAP_Output_Delete( InputData* y )
     # MAP_EXTERNCALL void MAP_OtherState_Delete( ModelData* data )
     def end(self):
-        Map.lib.map_end(self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, self.f_type_y, pointer(self.ierr), self.status)
+        MapAPI.lib.map_end(self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, self.f_type_y, pointer(self.ierr), self.status)
 
 
 
     # Set a name for the MAP summary file. Does not need to be called. If not called, the default name is 'outlist.sum.map'
     def summary_file(self, echo_file):
         self.f_type_init.contents.summaryFileName = echo_file
-        Map.lib.map_set_summary_file_name(self.f_type_init, self.status, pointer(self.ierr) )
+        MapAPI.lib.map_set_summary_file_name(self.f_type_init, self.status, pointer(self.ierr) )
 
 
 
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL InitializationData* MAP_InitInput_Create( char* map_msg, MAP_ERROR_CODE* ierr )
     def CreateInitState( self ) :
-        obj = Map.lib.map_create_init_type( self.status, pointer(self.ierr) )
+        obj = MapAPI.lib.map_create_init_type( self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
         return obj
@@ -329,7 +329,7 @@ class MapAPI(object):
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL void MAP_InitOutput_Delete( InputData* io )
     def CreateInitoutState( self ) :
-        obj = Map.lib.map_create_initout_type( self.status, pointer(self.ierr) )
+        obj = MapAPI.lib.map_create_initout_type( self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
         return obj
@@ -338,7 +338,7 @@ class MapAPI(object):
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL ModelData *MAP_OtherState_Create( char *map_msg, MAP_ERROR_CODE *ierr )
     def CreateDataState( self ) :
-        obj = Map.lib.map_create_other_type( self.status, pointer(self.ierr) )
+        obj = MapAPI.lib.map_create_other_type( self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
         return obj
@@ -347,7 +347,7 @@ class MapAPI(object):
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL InputData* MAP_Input_Create( char* map_msg, MAP_ERROR_CODE *ierr )
     def CreateInputState( self ) :
-        obj = Map.lib.map_create_input_type( self.status, pointer(self.ierr) )
+        obj = MapAPI.lib.map_create_input_type( self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
         return obj
@@ -356,7 +356,7 @@ class MapAPI(object):
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL ContinuousData* MAP_ContState_Create( char* map_msg, MAP_ERROR_CODE *ierr )
     def CreateContinuousState( self ) :
-        obj = Map.lib.map_create_continuous_type( self.status, pointer(self.ierr) )
+        obj = MapAPI.lib.map_create_continuous_type( self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
         return obj
@@ -364,7 +364,7 @@ class MapAPI(object):
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL OutputData *MAP_Output_Create( char *map_msg, MAP_ERROR_CODE *ierr )
     def CreateOutputState( self ) :
-        obj = Map.lib.map_create_output_type( self.status, pointer(self.ierr) )
+        obj = MapAPI.lib.map_create_output_type( self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
         return obj
@@ -373,7 +373,7 @@ class MapAPI(object):
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL ConstraintData* MAP_ConstrState_Create( char* map_msg, MAP_ERROR_CODE *ierr )
     def CreateConstraintState( self ) :
-        obj = Map.lib.map_create_constraint_type( self.status, pointer(self.ierr) )
+        obj = MapAPI.lib.map_create_constraint_type( self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
         return obj
@@ -382,59 +382,59 @@ class MapAPI(object):
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL ParameterData* MAP_Param_Create( char* map_msg, MAP_ERROR_CODE *ierr )
     def CreateParameterState( self ) :
-        obj = Map.lib.map_create_parameter_type( self.status, pointer(self.ierr) )
+        obj = MapAPI.lib.map_create_parameter_type( self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
         return obj
 
 
     def map_set_sea_depth( self, depth ):
-         Map.lib.map_set_sea_depth( self.f_type_p, depth )
+         MapAPI.lib.map_set_sea_depth( self.f_type_p, depth )
 
     def map_set_gravity( self, g ):
-        Map.lib.map_set_gravity( self.f_type_p, g )
+        MapAPI.lib.map_set_gravity( self.f_type_p, g )
 
     def map_set_sea_density( self, rho ):
-        Map.lib.map_set_sea_density( self.f_type_p, rho )
+        MapAPI.lib.map_set_sea_density( self.f_type_p, rho )
 
     def plot_x( self, lineNum, length ) :
         arr = [None]*length
         array = POINTER(c_double)
-        array = Map.lib.map_plot_x_array( self.f_type_d, lineNum, length, self.status, pointer(self.ierr) )        
+        array = MapAPI.lib.map_plot_x_array( self.f_type_d, lineNum, length, self.status, pointer(self.ierr) )        
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
-            Map.lib.map_plot_array_free( array )        
+            MapAPI.lib.map_plot_array_free( array )        
             sys.exit('MAP terminated premature.')
         arr = [array[j] for j in range(length)]        
-        Map.lib.map_plot_array_free( array )        
+        MapAPI.lib.map_plot_array_free( array )        
         return arr 
 
     def plot_y( self, lineNum, length ) :
         arr = [None]*length
         array = POINTER(c_double)
-        array = Map.lib.map_plot_y_array( self.f_type_d, lineNum, length, self.status, pointer(self.ierr) )        
+        array = MapAPI.lib.map_plot_y_array( self.f_type_d, lineNum, length, self.status, pointer(self.ierr) )        
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
-            Map.lib.map_plot_array_free( array )        
+            MapAPI.lib.map_plot_array_free( array )        
             sys.exit('MAP terminated premature.')
         arr = [array[j] for j in range(length)]        
-        Map.lib.map_plot_array_free( array )        
+        MapAPI.lib.map_plot_array_free( array )        
         return arr 
 
 
     def plot_z( self, lineNum, length ) :
         arr = [None]*length
         array = POINTER(c_double)
-        array = Map.lib.map_plot_z_array( self.f_type_d, lineNum, length, self.status, pointer(self.ierr) )        
+        array = MapAPI.lib.map_plot_z_array( self.f_type_d, lineNum, length, self.status, pointer(self.ierr) )        
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
-            Map.lib.map_plot_array_free( array )        
+            MapAPI.lib.map_plot_array_free( array )        
             sys.exit('MAP terminated premature.')
         arr = [array[j] for j in range(length)]        
-        Map.lib.map_plot_array_free( array )        
+        MapAPI.lib.map_plot_array_free( array )        
         return arr 
 
 
@@ -454,7 +454,7 @@ class MapAPI(object):
         """
         H_ref = c_double(-999.9)
         V_ref = c_double(-999.9)
-        Map.lib.map_get_fairlead_force_2d( pointer(H_ref), pointer(V_ref),self.f_type_d, index, self.status, pointer(self.ierr))
+        MapAPI.lib.map_get_fairlead_force_2d( pointer(H_ref), pointer(V_ref),self.f_type_d, index, self.status, pointer(self.ierr))
         return H_ref.value, V_ref.value
     
     
@@ -475,7 +475,7 @@ class MapAPI(object):
         fx = c_double(-999.9)
         fy = c_double(-999.9)
         fz = c_double(-999.9)
-        Map.lib.map_get_fairlead_force_3d( pointer(fx), pointer(fy), pointer(fz), self.f_type_d, index, self.status, pointer(self.ierr))
+        MapAPI.lib.map_get_fairlead_force_3d( pointer(fx), pointer(fy), pointer(fz), self.f_type_d, index, self.status, pointer(self.ierr))
         return fx.value, fy.value, fz.value
         
 
@@ -488,7 +488,7 @@ class MapAPI(object):
 
 
     def funcl( self, i ) :
-        self.val = Map.lib.map_residual_function_length(self.f_type_d, i, self.status, pointer(self.ierr))
+        self.val = MapAPI.lib.map_residual_function_length(self.f_type_d, i, self.status, pointer(self.ierr))
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
@@ -497,7 +497,7 @@ class MapAPI(object):
 
 
     def funch( self, i ) :
-        self.val = Map.lib.map_residual_function_height(self.f_type_d, i, self.status, pointer(self.ierr))
+        self.val = MapAPI.lib.map_residual_function_height(self.f_type_d, i, self.status, pointer(self.ierr))
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
@@ -506,7 +506,7 @@ class MapAPI(object):
 
 
     def dxdh( self, i ) :
-        self.val = Map.lib.map_jacobian_dxdh( self.f_type_d, i, self.status, pointer(self.ierr) )
+        self.val = MapAPI.lib.map_jacobian_dxdh( self.f_type_d, i, self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
@@ -515,7 +515,7 @@ class MapAPI(object):
 
 
     def dxdv( self, i ) :
-        self.val = Map.lib.map_jacobian_dxdv( self.f_type_d, i, self.status, pointer(self.ierr) )
+        self.val = MapAPI.lib.map_jacobian_dxdv( self.f_type_d, i, self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
@@ -524,7 +524,7 @@ class MapAPI(object):
 
 
     def dzdh( self, i ) :
-        self.val = Map.lib.map_jacobian_dzdh( self.f_type_d, i, self.status, pointer(self.ierr) )
+        self.val = MapAPI.lib.map_jacobian_dzdh( self.f_type_d, i, self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
@@ -533,7 +533,7 @@ class MapAPI(object):
 
 
     def dzdv( self, i ) :
-        self.val = Map.lib.map_jacobian_dzdv( self.f_type_d, i, self.status, pointer(self.ierr) )
+        self.val = MapAPI.lib.map_jacobian_dzdv( self.f_type_d, i, self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
@@ -555,18 +555,18 @@ class MapAPI(object):
         :rtype: Int.
         """ 
         array = POINTER(POINTER(c_double))
-        array = Map.lib.map_linearize_matrix( self.f_type_u, self.f_type_p, self.f_type_d, self.f_type_y, self.f_type_z, epsilon, pointer(self.ierr), self.status)        
+        array = MapAPI.lib.map_linearize_matrix( self.f_type_u, self.f_type_p, self.f_type_d, self.f_type_y, self.f_type_z, epsilon, pointer(self.ierr), self.status)        
         if self.ierr.value != 0 :
            print self.status.value        
            self.end( )
            sys.exit('MAP terminated premature.')
         arr = [[array[j][i] for i in range(6)] for j in range(6)]
-        Map.lib.map_free_linearize_matrix(array)        
+        MapAPI.lib.map_free_linearize_matrix(array)        
         return arr
     
 
     def displace_vessel(self,x,y,z,phi,the,psi) :
-        Map.lib.map_offset_vessel(self.f_type_d, self.f_type_u, x,y,z,phi,the,psi, self.status, pointer(self.ierr) )
+        MapAPI.lib.map_offset_vessel(self.f_type_d, self.f_type_u, x,y,z,phi,the,psi, self.status, pointer(self.ierr) )
         if self.ierr.value != 0 :
             print self.status.value        
             self.end( )
@@ -608,7 +608,7 @@ class MapAPI(object):
             else:
                 # create_string_buffer(line, 255).raw
                 self.f_type_init.contents.libraryInputLine =  line+'\0'
-                Map.lib.map_add_cable_library_input_text(self.f_type_init)
+                MapAPI.lib.map_add_cable_library_input_text(self.f_type_init)
    
         f.seek(line_offset[Node_ref+3])
         for line in f:
@@ -616,7 +616,7 @@ class MapAPI(object):
                 break
             else:
                 self.f_type_init.contents.nodeInputLine = line+'\0'
-                Map.lib.map_add_node_input_text(self.f_type_init)
+                MapAPI.lib.map_add_node_input_text(self.f_type_init)
 
         f.seek(line_offset[Line_ref+4])
         for line in f:
@@ -624,7 +624,7 @@ class MapAPI(object):
                 break
             else:
                 self.f_type_init.contents.elementInputLine = line+'\0'
-                Map.lib.map_add_line_input_text(self.f_type_init)
+                MapAPI.lib.map_add_line_input_text(self.f_type_init)
                  
         f.seek(line_offset[Option_ref+5])
         for line in f:
@@ -635,4 +635,4 @@ class MapAPI(object):
             else:
                 # print line
                 self.f_type_init.contents.optionInputLine = line+'\0'
-                Map.lib.map_add_options_input_text(self.f_type_init)            
+                MapAPI.lib.map_add_options_input_text(self.f_type_init)            

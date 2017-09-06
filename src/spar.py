@@ -3,21 +3,9 @@ import numpy as np
 from scipy.optimize import brentq, minimize_scalar
 
 from constants import gravity
+from sparGeometry import nodal2sectional
 from commonse.WindWaveDrag import cylinderDrag
 import commonse.Frustum as frustum
-
-def nodal2sectional(x):
-    """Averages nodal data to be length-1 vector of sectional data
-
-    INPUTS:
-    ----------
-    x   : float vector, nodal data
-
-    OUTPUTS:
-    -------
-    y   : float vector,  sectional data
-    """
-    return 0.5*(x[:-1] + x[1:])
 
 
 def cylinder_drag_per_length(U, r, rho, mu):
@@ -597,13 +585,11 @@ class Spar(Component):
         self.bouyancy_force = None # Weight of displaced water
         self.section_mass   = None # Weight of spar by section
         self.system_cg      = None # z-position of center of gravity
-        self.z_nodes        = None # z-position of section nodes
-        self.z_section      = None # z-position of cg of each section
         
         # Environment
         self.add_param('air_density', val=1.198, units='kg/m**3', desc='density of air')
         self.add_param('air_viscosity', val=1.81e-5, units='kg/s/m', desc='viscosity of air')
-        self.add_param('water_density', val=1025, units='kg/m**3', desc='density of water')
+        self.add_param('water_density', val=1025.0, units='kg/m**3', desc='density of water')
         self.add_param('water_viscosity', val=8.90e-4, units='kg/s/m', desc='viscosity of water')
         self.add_param('water_depth', val=0.0, units='m', desc='water depth')
         self.add_param('wave_height', val=0.0, units='m', desc='wave height (crest to trough)')
@@ -619,6 +605,11 @@ class Spar(Component):
         self.add_param('nu', val=0.3, desc='poissons ratio of spar material')
         self.add_param('yield_stress', val=345000000., units='Pa', desc='yield stress of spar material')
         self.add_param('permanent_ballast_density', val=4492.0, units='kg/m**3', desc='density of permanent ballast')
+
+        # Inputs from SparGeometry
+        self.add_param('draft', val=0.0, units='m', desc='Spar draft (length of body under water)')
+        self.add_param('z_nodes', val=np.zeros((4,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('z_section', val=np.zeros((3,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
         
         # Design variables
         self.add_param('freeboard', val=25.0, units='m', desc='Length of spar above water line')
@@ -639,7 +630,7 @@ class Spar(Component):
         self.add_param('ring_mass_factor', val=1.0, desc='Stiffener ring mass correction factor')
         self.add_param('spar_mass_factor', val=1.0, desc='Overall spar mass correction factor')
         self.add_param('shell_mass_factor', val=1.0, desc='Spar shell mass correction factor')
-        self.add_param('outfitting_mass_factor', val=0.0, desc='Mass fraction added for outfitting')
+        self.add_param('outfitting_mass_fraction', val=0.0, desc='Mass fraction added for outfitting')
         
         # Cost rates
         self.add_param('ballast_cost_rate', val=0.0, units='USD/kg', desc='Cost per unit mass of ballast')
@@ -657,9 +648,9 @@ class Spar(Component):
         
         # Inputs from mooring MAP
         self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
-        self.add_param('mooring_total_cost', val=0.0, units='USD', desc='Cost of mooring system')
+        self.add_param('mooring_cost', val=0.0, units='USD', desc='Cost of mooring system')
         self.add_param('mooring_vertical_load', val=0.0, units='kg*m/s**2', desc='Effective loading/weight of mooring system in z-direction')
-        self.add_param('mooring_horizontal_stiffness', val=0.0, units='kg/s**2', desc='Mooring resistance to surge')
+        self.add_param('mooring_restoring_force', val=0.0, units='kg*m/s**2', desc='Mooring resistance to surge')
         
         # Outputs
         self.add_output('flange_compactness', val=0.0, desc='check for flange compactness')
@@ -689,7 +680,7 @@ class Spar(Component):
         self.add_output('total_mass', val=0.0, units='kg', desc='total mass of spar and moorings')
         self.add_output('total_cost', val=0.0, units='USD', desc='total cost of spar and moorings')
 
-        self.add_output('offset_surge', val=0.0, units='m', desc='maximum surge offset')
+        self.add_output('offset_force_ratio', val=0.0, units='m', desc='maximum surge offset')
         self.add_output('heel_angle', val=0.0, units='deg', desc='static angle of heel for turbine and spar substructure')
         
         # TODO: Constraints draft<depth, draft>0, bulkhead keep in ballast?, R_od_top=tower base diam?, unity checks, compactness checks, heel<10 extreme, heel<6 ordinary, static_stability, metacentric, water_ballast_height>0, surge<10%depth, heave<input (will be zero), mooring stress@max surge<80%breaking limit, pass spar radius at fairlead
@@ -706,9 +697,6 @@ class Spar(Component):
         
         OUTPUTS  : (none)
         """
-        # Set geometry of design in coordinate system with z=0 at waterline
-        self.set_geometry(params, unknowns)
-
         # Balance the design by adding ballast to achieve desired draft and freeboard heights
         # This requires a full mass tally as well.
         # Compute the CG, CB, and metacentric heights- use these for a static stability check
@@ -724,42 +712,6 @@ class Spar(Component):
         self.compute_cost(params, unknowns)
 
 
-    def set_geometry(self, params, unknowns):
-        """Sets nodal points and sectional centers of mass in z-coordinate system with z=0 at the waterline.
-        Nodal points are the beginning and end points of each section.
-        Nodes and sections start at bottom and move upwards.
-        
-        INPUTS:
-        ----------
-        params   : dictionary of input parameters
-        unknowns : dictionary of output parameters
-        
-        OUTPUTS  : (none)
-        ----------
-        z_nodes    class variable set
-        z_section  class variable set
-        z_fairlead class variable set
-        draft in 'unknowns' dictionary set
-        """
-        # Unpack variables
-        R_od      = params['outer_radius']
-        t_wall    = params['wall_thickness']
-        h_section = params['section_height']
-        freeboard = params['freeboard'] # length of spar under water
-        fairlead  = params['fairlead'] # depth of mooring attachment point
-
-        # With waterline at z=0, set the z-position of section nodes
-        # Note sections and nodes start at bottom of spar and move up
-        self.z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
-        unknowns['draft'] = np.abs(self.z_nodes[0])
-        self.z_fairlead = -np.abs(fairlead)
-        
-        # With waterline at z=0, set the z-position of section centroids
-        R = R_od - 0.5*t_wall
-        cm_section     = frustum.frustumShellCG_radius(R[:-1], R[1:], h_section)
-        self.z_section = self.z_nodes[:-1] + cm_section
-
-        
     def compute_spar_mass_cg(self, params, unknowns):
         """Computes spar mass from components: Shell, Stiffener rings, Bulkheads
         Also computes center of mass of the shell by weighted sum of the components' position
@@ -782,7 +734,9 @@ class Spar(Component):
         """
         # Unpack variables
         coeff        = params['spar_mass_factor']
-
+        z_nodes      = params['z_nodes']
+        z_section    = params['z_section']
+        
         m_spar = 0.0
         z_cg = 0.0
         
@@ -791,12 +745,12 @@ class Spar(Component):
         m_shell     = compute_shell_mass(params)
         m_stiffener = compute_stiffener_mass(params)
         m_spar     += (m_shell + m_stiffener).sum()
-        z_cg       += np.dot(m_shell+m_stiffener, self.z_section)
+        z_cg       += np.dot(m_shell+m_stiffener, z_section)
 
         # Masses assumed to be centered at nodes
         m_bulkhead  = compute_bulkhead_mass(params)
         m_spar     += m_bulkhead.sum()
-        z_cg       += np.dot(m_bulkhead, self.z_nodes)
+        z_cg       += np.dot(m_bulkhead, z_nodes)
 
         # Account for components not explicitly calculated here
         m_spar     *= coeff
@@ -813,7 +767,7 @@ class Spar(Component):
         unknowns['shell_mass']        = m_shell.sum()
         unknowns['stiffener_mass']    = m_stiffener.sum()
         unknowns['bulkhead_mass']     = m_bulkhead.sum()
-        unknowns['outfitting_mass']   = params['outfitting_mass_factor'] * m_spar
+        unknowns['outfitting_mass']   = params['outfitting_mass_fraction'] * m_spar
 
         # Return total spar mass and position of spar cg
         return m_spar, z_cg
@@ -842,9 +796,10 @@ class Spar(Component):
         t_wall      = params['wall_thickness']
         h_ballast   = params['permanent_ballast_height']
         rho_ballast = params['permanent_ballast_density']
+        z_nodes     = params['z_nodes']
 
         # Geometry of the spar in our coordinate system (z=0 at waterline)
-        z_draft     = self.z_nodes[0]
+        z_draft     = z_nodes[0]
 
         # Integration points
         npts = 100
@@ -852,7 +807,7 @@ class Spar(Component):
         # Fixed and total ballast mass and cg
         # Assume they are bottled in cylinders a the keel of the spar- first the permanent then the fixed
         zpts      = np.linspace(z_draft, z_draft+h_ballast, npts)
-        R_id      = np.interp(zpts, self.z_nodes, R_od-t_wall)
+        R_id      = np.interp(zpts, z_nodes, R_od-t_wall)
         V_ballast = np.trapz(np.pi*R_id**2, zpts)
         m_ballast = rho_ballast * V_ballast
         z_cg      = rho_ballast * np.trapz(zpts*np.pi*R_id**2, zpts) / m_ballast
@@ -884,12 +839,13 @@ class Spar(Component):
         t_wall           = params['wall_thickness']
         h_section        = params['section_height']
         rho_water        = params['water_density']
+        z_nodes          = params['z_nodes']
 
         # Compute volume of each section and mass of displaced water by section
         # Find the radius at the waterline so that we can compute the submerged volume as a sum of frustum sections
-        r_waterline = np.interp(0.0, self.z_nodes, R_od)
-        z_under     = np.r_[self.z_nodes[self.z_nodes < 0.0], 0.0]
-        r_under     = np.r_[R_od[self.z_nodes < 0.0], r_waterline]
+        r_waterline = np.interp(0.0, z_nodes, R_od)
+        z_under     = np.r_[z_nodes[z_nodes < 0.0], 0.0]
+        r_under     = np.r_[R_od[z_nodes < 0.0], r_waterline]
         V_under     = frustum.frustumVol_radius(r_under[:-1], r_under[1:], np.diff(z_under))
         m_displaced = rho_water * V_under.sum()
         self.bouyancy_force  = m_displaced * gravity
@@ -938,6 +894,8 @@ class Spar(Component):
         rho_water        = params['water_density']
         m_mooring        = params['mooring_mass']
         Fvert_mooring    = params['mooring_vertical_load']
+        z_nodes          = params['z_nodes']
+        z_fairlead       = params['fairlead'] * -1
         
         # Initialize counters
         m_system = 0.0
@@ -966,16 +924,16 @@ class Spar(Component):
         # The effective mooring mass will be replacecd with the true mass after the CG computation
         m_mooring_eff = Fvert_mooring/gravity
         m_system     += m_mooring_eff
-        z_cg         += m_mooring_eff * self.z_fairlead
+        z_cg         += m_mooring_eff * z_fairlead
         
         # Add in water ballast to ballace the system
         m_ballast_water = m_displaced - m_system - m_turbine
         # Find height of water ballast numerically by finding the height that integrates to the mass we want
         npts = 100
-        h_avail = self.z_nodes[-1] - z_ballast_var
+        h_avail = z_nodes[-1] - z_ballast_var
         def mwater(h):
             zpts = np.linspace(z_ballast_var, z_ballast_var+h, npts)
-            R_id = np.interp(zpts, self.z_nodes, R_od-t_wall)
+            R_id = np.interp(zpts, z_nodes, R_od-t_wall)
             V    = np.trapz(np.pi*R_id**2, zpts)
             return (rho_water*V)
         if mwater(h_avail) < m_ballast_water:
@@ -985,7 +943,7 @@ class Spar(Component):
             h_ballast_water = brentq(lambda x: mwater(x)-m_ballast_water, 0.0, h_avail)
         # Find CG of variable ballast
         zpts              = np.linspace(z_ballast_var, z_ballast_var+h_ballast_water, npts)
-        R_id              = np.interp(zpts, self.z_nodes, R_od-t_wall)
+        R_id              = np.interp(zpts, z_nodes, R_od-t_wall)
         cg_ballast_water  = rho_water * np.trapz(zpts*np.pi*R_id**2, zpts) / m_ballast_water
         m_system         += m_ballast_water
         z_cg             += m_ballast_water * cg_ballast_water
@@ -1005,9 +963,9 @@ class Spar(Component):
         unknowns['total_mass']              = m_system + unknowns['outfitting_mass'] # Does not include weight of turbine or mooring
         
         # Measure static stability:
-        # 1. Center of bouyancy should be above CG
+        # 1. Center of bouyancy should be above CG (difference should be positive)
         # 2. Metacentric height should be positive
-        unknowns['static_stability'  ] = self.system_cg < center_bouyancy
+        unknowns['static_stability'  ] = center_bouyancy - self.system_cg
         unknowns['metacentric_height'] = metacentric_height
         
 
@@ -1023,7 +981,7 @@ class Spar(Component):
         OUTPUTS  : (none)
         ----------
         heel_angle   in 'unknowns' dictionary set
-        offset_surge in 'unknowns' dictionary set
+        offset_force_ratio in 'unknowns' dictionary set
         """
         # Unpack variables
         R_od      = params['outer_radius']
@@ -1045,14 +1003,16 @@ class Spar(Component):
         rna_cg    = params['rna_center_of_gravity'] # z-direction From base of tower
         rna_cg_x  = params['rna_center_of_gravity_x'] # x-direction from centerline
         freeboard = params['freeboard']
-        kstiff_horiz_mooring = params['mooring_horizontal_stiffness']
+        F_mooring = params['mooring_restoring_force']
+        z_nodes   = params['z_nodes']
+        draft     = params['draft']
         
         # Points for trapezoidal integration
         npts = 100
         
         # Spar contribution
-        zpts = np.linspace(self.z_nodes[0], self.z_nodes[-1], npts)
-        r    = np.interp(zpts, self.z_nodes, R_od)
+        zpts = np.linspace(z_nodes[0], z_nodes[-1], npts)
+        r    = np.interp(zpts, z_nodes, R_od)
         rho  = rhoWater * np.ones(zpts.shape)
         mu   = muWater  * np.ones(zpts.shape)
         rho[zpts>=0.0] = rhoAir
@@ -1093,9 +1053,9 @@ class Spar(Component):
         # Now compute offsets from the applied force
         # First use added mass (the mass of the water that must be displaced in movement)
         # http://www.iaea.org/inis/collection/NCLCollectionStore/_Public/09/411/9411273.pdf
-        mass_add_surge = rhoWater * np.pi * R_od.max() * unknowns['draft']
-        T_surge        = 2*np.pi*np.sqrt( (unknowns['total_mass']+mass_add_surge) / kstiff_horiz_mooring)
-        unknowns['offset_surge'] = F / kstiff_horiz_mooring
+        #mass_add_surge = rhoWater * np.pi * R_od.max() * draft
+        #T_surge        = 2*np.pi*np.sqrt( (unknowns['total_mass']+mass_add_surge) / kstiff_horiz_mooring)
+        unknowns['offset_force_ratio'] = np.abs(F / F_mooring)
         
         
     def check_stresses(self, params, unknowns, loading='hydro'):
@@ -1114,7 +1074,9 @@ class Spar(Component):
         E            = params['E'] # Young's modulus
         nu           = params['nu'] # Poisson ratio
         yield_stress = params['yield_stress']
-        nsections    = self.z_nodes.size
+        z_nodes      = params['z_nodes']
+        z_section    = params['z_section']
+        nsections    = z_section.size
         
         # Apply quick "compactness" check on stiffener geometry
         # Constraint is that these must be >= 1
@@ -1122,7 +1084,7 @@ class Spar(Component):
         unknowns['web_compactness']    = 1.0   * (t_web    / h_web         ) * np.sqrt(E / yield_stress)
 
         # APPLIED STRESSES (Section 11 of API Bulletin 2U)
-        _, _, pressure      = linear_waves(self.z_section, params['water_depth'], params['wave_height'], params['wave_period'], params['water_density'])
+        _, _, pressure      = linear_waves(z_section, params['water_depth'], params['wave_height'], params['wave_period'], params['water_density'])
         axial_stress        = compute_applied_axial(params, self.section_mass)
         stiffener_factor_KthL, stiffener_factor_KthG = compute_stiffener_factors(params, pressure, axial_stress)
         hoop_stress_nostiff = compute_applied_hoop(pressure, R_od, t_wall)
@@ -1176,4 +1138,4 @@ class Spar(Component):
         unknowns['spar_cost']        = params['tapered_col_cost_rate'] * unknowns['spar_mass']
         unknowns['outfitting_cost']  = params['outfitting_cost_rate'] * unknowns['outfitting_mass']
         unknowns['total_cost']       = (unknowns['ballast_cost'] + unknowns['spar_cost'] +
-                                        unknowns['outfitting_cost'] + params['mooring_total_cost'])
+                                        unknowns['outfitting_cost'] + params['mooring_cost'])
