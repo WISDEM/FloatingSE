@@ -51,8 +51,8 @@ class MapMooring(Component):
         self.add_param('mooring_cost_rate', val=1.1, desc='miscellaneous cost factor in percent')
 
         # Outputs
-        self.add_output('total_mass', val=0.0, units='kg',desc='total mass of mooring')
-        self.add_output('total_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
+        self.add_output('mooring_mass', val=0.0, units='kg',desc='total mass of mooring')
+        self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
         self.add_output('vertical_load', val=0.0, units='kg*m/s**2',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='kg*m/s**2',desc='sume of forces in x direction')
         self.add_output('safety_factor', val=0.0, units='m',desc='range of damaged mooring')
@@ -67,7 +67,7 @@ class MapMooring(Component):
         self.runMAP(params, unknowns)
 
         # Compute costs for the system
-        self.compute_costs(params, unknowns)
+        self.compute_cost(params, unknowns)
 
 
     def set_properties(self, params):
@@ -379,5 +379,5 @@ class MapMooring(Component):
         anchor_total = anchor_rate*nlines
 
         # Total summations
-        unknowns['mooring_total_cost'] = costFact*(legs_total + anchor_total)
+        unknowns['mooring_cost'] = costFact*(legs_total + anchor_total)
         unknowns['mooring_mass'] = (self.wet_mass_per_length + rhoWater*0.25*np.pi*Dmooring**2)*self.scope*nlines

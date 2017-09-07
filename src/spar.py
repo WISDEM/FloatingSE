@@ -3,7 +3,7 @@ import numpy as np
 from scipy.optimize import brentq, minimize_scalar
 
 from constants import gravity
-from sparGeometry import nodal2sectional
+from sparGeometry import nodal2sectional, NSECTIONS
 from commonse.WindWaveDrag import cylinderDrag
 import commonse.Frustum as frustum
 
@@ -454,7 +454,6 @@ def compute_elastic_stress_limits(params, KthG, loading='hydrostatic'):
     L_stiffener  = params['stiffener_spacing']
     E            = params['E'] # Young's modulus
     nu           = params['nu'] # Poisson ratio
-    nsections    = R_od.size
 
     # Geometry computations
     area_stiff, y_cg, Ixx, Iyy = TBeamProperties(h_web, t_web, w_flange, t_flange)
@@ -478,8 +477,8 @@ def compute_elastic_stress_limits(params, KthG, loading='hydrostatic'):
     a_thL = np.ones(m_x.shape)
     a_thL[m_x > 5.0] = 0.8
     # Find the buckling mode- closest integer that is root of solved equation
-    n   = np.zeros((nsections,))
-    for k in xrange(nsections):
+    n   = np.zeros((NSECTIONS,))
+    for k in xrange(NSECTIONS):
         c = L_stiffener[k] / np.pi / R[k]
         n[k] = brentq(lambda x:((c*x)**2*(1 + (c*x)**2)**4/(2 + 3*(c*x)**2) - z_m[k]), 0, 50)
     # Calculate beta (local term)
@@ -519,7 +518,7 @@ def compute_elastic_stress_limits(params, KthG, loading='hydrostatic'):
     # Compute pressure leading to elastic failure
     n = np.zeros(R_od.shape)
     pressure_failure_peG = np.zeros(R_od.shape)
-    for k in xrange(nsections):
+    for k in xrange(NSECTIONS):
         peG = lambda x: ( E*lambda_G[k]**4*t_wall[k]/R[k]/(x**2+0.0*lambda_G[k]**2-1)/(x**2 + lambda_G[k]**2)**2 +
                           E*Ier[k]*(x**2-1)/L_stiffener[k]/Rc[k]**2/R_od[k] )
         minout = minimize_scalar(peG, bounds=(2.0, 15.0), method='bounded')
@@ -608,21 +607,21 @@ class Spar(Component):
 
         # Inputs from SparGeometry
         self.add_param('draft', val=0.0, units='m', desc='Spar draft (length of body under water)')
-        self.add_param('z_nodes', val=np.zeros((4,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('z_section', val=np.zeros((3,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
+        self.add_param('z_nodes', val=np.zeros((NSECTIONS+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('z_section', val=np.zeros((NSECTIONS,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
         
         # Design variables
         self.add_param('freeboard', val=25.0, units='m', desc='Length of spar above water line')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
-        self.add_param('section_height', val=np.zeros((3,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
-        self.add_param('outer_radius', val=np.zeros((4,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('wall_thickness', val=np.zeros((4,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('stiffener_web_height', val=np.zeros((3,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_web_thickness', val=np.zeros((3,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_flange_width', val=np.zeros((3,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_flange_thickness', val=np.zeros((3,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_spacing', val=np.zeros((3,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top (length = nsection)')
-        self.add_param('bulkhead_nodes', val=[True, False, False, False], desc='Nodal locations where there is a bulkhead bottom to top (length = nsection + 1)')
+        self.add_param('section_height', val=np.zeros((NSECTIONS,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
+        self.add_param('outer_radius', val=np.zeros((NSECTIONS+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('wall_thickness', val=np.zeros((NSECTIONS+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('stiffener_web_height', val=np.zeros((NSECTIONS,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_web_thickness', val=np.zeros((NSECTIONS,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_flange_width', val=np.zeros((NSECTIONS,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_flange_thickness', val=np.zeros((NSECTIONS,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_spacing', val=np.zeros((NSECTIONS,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top (length = nsection)')
+        self.add_param('bulkhead_nodes', val=[True]*(NSECTIONS+1), desc='Nodal locations where there is a bulkhead bottom to top (length = nsection + 1)')
         self.add_param('permanent_ballast_height', val=0.0, units='m', desc='height of permanent ballast')
         
         # Mass correction factors from simple rules here to real life
@@ -653,12 +652,12 @@ class Spar(Component):
         self.add_param('mooring_restoring_force', val=0.0, units='kg*m/s**2', desc='Mooring resistance to surge')
         
         # Outputs
-        self.add_output('flange_compactness', val=0.0, desc='check for flange compactness')
-        self.add_output('web_compactness', val=0.0, desc='check for web compactness')
-        self.add_output('axial_local_unity', val=0.0, desc='unity check for axial load - local buckling')
-        self.add_output('axial_general_unity', val=0.0, desc='unity check for axial load - genenral instability')
-        self.add_output('external_local_unity', val=0.0, desc='unity check for external pressure - local buckling')
-        self.add_output('external_general_unity', val=0.0, desc='unity check for external pressure - general instability')
+        self.add_output('flange_compactness', val=np.zeros((NSECTIONS,)), desc='check for flange compactness')
+        self.add_output('web_compactness', val=np.zeros((NSECTIONS,)), desc='check for web compactness')
+        self.add_output('axial_local_unity', val=np.zeros((NSECTIONS,)), desc='unity check for axial load - local buckling')
+        self.add_output('axial_general_unity', val=np.zeros((NSECTIONS,)), desc='unity check for axial load - genenral instability')
+        self.add_output('external_local_unity', val=np.zeros((NSECTIONS,)), desc='unity check for external pressure - local buckling')
+        self.add_output('external_general_unity', val=np.zeros((NSECTIONS,)), desc='unity check for external pressure - general instability')
 
         self.add_output('metacentric_height', val=0.0, units='m', desc='measure of static overturning stability')
         self.add_output('static_stability', val=0.0, desc='static stability margin based on position of centers of gravity and bouyancy')
@@ -703,7 +702,7 @@ class Spar(Component):
         self.balance_spar(params, unknowns)
 
         # Sum all forces and moments on the sytem to determine offsets and heel angles
-        self.compute_forces_moments(params)
+        self.compute_forces_moments(params, unknowns)
         
         # Check that axial and hoop loads don't exceed limits
         self.check_stresses(params, unknowns)
@@ -1076,7 +1075,6 @@ class Spar(Component):
         yield_stress = params['yield_stress']
         z_nodes      = params['z_nodes']
         z_section    = params['z_section']
-        nsections    = z_section.size
         
         # Apply quick "compactness" check on stiffener geometry
         # Constraint is that these must be >= 1
@@ -1127,10 +1125,10 @@ class Spar(Component):
         # Compare limits to applied stresses and use this ratio as a design constraint
         # (Section 9 "Allowable Stresses" of API Bulletin 2U)
         # These values must be <= 1.0
-        unknowns['axial_local_unity']    = axial_stress / axial_limit_local_FaL
-        unknowns['axial_general_unity']  = axial_stress / axial_limit_general_FaG
-        unknowns['extern_local_unity']   = hoop_stress_between / extern_limit_local_FthL
-        unknowns['extern_general_unity'] = hoop_stress_between / extern_limit_general_FthG
+        unknowns['axial_local_unity']      = axial_stress / axial_limit_local_FaL
+        unknowns['axial_general_unity']    = axial_stress / axial_limit_general_FaG
+        unknowns['external_local_unity']   = hoop_stress_between / extern_limit_local_FthL
+        unknowns['external_general_unity'] = hoop_stress_between / extern_limit_general_FthG
 
         
     def compute_cost(self, params, unknowns):

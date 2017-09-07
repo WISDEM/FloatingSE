@@ -1,6 +1,6 @@
-from openmdao.api import Group, Problem, ScipyOptimizer
+from openmdao.api import Group, Problem, IndepVarComp, ScipyOptimizer
 from spar import Spar
-from sparGeometry import SparGeometry
+from sparGeometry import SparGeometry, NSECTIONS
 from mapMooring import MapMooring
 import numpy as np
 
@@ -9,8 +9,60 @@ class SparAssembly(Group):
     def __init__(self):
         super(SparAssembly, self).__init__()
 
-        # Define environment type variables here?  Link them to all?
-        
+        # Define all input variables from all models
+        self.add('water_depth',                IndepVarComp('x', 0.0))
+        self.add('freeboard',                  IndepVarComp('x', 0.0))
+        self.add('fairlead',                   IndepVarComp('x', 0.0))
+        self.add('section_height',             IndepVarComp('x', np.zeros((NSECTIONS,))))
+        self.add('outer_radius',               IndepVarComp('x', np.zeros((NSECTIONS+1,))))
+        self.add('wall_thickness',             IndepVarComp('x', np.zeros((NSECTIONS+1,))))
+        self.add('fairlead_offset_from_shell', IndepVarComp('x', 0.0))
+        self.add('scope_ratio',                IndepVarComp('x', 0.0))
+        self.add('anchor_radius',              IndepVarComp('x', 0.0))
+        self.add('mooring_diameter',           IndepVarComp('x', 0.0))
+        self.add('number_of_mooring_lines',    IndepVarComp('x', 0))
+        self.add('mooring_type',               IndepVarComp('x', 'chain'))
+        self.add('anchor_type',                IndepVarComp('x', 'pile'))
+        self.add('mooring_cost_rate',          IndepVarComp('x', 0.0))
+        self.add('max_offset',                 IndepVarComp('x', 0.0))
+        self.add('air_density',                IndepVarComp('x', 0.0))
+        self.add('air_viscosity',              IndepVarComp('x', 0.0))
+        self.add('water_density',              IndepVarComp('x', 0.0))
+        self.add('water_viscosity',            IndepVarComp('x', 0.0))
+        self.add('wave_height',                IndepVarComp('x', 0.0))
+        self.add('wave_period',                IndepVarComp('x', 0.0))
+        self.add('wind_reference_speed',       IndepVarComp('x', 0.0))
+        self.add('wind_reference_height',      IndepVarComp('x', 0.0))
+        self.add('alpha',                      IndepVarComp('x', 0.0))
+        self.add('morison_mass_coefficient',   IndepVarComp('x', 0.0))
+        self.add('material_density',           IndepVarComp('x', 0.0))
+        self.add('E',                          IndepVarComp('x', 0.0))
+        self.add('nu',                         IndepVarComp('x', 0.0))
+        self.add('yield_stress',               IndepVarComp('x', 0.0))
+        self.add('permanent_ballast_density',  IndepVarComp('x', 0.0))
+        self.add('stiffener_web_height',       IndepVarComp('x', np.zeros((NSECTIONS,))))
+        self.add('stiffener_web_thickness',    IndepVarComp('x', np.zeros((NSECTIONS,))))
+        self.add('stiffener_flange_width',     IndepVarComp('x', np.zeros((NSECTIONS,))))
+        self.add('stiffener_flange_thickness', IndepVarComp('x', np.zeros((NSECTIONS,))))
+        self.add('stiffener_spacing',          IndepVarComp('x', np.zeros((NSECTIONS,))))
+        self.add('bulkhead_nodes',             IndepVarComp('x', [False]*(NSECTIONS+1) ))
+        self.add('permanent_ballast_height',   IndepVarComp('x', 0.0))
+        self.add('bulkhead_mass_factor',       IndepVarComp('x', 0.0))
+        self.add('ring_mass_factor',           IndepVarComp('x', 0.0))
+        self.add('shell_mass_factor',          IndepVarComp('x', 0.0))
+        self.add('spar_mass_factor',           IndepVarComp('x', 0.0))
+        self.add('outfitting_mass_fraction',   IndepVarComp('x', 0.0))
+        self.add('ballast_cost_rate',          IndepVarComp('x', 0.0))
+        self.add('tapered_col_cost_rate',      IndepVarComp('x', 0.0))
+        self.add('outfitting_cost_rate',       IndepVarComp('x', 0.0))
+        self.add('rna_mass',                   IndepVarComp('x', 0.0))
+        self.add('rna_center_of_gravity',      IndepVarComp('x', 0.0))
+        self.add('rna_center_of_gravity_x',    IndepVarComp('x', 0.0))
+        self.add('tower_mass',                 IndepVarComp('x', 0.0))
+        self.add('tower_center_of_gravity',    IndepVarComp('x', 0.0))
+        self.add('rna_wind_force',             IndepVarComp('x', 0.0))
+        self.add('tower_wind_force',           IndepVarComp('x', 0.0))
+
         # Run Spar Geometry component first
         self.add('sg', SparGeometry())
 
@@ -20,131 +72,107 @@ class SparAssembly(Group):
         # Run main Spar analysis
         self.add('sp', Spar())
 
-        # Connect SparGeometry and MapMooring variables that are the same
-        self.connect('sg.fairlead_radius', 'mm.fairlead_radius')
+        self.connect('water_depth.x', ['sg.water_depth', 'mm.water_depth', 'sp.water_depth'])
+        self.connect('water_density.x', ['mm.water_density', 'sp.water_density'])
+        self.connect('fairlead.x', ['sg.fairlead', 'mm.fairlead','sp.fairlead'])
+        self.connect('freeboard.x', ['sg.freeboard', 'sp.freeboard'])
+        self.connect('section_height.x', ['sg.section_height', 'sp.section_height'])
+        self.connect('outer_radius.x', ['sg.outer_radius', 'sp.outer_radius'])
+        self.connect('wall_thickness.x', ['sg.wall_thickness', 'sp.wall_thickness'])
 
-        # Connect SparGeometry and MapMooring to the Spar
-        self.connect('sg.water_depth', ['mm.water_depth', 'sp.water_depth'])
-        self.connect('sg.fairlead', ['mm.fairlead','sp.fairlead'])
-        self.connect('sg.freeboard', 'sp.freeboard')
-        self.connect('sg.section_height', 'sp.section_height')
-        self.connect('sg.outer_radius', 'sp.outer_radius')
-        self.connect('sg.wall_thickness', 'sp.wall_thickness')
+        self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
+        self.connect('scope_ratio.x', 'mm.scope_ratio')
+        self.connect('anchor_radius.x', 'mm.anchor_radius')
+        self.connect('mooring_diameter.x', 'mm.mooring_diameter')
+        self.connect('number_of_mooring_lines.x', 'mm.number_of_mooring_lines')
+        self.connect('mooring_type.x', 'mm.mooring_type')
+        self.connect('anchor_type.x', 'mm.anchor_type')
+        self.connect('max_offset.x', 'mm.max_offset')
+        self.connect('mooring_cost_rate.x', 'mm.mooring_cost_rate')
+        self.connect('air_density.x', 'sp.air_density')
+        self.connect('air_viscosity.x', 'sp.air_viscosity')
+        self.connect('water_viscosity.x', 'sp.water_viscosity')
+        self.connect('wave_height.x', 'sp.wave_height')
+        self.connect('wave_period.x', 'sp.wave_period')
+        self.connect('wind_reference_speed.x', 'sp.wind_reference_speed')
+        self.connect('wind_reference_height.x', 'sp.wind_reference_height')
+        self.connect('alpha.x', 'sp.alpha')
+        self.connect('morison_mass_coefficient.x', 'sp.morison_mass_coefficient')
+        self.connect('material_density.x', 'sp.material_density')
+        self.connect('E.x', 'sp.E')
+        self.connect('nu.x', 'sp.nu')
+        self.connect('yield_stress.x', 'sp.yield_stress')
+        self.connect('permanent_ballast_density.x', 'sp.permanent_ballast_density')
+        self.connect('stiffener_web_height.x', 'sp.stiffener_web_height')
+        self.connect('stiffener_web_thickness.x', 'sp.stiffener_web_thickness')
+        self.connect('stiffener_flange_width.x', 'sp.stiffener_flange_width')
+        self.connect('stiffener_flange_thickness.x', 'sp.stiffener_flange_thickness')
+        self.connect('stiffener_spacing.x', 'sp.stiffener_spacing')
+        self.connect('bulkhead_nodes.x', 'sp.bulkhead_nodes')
+        self.connect('permanent_ballast_height.x', 'sp.permanent_ballast_height')
+        self.connect('bulkhead_mass_factor.x', 'sp.bulkhead_mass_factor')
+        self.connect('ring_mass_factor.x', 'sp.ring_mass_factor')
+        self.connect('spar_mass_factor.x', 'sp.spar_mass_factor')
+        self.connect('shell_mass_factor.x', 'sp.shell_mass_factor')
+        self.connect('outfitting_mass_fraction.x', 'sp.outfitting_mass_fraction')
+        self.connect('ballast_cost_rate.x', 'sp.ballast_cost_rate')
+        self.connect('tapered_col_cost_rate.x', 'sp.tapered_col_cost_rate')
+        self.connect('outfitting_cost_rate.x', 'sp.outfitting_cost_rate')
+        self.connect('rna_mass.x', 'sp.rna_mass')
+        self.connect('rna_center_of_gravity.x', 'sp.rna_center_of_gravity')
+        self.connect('rna_center_of_gravity_x.x', 'sp.rna_center_of_gravity_x')
+        self.connect('rna_wind_force.x', 'sp.rna_wind_force')
+        self.connect('tower_mass.x', 'sp.tower_mass')
+        self.connect('tower_center_of_gravity.x', 'sp.tower_center_of_gravity')
+        self.connect('tower_wind_force.x', 'sp.tower_wind_force')
+        
+        # Link outputs from one model to inputs to another
+        self.connect('sg.fairlead_radius', 'mm.fairlead_radius')
         self.connect('sg.draft', 'sp.draft')
         self.connect('sg.z_nodes', 'sp.z_nodes')
         self.connect('sg.z_section', 'sp.z_section')
-
-        self.connect('mm.water_density', 'sp.water_density')
-        self.connect('mm.total_mass', 'sp.mooring_mass')
-        self.connect('mm.total_cost', 'sp.mooring_cost')
+        self.connect('mm.mooring_mass', 'sp.mooring_mass')
+        self.connect('mm.mooring_cost', 'sp.mooring_cost')
         self.connect('mm.vertical_load', 'sp.mooring_vertical_load')
         self.connect('mm.max_offset_restoring_force', 'sp.mooring_restoring_force')
 
-        
+        self.deriv_options['type'] = 'fd' #'cs'
+
         
 def optimize_spar(params):
 
     # Setup the problem
     prob = Problem()
     prob.root = SparAssembly()
-    prob.setup()
-    
-    # Vectorize inputs as starting point
-    nsections = int(params['number_of_sections'])
-    nodeOnes  = np.ones((nsections+1,))
-    secOnes   = np.ones((nsections,))
-
-    # INPUT PARAMETER SETTING
-    # Parameters heading into Spar Geometry first
-    prob['sg.water_depth']                = params['water_depth']
-    prob['sg.freeboard']                  = params['freeboard']
-    prob['sg.fairlead']                   = params['fairlead']
-    prob['sg.section_height']             = (params['spar_length']/nsections) * secOnes
-    prob['sg.outer_radius']               = params['outer_radius'] * nodeOnes
-    prob['sg.wall_thickness']             = params['wall_thickness'] * nodeOnes
-    prob['sg.fairlead_offset_from_shell'] = params['fairlead_offset_from_shell']
-
-    # Parameters heading into MAP Mooring second
-    prob['mm.scope_ratio']             = params['scope_ratio']
-    prob['mm.anchor_radius']           = params['anchor_radius']
-    prob['mm.mooring_diameter']        = params['mooring_diameter']
-    prob['mm.number_of_mooring_lines'] = params['number_of_mooring_lines']
-    prob['mm.mooring_type']            = params['mooring_type']
-    prob['mm.anchor_type']             = params['anchor_type']
-    prob['mm.max_offset']              = 0.1*params['water_depth'] # Assumption!
-    prob['mm.mooring_cost_rate']       = params['mooring_cost_rate']
-
-    #Parameters heading into Spar
-    prob['sp.air_density']               = params['air_density']
-    prob['sp.air_viscosity']             = params['air_viscosity']
-    prob['sp.water_density']             = params['water_density']
-    prob['sp.water_viscosity']           = params['water_viscosity']
-    prob['sp.wave_height']               = params['wave_height']
-    prob['sp.wave_period']               = params['wave_period']
-    prob['sp.wind_reference_speed']      = params['wind_reference_speed']
-    prob['sp.wind_reference_height']     = params['wind_reference_height']
-    prob['sp.alpha']                     = params['alpha']
-    prob['sp.morison_mass_coefficient']  = params['morison_mass_coefficient']
-    prob['sp.material_density']          = params['material_density']
-    prob['sp.E']                         = params['E']
-    prob['sp.nu']                        = params['nu']
-    prob['sp.yield_stress']              = params['yield_stress']
-    prob['sp.permanent_ballast_density'] = params['permanent_ballast_density']
-    
-    prob['sp.stiffener_web_height']       = params['stiffener_web_height'] * secOnes
-    prob['sp.stiffener_web_thickness']    = params['stiffener_web_thickness'] * secOnes
-    prob['sp.stiffener_flange_width']     = params['stiffener_flange_width'] * secOnes
-    prob['sp.stiffener_flange_thickness'] = params['stiffener_flange_thickness'] * secOnes
-    prob['sp.stiffener_spacing']          = params['stiffener_spacing'] * secOnes
-    prob['sp.bulkhead_nodes']             = [True] * nsections
-    prob['sp.permanent_ballast_height']   = params['permanent_ballast_height']
-    
-    prob['sp.bulkhead_mass_factor']     = params['bulkhead_mass_factor']
-    prob['sp.ring_mass_factor']         = params['ring_mass_factor']
-    prob['sp.spar_mass_factor']         = params['spar_mass_factor']
-    prob['sp.shell_mass_factor']        = params['shell_mass_factor']
-    prob['sp.outfitting_mass_fraction'] = params['outfitting_mass_fraction']
-    prob['sp.ballast_cost_rate']        = params['ballast_cost_rate']
-    prob['sp.tapered_col_cost_rate']    = params['tapered_col_cost_rate']
-    prob['sp.outfitting_cost_rate']     = params['outfitting_cost_rate']
-    
-    prob['sp.rna_mass']                = params['rna_mass']
-    prob['sp.rna_center_of_gravity']   = params['rna_center_of_gravity']
-    prob['sp.rna_center_of_gravity_x'] = params['rna_center_of_gravity_x']
-    prob['sp.rna_wind_force']          = params['rna_wind_force']
-    prob['sp.tower_mass']              = params['tower_mass']
-    prob['sp.tower_center_of_gravity'] = params['tower_center_of_gravity']
-    prob['sp.tower_wind_force']        = params['tower_wind_force']
-
     
     # Establish the optimization driver, then set design variables and constraints
     prob.driver = ScipyOptimizer() #COBYLAdriver()
 
     
     # DESIGN VARIABLES
-    prob.driver.add_desvar('sg.freeboard',lower=0.0)
-    prob.driver.add_desvar('sg.fairlead',lower=0.0)
-    prob.driver.add_desvar('sg.fairlead_offset_from_shell',lower=0.0)
-    prob.driver.add_desvar('sg.section_height',lower=1e-2)
-    prob.driver.add_desvar('sg.outer_radius',lower=1.0)
-    prob.driver.add_desvar('sg.wall_thickness',lower=1e-2)
+    prob.driver.add_desvar('freeboard.x',lower=0.0)
+    prob.driver.add_desvar('fairlead.x',lower=0.0)
+    prob.driver.add_desvar('fairlead_offset_from_shell.x',lower=0.0)
+    prob.driver.add_desvar('section_height.x',lower=1e-2)
+    prob.driver.add_desvar('outer_radius.x',lower=1.0)
+    prob.driver.add_desvar('wall_thickness.x',lower=1e-2)
 
-    prob.driver.add_desvar('mm.scope_ratio', lower=1.0) #>1 means longer than water depth
-    prob.driver.add_desvar('mm.anchor_radius', lower=0.0)
-    prob.driver.add_desvar('mm.mooring_diameter', lower=1e-2)
-    prob.driver.add_desvar('mm.number_of_mooring_lines', lower=1)
+    prob.driver.add_desvar('scope_ratio.x', lower=1.0) #>1 means longer than water depth
+    prob.driver.add_desvar('anchor_radius.x', lower=0.0)
+    prob.driver.add_desvar('mooring_diameter.x', lower=1e-2)
     # TODO: Integer design variables
-    #prob.driver.add_desvar('mm.mooring_type')
-    #prob.driver.add_desvar('mm.anchor_type')
+    #prob.driver.add_desvar('number_of_mooring_lines.x', lower=1)
+    #prob.driver.add_desvar('mooring_type.x')
+    #prob.driver.add_desvar('anchor_type.x')
 
-    prob.driver.add_desvar('sp.stiffener_web_height', lower=1e-3)
-    prob.driver.add_desvar('sp.stiffener_web_thickness', lower=1e-3)
-    prob.driver.add_desvar('sp.stiffener_flange_width', lower=1e-3)
-    prob.driver.add_desvar('sp.stiffener_flange_thickness', lower=1e-3)
-    prob.driver.add_desvar('sp.stiffener_spacing', lower=1e-2)
-    prob.driver.add_desvar('sp.permanent_ballast_height', lower=0.0)
+    prob.driver.add_desvar('stiffener_web_height.x', lower=1e-3)
+    prob.driver.add_desvar('stiffener_web_thickness.x', lower=1e-3)
+    prob.driver.add_desvar('stiffener_flange_width.x', lower=1e-3)
+    prob.driver.add_desvar('stiffener_flange_thickness.x', lower=1e-3)
+    prob.driver.add_desvar('stiffener_spacing.x', lower=1e-2)
+    prob.driver.add_desvar('permanent_ballast_height.x', lower=0.0)
     # TODO: Boolean design variables
-    #prob.driver.add_desvar('sp.bulkhead_nodes')
+    #prob.driver.add_desvar('bulkhead_nodes.x')
 
     
     # CONSTRAINTS
@@ -180,9 +208,83 @@ def optimize_spar(params):
     
     # OBJECTIVE FUNCTION: Minimize total cost!
     prob.driver.add_objective('sp.total_cost')
-        
-    # Execute the optimization
+
+    # Establish the problem
+    # Note this command must be done after the constraints, design variables, and objective have been set,
+    # but before the initial conditions are specified (unless we use the default initial conditions )
+    # After setting the intial conditions, running setup() again will revert them back to default values
     prob.setup()
+
+    # INITIAL CONDITIONS
+    nodeOnes  = np.ones((NSECTIONS+1,))
+    secOnes   = np.ones((NSECTIONS,))
+
+    # INPUT PARAMETER SETTING
+    # Parameters heading into Spar Geometry first
+    prob['water_depth.x']                = params['water_depth']
+    prob['freeboard.x']                  = params['freeboard']
+    prob['fairlead.x']                   = params['fairlead']
+    prob['section_height.x']             = (params['spar_length']/NSECTIONS) * secOnes
+    prob['outer_radius.x']               = params['outer_radius'] * nodeOnes
+    prob['wall_thickness.x']             = params['wall_thickness'] * nodeOnes
+    prob['fairlead_offset_from_shell.x'] = params['fairlead_offset_from_shell']
+
+    # Parameters heading into MAP Mooring second
+    prob['scope_ratio.x']             = params['scope_ratio']
+    prob['anchor_radius.x']           = params['anchor_radius']
+    prob['mooring_diameter.x']        = params['mooring_diameter']
+    prob['number_of_mooring_lines.x'] = params['number_of_mooring_lines']
+    prob['mooring_type.x']            = params['mooring_type']
+    prob['anchor_type.x']             = params['anchor_type']
+    prob['max_offset.x']              = 0.1*params['water_depth'] # Assumption!
+    prob['mooring_cost_rate.x']       = params['mooring_cost_rate']
+
+    #Parameters heading into Spar
+    prob['air_density.x']               = params['air_density']
+    prob['air_viscosity.x']             = params['air_viscosity']
+    prob['water_density.x']             = params['water_density']
+    prob['water_viscosity.x']           = params['water_viscosity']
+    prob['wave_height.x']               = params['wave_height']
+    prob['wave_period.x']               = params['wave_period']
+    prob['wind_reference_speed.x']      = params['wind_reference_speed']
+    prob['wind_reference_height.x']     = params['wind_reference_height']
+    prob['alpha.x']                     = params['alpha']
+    prob['morison_mass_coefficient.x']  = params['morison_mass_coefficient']
+    prob['material_density.x']          = params['material_density']
+    prob['E.x']                         = params['E']
+    prob['nu.x']                        = params['nu']
+    prob['yield_stress.x']              = params['yield_stress']
+    prob['permanent_ballast_density.x'] = params['permanent_ballast_density']
+    
+    prob['stiffener_web_height.x']       = params['stiffener_web_height'] * secOnes
+    prob['stiffener_web_thickness.x']    = params['stiffener_web_thickness'] * secOnes
+    prob['stiffener_flange_width.x']     = params['stiffener_flange_width'] * secOnes
+    prob['stiffener_flange_thickness.x'] = params['stiffener_flange_thickness'] * secOnes
+    prob['stiffener_spacing.x']          = params['stiffener_spacing'] * secOnes
+    prob['bulkhead_nodes.x']             = [False] * (NSECTIONS+1)
+    prob['bulkhead_nodes.x'][0]          = True
+    prob['bulkhead_nodes.x'][1]          = True
+    prob['permanent_ballast_height.x']   = params['permanent_ballast_height']
+    
+    prob['bulkhead_mass_factor.x']     = params['bulkhead_mass_factor']
+    prob['ring_mass_factor.x']         = params['ring_mass_factor']
+    prob['spar_mass_factor.x']         = params['spar_mass_factor']
+    prob['shell_mass_factor.x']        = params['shell_mass_factor']
+    prob['outfitting_mass_fraction.x'] = params['outfitting_mass_fraction']
+    prob['ballast_cost_rate.x']        = params['ballast_cost_rate']
+    prob['tapered_col_cost_rate.x']    = params['tapered_col_cost_rate']
+    prob['outfitting_cost_rate.x']     = params['outfitting_cost_rate']
+    
+    prob['rna_mass.x']                = params['rna_mass']
+    prob['rna_center_of_gravity.x']   = params['rna_center_of_gravity']
+    prob['rna_center_of_gravity_x.x'] = params['rna_center_of_gravity_x']
+    prob['rna_wind_force.x']          = params['rna_wind_force']
+    prob['tower_mass.x']              = params['tower_mass']
+    prob['tower_center_of_gravity.x'] = params['tower_center_of_gravity']
+    prob['tower_wind_force.x']        = params['tower_wind_force']
+
+    
+    # Execute the optimization
     prob.run()
 
     return prob
@@ -195,13 +297,12 @@ if __name__ == '__main__':
     params['freeboard'] = 15.0
     params['fairlead'] = 10.0
     params['spar_length'] = 75.0
-    params['number_of_sections'] = 5
-    params['outer_radius'] = 3.0
+    params['outer_radius'] = 10.0
     params['wall_thickness'] = 0.05
     params['fairlead_offset_from_shell'] = 0.5
-    params['scope_ratio'] = 1.5
-    params['anchor_radius'] = 50.0
-    params['mooring_diameter'] = 0.1
+    params['scope_ratio'] = 2.5
+    params['anchor_radius'] = 30.0
+    params['mooring_diameter'] = 0.05
     params['number_of_mooring_lines'] = 3
     params['mooring_type'] = 'chain'
     params['anchor_type'] = 'pile'
