@@ -101,7 +101,7 @@ class MapMooring(Component):
 
         # TODO: Costs per unit length are not synced with new input sources
         if lineType == 'CHAIN':
-            self.min_break_load      = 2.74e7  * Dmooring2 * (44.0 - 80.0*Dmooring)
+            self.min_break_load      = 2.74e8  * Dmooring2 * (44.0 - 80.0*Dmooring)
             self.wet_mass_per_length = 19.9e3  * Dmooring2
             self.axial_stiffness     = 8.54e10 * Dmooring2
             self.area                = 2.0 * 0.25 * np.pi * Dmooring2
@@ -370,12 +370,13 @@ class MapMooring(Component):
         legs_total = nlines * self.cost_per_length * self.scope
 
         # Cost of anchors
-        if anchorType =='DRAG':
-            anchor_rate = 1e-3 * self.min_break_load / gravity / 20*2000
-        elif anchorType  == 'PILE':
-            anchor_rate = 150000.* np.sqrt(1e-3*self.min_break_load/gravity/1250.)
-        else:
-            raise ValueError('Anchor Type must be DRAG or PILE')
+        anchor_rate = 1e-3 * self.min_break_load / gravity / 20*2000
+        #if anchorType =='DRAG':
+        #    anchor_rate = 1e-3 * self.min_break_load / gravity / 20*2000
+        #elif anchorType  == 'PILE':
+        #    anchor_rate = 150000.* np.sqrt(1e-3*self.min_break_load/gravity/1250.)
+        #else:
+        #    raise ValueError('Anchor Type must be DRAG or PILE')
         anchor_total = anchor_rate*nlines
 
         # Total summations

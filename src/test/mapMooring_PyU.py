@@ -64,11 +64,11 @@ class TestMapMooring(unittest.TestCase):
         self.params['fairlead'] = 10.0
         self.params['fairlead_offset_from_shell'] = 1.0
 
-        self.params['water_density'] = 1e3
-        self.params['water_depth'] = 100.0
+        self.params['water_density'] = 1025.0 #1e3
+        self.params['water_depth'] = 218.0 #100.0
 
-        self.params['scope_ratio'] = 2.0
-        self.params['mooring_diameter'] = 0.05
+        self.params['scope_ratio'] = 1.2 #2.0
+        self.params['mooring_diameter'] = 1.5 #0.05
         self.params['anchor_radius'] = 175.0
         self.params['number_of_mooring_lines'] = 3
         self.params['mooring_type'] = 'chain'

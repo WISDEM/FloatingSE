@@ -146,8 +146,9 @@ def optimize_spar(params):
     prob.root = SparAssembly()
     
     # Establish the optimization driver, then set design variables and constraints
+    myopt={}
     prob.driver = ScipyOptimizer() #COBYLAdriver()
-
+    #prob.driver.options['maxiter'] = 1
     
     # DESIGN VARIABLES
     prob.driver.add_desvar('freeboard.x',lower=0.0)
@@ -285,6 +286,7 @@ def optimize_spar(params):
 
     
     # Execute the optimization
+    #prob.run_once()
     prob.run()
 
     return prob
@@ -296,13 +298,13 @@ if __name__ == '__main__':
     params['water_depth'] = 218.0
     params['freeboard'] = 15.0
     params['fairlead'] = 10.0
-    params['spar_length'] = 75.0
-    params['outer_radius'] = 10.0
-    params['wall_thickness'] = 0.05
-    params['fairlead_offset_from_shell'] = 0.5
-    params['scope_ratio'] = 2.5
-    params['anchor_radius'] = 30.0
-    params['mooring_diameter'] = 0.05
+    params['spar_length'] = 90.0
+    params['outer_radius'] = 35.0
+    params['wall_thickness'] = 0.1
+    params['fairlead_offset_from_shell'] = 0.05
+    params['scope_ratio'] = 1.5
+    params['anchor_radius'] = 175.0
+    params['mooring_diameter'] = 0.5
     params['number_of_mooring_lines'] = 3
     params['mooring_type'] = 'chain'
     params['anchor_type'] = 'pile'
@@ -322,12 +324,12 @@ if __name__ == '__main__':
     params['nu'] = 0.3
     params['yield_stress'] = 3.45e8
     params['permanent_ballast_density'] = 4492.0
-    params['stiffener_web_height']= 0.1
-    params['stiffener_web_thickness'] = 0.01
-    params['stiffener_flange_width'] = 0.1
-    params['stiffener_flange_thickness'] = 0.01
+    params['stiffener_web_height']= 0.2
+    params['stiffener_web_thickness'] = 0.05
+    params['stiffener_flange_width'] = 0.15
+    params['stiffener_flange_thickness'] = 0.05
     params['stiffener_spacing'] = 0.2
-    params['permanent_ballast_height'] = 3.0
+    params['permanent_ballast_height'] = 10.0
     params['bulkhead_mass_factor'] = 1.0
     params['ring_mass_factor'] = 1.0
     params['shell_mass_factor'] = 1.0
@@ -345,4 +347,4 @@ if __name__ == '__main__':
     params['tower_wind_force'] = 1e4 # TODO: Better guess
 
     prob = optimize_spar(params)
-    
+    print prob.driver.get_constraints()

@@ -935,6 +935,7 @@ class Spar(Component):
             R_id = np.interp(zpts, z_nodes, R_od-t_wall)
             V    = np.trapz(np.pi*R_id**2, zpts)
             return (rho_water*V)
+
         if mwater(h_avail) < m_ballast_water:
             # Don't have enough space, so max out variable balast here and constraints will catch this
             h_ballast_water = np.inf
