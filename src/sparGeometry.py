@@ -2,7 +2,7 @@ from openmdao.api import Component
 import numpy as np
 import commonse.Frustum as frustum
 
-NSECTIONS = 10
+NSECTIONS = 5
 
 def nodal2sectional(x):
     """Averages nodal data to be length-1 vector of sectional data
@@ -46,7 +46,6 @@ class SparGeometry(Component):
 
         
     def solve_nonlinear(self, params, unknowns, resids):
-        
         """Sets nodal points and sectional centers of mass in z-coordinate system with z=0 at the waterline.
         Nodal points are the beginning and end points of each section.
         Nodes and sections start at bottom and move upwards.

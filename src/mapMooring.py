@@ -1,21 +1,18 @@
 from openmdao.api import Component
 import numpy as np
 import os
+import sys
 from mapapi import *
 
 from constants import gravity
 
 FINPUTSTR = os.path.abspath('input.map')
-
+        
 class MapMooring(Component):
     """
     OpenMDAO Component class for mooring system attached to sub-structure of floating offshore wind turbines.
     Should be tightly coupled with Spar class for full system representation.
     """
-    '''The InputMAP class takes everything from FloatingSE and puts it in the
-    correct format for MAP++. MAP++ then outputs a linearlized stiffness matrix
-    that FloatingSE uses in its optimization analysis.'''
-
 
     def __init__(self):
         super(MapMooring,self).__init__()
@@ -41,10 +38,10 @@ class MapMooring(Component):
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('scope_ratio', val=1.5, units='m',desc='total mooring line length (scope) to fairlead depth (fairlead anchor to sea floor)')
         self.add_param('anchor_radius', val=1.0, units='m', desc='radius from center of spar to mooring anchor point')
-        self.add_param('mooring_diameter', val=0.09, units='m',desc='diameter of mooring line')
-        self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines')
-        self.add_param('mooring_type', val='CHAIN', desc='chain, nylon, polyester, fiber, or iwrc')
-        self.add_param('anchor_type', val='PILE', desc='PILE or DRAG')
+        self.add_param('mooring_diameter', val=0.2, units='m',desc='diameter of mooring line')
+        self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines', pass_by_obj=True)
+        self.add_param('mooring_type', val='CHAIN', desc='chain, nylon, polyester, fiber, or iwrc', pass_by_obj=True)
+        self.add_param('anchor_type', val='PILE', desc='PILE or DRAG', pass_by_obj=True)
         self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
 
         # Cost rates
@@ -56,12 +53,26 @@ class MapMooring(Component):
         self.add_output('vertical_load', val=0.0, units='kg*m/s**2',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='kg*m/s**2',desc='sume of forces in x direction')
         self.add_output('safety_factor', val=0.0, units='m',desc='range of damaged mooring')
+        self.add_output('mooring_length_min', val=0.0, desc='mooring line length ratio to nodal distance')
+        self.add_output('mooring_length_max', val=0.0, desc='mooring line length ratio to nodal distance')
 
         
     def solve_nonlinear(self, params, unknowns, resids):
+        """Sets mooring line properties then writes MAP input file and executes MAP.
+        
+        INPUTS:
+        ----------
+        params   : dictionary of input parameters
+        unknowns : dictionary of output parameters
+        
+        OUTPUTS  : none (all unknown dictionary values set)
+        """
 
-        # Set geometry profile and other characteristics based on regressions
+        # Set characteristics based on regressions / empirical data
         self.set_properties(params)
+
+        # Set geometry profile
+        self.set_geometry(params, unknowns)
 
         # Write MAP input file and analyze the system at every angle
         self.runMAP(params, unknowns)
@@ -71,9 +82,15 @@ class MapMooring(Component):
 
 
     def set_properties(self, params):
-        '''Minimun breaking load (MBL), wet mass per length (WML), element axial
-        stiffness (ae_storm and AE_drift), area, and MCPL are calcuated here
-        with MOORING DIAMETER and LINE TYPE
+        """Sets mooring line properties: Minimum Breaking Load, Mass per Length, Axial Stiffness, Cross-Sectional Area, Cost-per-Length.
+        
+        INPUTS:
+        ----------
+        params   : dictionary of input parameters
+        
+        OUTPUTS  : Parameters are class variables and are set internally
+
+        References:
         https://daim.idi.ntnu.no/masteroppgaver/015/15116/masteroppgave.pdf
         http://offshoremechanics.asmedigitalcollection.asme.org/article.aspx?articleid=2543338
         https://www.orcina.com/SoftwareProducts/OrcaFlex/Documentation/Help/Content/html/
@@ -84,24 +101,20 @@ class MapMooring(Component):
         RopeWire,MinimumBreakingLoads.htm
         RopeWire,Massperunitlength.htm
         RopeWire,AxialandBendingStiffness.htm
-        '''
-
+        """
+        
         # Unpack variables
         Dmooring       = params['mooring_diameter']
         lineType       = params['mooring_type'].upper()
-        scopeRatio     = params['scope_ratio']
-        fairleadDepth  = params['fairlead']
-        waterDepth     = params['water_depth']
 
-        # Define total length of mooring line
-        self.scope = scopeRatio * (waterDepth - fairleadDepth)
-        
         # Set parameters based on regressions for different mooring line type
         Dmooring2 = Dmooring**2
 
         # TODO: Costs per unit length are not synced with new input sources
         if lineType == 'CHAIN':
-            self.min_break_load      = 2.74e8  * Dmooring2 * (44.0 - 80.0*Dmooring)
+            #self.min_break_load      = 2.74e7  * Dmooring2 * (44.0 - 80.0*Dmooring)
+            # Use a linear fit to the other fit becuase it is poorly conditioned for optimization
+            self.min_break_load      = 1e3*np.maximum(1.0, -5445.2957034820683+176972.68498888266*Dmooring)
             self.wet_mass_per_length = 19.9e3  * Dmooring2
             self.axial_stiffness     = 8.54e10 * Dmooring2
             self.area                = 2.0 * 0.25 * np.pi * Dmooring2
@@ -139,11 +152,37 @@ class MapMooring(Component):
             raise ValueError('Available line types are: chain nylon polyester fiber iwrc')
 
             
+    def set_geometry(self, params, unknowns):
+        # Unpack variables
+        fairleadDepth = params['fairlead']
+        R_fairlead    = params['fairlead_radius']
+        R_anchor      = params['anchor_radius']
+        waterDepth    = params['water_depth']
+        scopeRatio    = params['scope_ratio']
+
+        # Define total length of mooring line
+        self.scope = scopeRatio * (waterDepth - fairleadDepth)
+
+        # Check that there is enough mooring line between anchor point and attachment point
+        vessel_node = np.array([R_fairlead, -fairleadDepth])
+        anchor_node = np.array([R_anchor, -waterDepth])
+        node_dist   = np.sqrt( np.sum( (anchor_node - vessel_node)**2) )
+
+        # Create constraint that there is at least enough line to cover this distance
+        unknowns['mooring_length_min'] = self.scope / node_dist
+        unknowns['mooring_length_max'] = self.scope / (R_anchor + waterDepth - fairleadDepth)
+        
+    
     def write_line_dictionary(self, params, cable_sea_friction_coefficient=0.65):
-        '''Writes the forth line of the input.map file. This is where 
-        LINE_TYPE, DIAMETER, AIR_MASS_DENSITY, ELEMENT_AXIAL_STIFFNESS, and
-        CABLE_SEA_FRICTION_COEFFICIENT is inputted. 
-        CABLE_SEA_FRICTION_COEFFICIENT defaults to 1 when none is given.'''
+        """Writes LINE DICTIONARY section of input.map file
+        
+        INPUTS:
+        ----------
+        params   : dictionary of input parameters
+        cable_sea_friction_coefficient : coefficient of friction with sea floor (defaults to 0.65)
+        
+        OUTPUTS  : none
+        """
         # Unpack variables
         rhoWater = params['water_density']
         lineType = params['mooring_type'].lower()
@@ -158,7 +197,13 @@ class MapMooring(Component):
 
         
     def write_node_properties_header(self):
-        '''Writes the node properties header:'''
+        """Writes NODE PROPERTIES section header of input.map file
+        
+        INPUTS: none 
+        ----------
+        
+        OUTPUTS  : none
+        """
         self.finput.write('---------------------- NODE PROPERTIES ---------------------------------------\n')
         # Doesn't like some weird character here somewhere
         #self.finput.write('Node  Type       X       Y       Z      M     B     FX      FY      FZ\n')
@@ -171,9 +216,19 @@ class MapMooring(Component):
     def write_node_properties(self, number, node_type, x_pos, y_pos, z_pos,
                               point_mass=0, displaced_volume=0,
                               x_force=None, y_force=None, z_force=None):
-        '''Writes the input information for a node based on NODE_TYPE. X_FORCE, 
-        Y_FORCE_APP, Z_FORCE_APP defaults to '#' if none is given.'''
-
+        """Writes NODE PROPERTIES data of input.map file.  Nodes are connections between mooring lines and bridles, vessels, and anchors
+        
+        INPUTS:
+        ----------
+        number           : The node number listing in the input file
+        node_type        : fix / vessel / connect (fix=anchor)
+        x_, y_, z_pos    : position of node in coordinate system (separate inputs)
+        point_mass       : see MAP reference (defaults to 0)
+        displaced_volume : see MAP reference (defaults to 0)
+        x_, y_, z_force  : see MAP reference (defaults to None)
+        
+        OUTPUTS  : none
+        """
         # Ensure this connection is something MAP understands
         nodeStr = node_type.lower()
         if not nodeStr in ['fix', 'connect', 'vessel']:
@@ -208,9 +263,18 @@ class MapMooring(Component):
 
 
     def write_line_properties(self, params, line_number=1, anchor_node=1, fairlead_node=2, flags=' '):
-        '''Writes the input information for the line properties. This explains
-        what node number is the ANCHOR and what node number is the FAIRLEAD, 
-        as well as the UNSTRETCHED_LENGTH between the two nodes.'''
+        """Writes LINE PROPERTIES section of input.map file that connects multiple nodes
+        
+        INPUTS:
+        ----------
+        params        : dictionary of input parameters- only 'mooring_type' is used
+        line_number   : Line ID number (defaults to 1)
+        anchor_node   : Node number corresponding to anchor (defaults to 1)
+        fairlead_node : Node number corresponding to fairlead (vessel) node (defaults to 2)
+        flags         : see MAP reference (defaults to empty string ' ')
+        
+        OUTPUTS  : none
+        """
         self.finput.write('---------------------- LINE PROPERTIES ---------------------------------------\n')
         self.finput.write('Line    LineType  UnstrLen  NodeAnch  NodeFair  Flags\n')
         self.finput.write('(-)      (-)       (m)       (-)       (-)       (-)\n')
@@ -219,11 +283,15 @@ class MapMooring(Component):
 
         
     def write_solver_options(self, params):
-        '''Writes the solver options at the end of the input file, as well as 
-        takes the self.NUMBER_OF_MOORING_LINES and places them evenly within 360
-        degrees. For NUMBER_OF_MOORING_LINES = 3:
-        '''
-
+        """Writes SOLVER OPTIONS section of input.map file, 
+        which includes repeating node/line arrangement in even angular spacing around structure.
+        
+        INPUTS:
+        ----------
+        params        : dictionary of input parameters- only 'number_of_mooring_lines' is used
+        
+        OUTPUTS  : none
+        """
         # Unpack variables
         nlines = params['number_of_mooring_lines']
         
@@ -235,16 +303,16 @@ class MapMooring(Component):
         self.finput.write(' kb_default 3.0e6\n')
         self.finput.write(' cb_default 3.0e5\n')
         self.finput.write(' wave_kinematics \n')
-        self.finput.write('inner_ftol 1e-6\n')
-        self.finput.write('inner_gtol 1e-6\n')
-        self.finput.write('inner_xtol 1e-6\n')
-        self.finput.write('outer_tol 1e-4\n')
+        self.finput.write('inner_ftol 1e-5\n')
+        self.finput.write('inner_gtol 1e-5\n')
+        self.finput.write('inner_xtol 1e-5\n')
+        self.finput.write('outer_tol 1e-3\n')
         self.finput.write(' pg_cooked 10000 1\n')
         self.finput.write(' outer_fd \n')
         self.finput.write(' outer_bd \n')
         self.finput.write(' outer_cd\n')
-        self.finput.write(' inner_max_its 100\n')
-        self.finput.write(' outer_max_its 500\n')
+        self.finput.write(' inner_max_its 200\n')
+        self.finput.write(' outer_max_its 600\n')
         # Repeat the details for the one mooring line multiple times
         self.finput.write('repeat ')
         n = 360.0/nlines
@@ -258,6 +326,15 @@ class MapMooring(Component):
 
         
     def write_input_file(self, params):
+        """Writes SOLVER OPTIONS section of input.map file, 
+        which includes repeating node/line arrangement in even angular spacing around structure.
+        
+        INPUTS:
+        ----------
+        params        : dictionary of input parameters- only 'number_of_mooring_lines' is used
+        
+        OUTPUTS  : none
+        """
         # Unpack variables
         fairleadDepth = params['fairlead']
         R_fairlead    = params['fairlead_radius']
@@ -286,6 +363,16 @@ class MapMooring(Component):
         
         
     def runMAP(self, params, unknowns):
+        """Writes MAP input file, executes, and then queries MAP to find 
+        maximum loading and displacement from vessel displacement around all 360 degrees
+        
+        INPUTS:
+        ----------
+        params   : dictionary of input parameters
+        unknowns : dictionary of output parameters
+        
+        OUTPUTS  : none (multiple unknown dictionary values set)
+        """
         # Unpack variables
         rhoWater      = params['water_density']
         waterDepth    = params['water_depth']
@@ -293,7 +380,7 @@ class MapMooring(Component):
         Dmooring      = params['mooring_diameter']
         nlines        = params['number_of_mooring_lines']
         offset        = params['max_offset']
-        
+
         # Write the mooring system input file for this design
         self.write_input_file(params)
 
@@ -323,9 +410,11 @@ class MapMooring(Component):
 
         # Get restoring force at weakest line at maximum allowable offset
         # Will global minimum always be along mooring angle?
-        max_tension = 0.0
+        max_tension   = 0.0
+        max_angle     = None
         F_max_tension = None
         T = np.zeros((nlines,))
+        F = np.zeros((nlines,))
         # Loop around all angles to find weakest point
         for a in angles:
             # Unit vector and offset in x-y components
@@ -334,31 +423,39 @@ class MapMooring(Component):
             sway  = offset * idir[1]
 
             # Get restoring force of offset at this angle
-            F = 0.0
-            mymap.displace_vessel(surge, sway, 0, 0, 0, 0)
+            mymap.displace_vessel(surge, sway, 0, 0, 0, 0) # 0s for z, angles
             mymap.update_states(0.0, 0)
             for k in xrange(nlines):
                 # Force in x-y-z coordinates
-                fx,fy,_ = mymap.get_fairlead_force_3d(k)
-                # Force along mooring line coordinates
-                H,V     = mymap.get_fairlead_force_2d(k)
-                T[k]    = np.hypot(H, V)
+                fx,fy,fz = mymap.get_fairlead_force_3d(k)
+                T[k]     = np.sqrt(fx*fx + fy*fy + fz*fz)
                 # Total restoring force
-                F      += np.dot([fx, fy], idir) #hypot(fx, fy)
-
+                F[k]     = np.dot([fx, fy], idir)
+                
             # Check if this is the weakest direction (highest tension)
             tempMax = T.max()
             if tempMax > max_tension:
                 max_tension   = tempMax
-                F_max_tension = F
-
+                F_max_tension = F.sum()
+                max_angle     = a
+                
         # Store the weakest restoring force when the vessel is offset the maximum amount
         unknowns['max_offset_restoring_force'] = F_max_tension
         unknowns['safety_factor'] = max_tension / self.min_break_load
+
         mymap.end()
 
         
     def compute_cost(self, params, unknowns):
+        """Computes cost, based on mass scaling, of mooring system.
+        
+        INPUTS:
+        ----------
+        params   : dictionary of input parameters
+        unknowns : dictionary of output parameters
+        
+        OUTPUTS  : none (mooring_cost/mass unknown dictionary values set)
+        """
         # Unpack variables
         nlines        = params['number_of_mooring_lines']
         rhoWater      = params['water_density']

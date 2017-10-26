@@ -279,21 +279,18 @@ class MapAPI(object):
 
     def init( self ):
         MapAPI.lib.map_init( self.f_type_init, self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, self.f_type_y, self.f_type_initout, pointer(self.ierr), self.status )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value
 
 
     def size_lines(self):
         size = MapAPI.lib.map_size_lines(self.f_type_d, pointer(self.ierr), self.status )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value        
         return size
 
 
     def update_states(self, t, interval):
         MapAPI.lib.map_update_states(c_float(t), c_int(interval), self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, pointer(self.ierr), self.status )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value        
 
 
     # Calls function in main.c and fordatamanager.c to delete insteads of c structs. First, the malloc'ed arrays need to vanish
@@ -322,16 +319,14 @@ class MapAPI(object):
     # MAP_EXTERNCALL InitializationData* MAP_InitInput_Create( char* map_msg, MAP_ERROR_CODE* ierr )
     def CreateInitState( self ) :
         obj = MapAPI.lib.map_create_init_type( self.status, pointer(self.ierr) )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value
         return obj
 
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL void MAP_InitOutput_Delete( InputData* io )
     def CreateInitoutState( self ) :
         obj = MapAPI.lib.map_create_initout_type( self.status, pointer(self.ierr) )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value        
         return obj
 
 
@@ -339,8 +334,7 @@ class MapAPI(object):
     # MAP_EXTERNCALL ModelData *MAP_OtherState_Create( char *map_msg, MAP_ERROR_CODE *ierr )
     def CreateDataState( self ) :
         obj = MapAPI.lib.map_create_other_type( self.status, pointer(self.ierr) )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value        
         return obj
 
 
@@ -348,8 +342,7 @@ class MapAPI(object):
     # MAP_EXTERNCALL InputData* MAP_Input_Create( char* map_msg, MAP_ERROR_CODE *ierr )
     def CreateInputState( self ) :
         obj = MapAPI.lib.map_create_input_type( self.status, pointer(self.ierr) )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value        
         return obj
 
 
@@ -357,16 +350,14 @@ class MapAPI(object):
     # MAP_EXTERNCALL ContinuousData* MAP_ContState_Create( char* map_msg, MAP_ERROR_CODE *ierr )
     def CreateContinuousState( self ) :
         obj = MapAPI.lib.map_create_continuous_type( self.status, pointer(self.ierr) )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value        
         return obj
 
     # Calls function in fortdatamanager.c to create instance of c structs
     # MAP_EXTERNCALL OutputData *MAP_Output_Create( char *map_msg, MAP_ERROR_CODE *ierr )
     def CreateOutputState( self ) :
         obj = MapAPI.lib.map_create_output_type( self.status, pointer(self.ierr) )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value        
         return obj
 
 
@@ -374,8 +365,7 @@ class MapAPI(object):
     # MAP_EXTERNCALL ConstraintData* MAP_ConstrState_Create( char* map_msg, MAP_ERROR_CODE *ierr )
     def CreateConstraintState( self ) :
         obj = MapAPI.lib.map_create_constraint_type( self.status, pointer(self.ierr) )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value        
         return obj
 
 
@@ -383,8 +373,7 @@ class MapAPI(object):
     # MAP_EXTERNCALL ParameterData* MAP_Param_Create( char* map_msg, MAP_ERROR_CODE *ierr )
     def CreateParameterState( self ) :
         obj = MapAPI.lib.map_create_parameter_type( self.status, pointer(self.ierr) )
-        if self.ierr.value != 0 :
-            print self.status.value        
+        if self.ierr.value != 0 : print self.status.value        
         return obj
 
 
@@ -633,6 +622,5 @@ class MapAPI(object):
             elif line[0]=="!":
                 None
             else:
-                # print line
                 self.f_type_init.contents.optionInputLine = line+'\0'
                 MapAPI.lib.map_add_options_input_text(self.f_type_init)            

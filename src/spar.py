@@ -51,7 +51,7 @@ def cylinder_forces_per_length(U, A, r, rho, mu, Cm):
     -------
     F   : float (scalar/vector),  force per unit length/height
     """
-    Fi = 0.5 * rho * Cm * np.pi * r**2 * A  # Morison's equation
+    Fi = rho * Cm * np.pi * r**2 * A  # Morison's equation
     Fd = cylinder_drag_per_length(U, r, rho, mu)
     return (Fi + Fd)
 
@@ -478,9 +478,14 @@ def compute_elastic_stress_limits(params, KthG, loading='hydrostatic'):
     a_thL[m_x > 5.0] = 0.8
     # Find the buckling mode- closest integer that is root of solved equation
     n   = np.zeros((NSECTIONS,))
+    maxn = 50
     for k in xrange(NSECTIONS):
         c = L_stiffener[k] / np.pi / R[k]
-        n[k] = brentq(lambda x:((c*x)**2*(1 + (c*x)**2)**4/(2 + 3*(c*x)**2) - z_m[k]), 0, 50)
+        myfun = lambda x:((c*x)**2*(1 + (c*x)**2)**4/(2 + 3*(c*x)**2) - z_m[k])
+        try:
+            n[k] = brentq(myfun, 0, maxn)
+        except:
+            n[k] = maxn
     # Calculate beta (local term)
     beta  = np.round(n) * L_stiffener / np.pi / R
     # Calculate buckling coefficient
@@ -927,6 +932,7 @@ class Spar(Component):
         
         # Add in water ballast to ballace the system
         m_ballast_water = m_displaced - m_system - m_turbine
+
         # Find height of water ballast numerically by finding the height that integrates to the mass we want
         npts = 100
         h_avail = z_nodes[-1] - z_ballast_var
@@ -938,7 +944,9 @@ class Spar(Component):
 
         if mwater(h_avail) < m_ballast_water:
             # Don't have enough space, so max out variable balast here and constraints will catch this
-            h_ballast_water = np.inf
+            h_ballast_water = h_avail
+        elif m_ballast_water < 0.0:
+            h_ballast_water = 0.0
         else:
             h_ballast_water = brentq(lambda x: mwater(x)-m_ballast_water, 0.0, h_avail)
         # Find CG of variable ballast
@@ -1009,6 +1017,10 @@ class Spar(Component):
         
         # Points for trapezoidal integration
         npts = 100
+
+        # Initialize summations
+        F = 0.0
+        M = 0.0
         
         # Spar contribution
         zpts = np.linspace(z_nodes[0], z_nodes[-1], npts)
@@ -1025,11 +1037,13 @@ class Spar(Component):
         
         # Get forces along spar- good for water or wind with our vectorized inputs
         # By setting acceleration to zero above waterline, hydrodynamic forces will be zero and only drag will remain
-        F = cylinder_forces_per_length(uvel, accel, r, rho, mu, Cm)
+        Fspar = cylinder_forces_per_length(uvel, accel, r, rho, mu, Cm)
         # Compute pitch moments from spar forces about CG
-        M = np.trapz((zpts-self.system_cg)*F, zpts)
-        F = np.trapz(F, zpts)
-
+        Mspar = np.trapz((zpts-self.system_cg)*F, zpts)
+        Fspar = np.trapz(Fspar, zpts)
+        F += Fspar
+        M += Mspar
+        
         # Tower contribution
         F += Ftower
         M += Ftower*(tower_cg + freeboard - self.system_cg)
@@ -1055,6 +1069,8 @@ class Spar(Component):
         # http://www.iaea.org/inis/collection/NCLCollectionStore/_Public/09/411/9411273.pdf
         #mass_add_surge = rhoWater * np.pi * R_od.max() * draft
         #T_surge        = 2*np.pi*np.sqrt( (unknowns['total_mass']+mass_add_surge) / kstiff_horiz_mooring)
+
+        # Compare restoring force from mooring to force of worst case spar displacement
         unknowns['offset_force_ratio'] = np.abs(F / F_mooring)
         
         
@@ -1109,7 +1125,10 @@ class Spar(Component):
             c1    = (Fxci + Frci) / yield_stress - 1.0
             c2    = load_ratio_k * Kph / Kth
             for k in xrange(Fxci.size):
-                Fthci[k] = brentq(lambda x: (c2[k]*x/Fxci[k])**2 - c1[k]*(c2[k]*x/Fxci[k])*(x/Frci[k]) + (x/Frci[k])**2 - 1.0, 0, Fxci[k]+Frci[k])
+                try:
+                    Fthci[k] = brentq(lambda x: (c2[k]*x/Fxci[k])**2 - c1[k]*(c2[k]*x/Fxci[k])*(x/Frci[k]) + (x/Frci[k])**2 - 1.0, 0, Fxci[k]+Frci[k], maxiter=20)
+                except:
+                    Fthci[k] = Fxci[k] + Frci[k]
                 Fphci[k] = c2[k] * Fthci[k]
             return Fphci, Fthci
         
