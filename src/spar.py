@@ -657,6 +657,8 @@ class Spar(Component):
         self.add_param('mooring_restoring_force', val=0.0, units='kg*m/s**2', desc='Mooring resistance to surge')
         
         # Outputs
+        self.add_output('flange_spacing_ratio', val=np.zeros((NSECTIONS,)), desc='ratio between flange and stiffener spacing')
+        self.add_output('web_radius_ratio', val=np.zeros((NSECTIONS,)), desc='ratio between web height and radius')
         self.add_output('flange_compactness', val=np.zeros((NSECTIONS,)), desc='check for flange compactness')
         self.add_output('web_compactness', val=np.zeros((NSECTIONS,)), desc='check for web compactness')
         self.add_output('axial_local_unity', val=np.zeros((NSECTIONS,)), desc='unity check for axial load - local buckling')
@@ -1076,7 +1078,25 @@ class Spar(Component):
         
     def check_stresses(self, params, unknowns, loading='hydro'):
         '''
-        This function computes the applied axial and hoop stresses in a cylinder and 
+        This function computes the applied axial and hoop stresses in a cylinder and compares that to 
+        limits established by the API standard.  Some physcial geometry checks are also performed.
+        
+        INPUTS:
+        ----------
+        params   : dictionary of input parameters
+        unknowns : dictionary of output parameters
+        loading  : Main loading source (default 'hydro')
+        
+        OUTPUTS  : (none)
+        ----------
+        flange_spacing_ratio   in 'unknowns' dictionary set
+        web_radius_ratio       in 'unknowns' dictionary set
+        flange_compactness     in 'unknowns' dictionary set
+        web_compactness        in 'unknowns' dictionary set
+        axial_local_unity      in 'unknowns' dictionary set
+        axial_general_unity    in 'unknowns' dictionary set
+        extern_local_unity     in 'unknowns' dictionary set
+        extern_general_unity   in 'unknowns' dictionary set
         '''
         # Unpack variables
         R_od         = nodal2sectional(params['outer_radius'])
@@ -1092,6 +1112,10 @@ class Spar(Component):
         yield_stress = params['yield_stress']
         z_nodes      = params['z_nodes']
         z_section    = params['z_section']
+
+        # Create some constraints for reasonable stiffener designs for an optimizer
+        unknowns['flange_spacing_ratio'] = w_flange / L_stiffener
+        unknowns['web_radius_ratio']     = h_web    / R_od
         
         # Apply quick "compactness" check on stiffener geometry
         # Constraint is that these must be >= 1
