@@ -18,7 +18,7 @@ myones = np.ones((100,))
 truth='---------------------- LINE DICTIONARY ---------------------------------------\n' + \
 'LineType  Diam      MassDenInAir   EA            CB   CIntDamp  Ca   Cdn    Cdt\n' + \
 '(-)       (m)       (kg/m)        (N)           (-)   (Pa-s)    (-)  (-)    (-)\n' + \
-'chain   0.05   53.67699   213500000.0   0.65   1.0E8   0.6   -1.0   0.05\n' + \
+'chain   0.05   53.77517   213500000.0   0.65   1.0E8   0.6   -1.0   0.05\n' + \
 '---------------------- NODE PROPERTIES ---------------------------------------\n' + \
 'Node Type X     Y    Z   M     V FX FY FZ\n' + \
 '(-)  (-) (m)   (m)  (m) (kg) (m^3) (kN) (kN) (kN)\n' + \
@@ -27,7 +27,7 @@ truth='---------------------- LINE DICTIONARY ----------------------------------
 '---------------------- LINE PROPERTIES ---------------------------------------\n' + \
 'Line    LineType  UnstrLen  NodeAnch  NodeFair  Flags\n' + \
 '(-)      (-)       (m)       (-)       (-)       (-)\n' + \
-'1   chain   180.0   1   2\n' + \
+'1   chain   416.0   1   2\n' + \
 '---------------------- SOLVER OPTIONS-----------------------------------------\n' + \
 'Option\n' + \
 '(-)\n' + \
@@ -36,16 +36,16 @@ truth='---------------------- LINE DICTIONARY ----------------------------------
 ' kb_default 3.0e6\n' + \
 ' cb_default 3.0e5\n' + \
 ' wave_kinematics\n' + \
-'inner_ftol 1e-6\n' + \
-'inner_gtol 1e-6\n' + \
-'inner_xtol 1e-6\n' + \
-'outer_tol 1e-4\n' + \
+'inner_ftol 1e-5\n' + \
+'inner_gtol 1e-5\n' + \
+'inner_xtol 1e-5\n' + \
+'outer_tol 1e-3\n' + \
 ' pg_cooked 10000 1\n' + \
 ' outer_fd\n' + \
 ' outer_bd\n' + \
 ' outer_cd\n' + \
-' inner_max_its 100\n' + \
-' outer_max_its 500\n' + \
+' inner_max_its 200\n' + \
+' outer_max_its 600\n' + \
 'repeat 120 240\n' + \
 ' krylov_accelerator 3\n' + \
 ' ref_position 0.0 0.0 0.0\n'
@@ -67,8 +67,8 @@ class TestMapMooring(unittest.TestCase):
         self.params['water_density'] = 1025.0 #1e3
         self.params['water_depth'] = 218.0 #100.0
 
-        self.params['scope_ratio'] = 1.2 #2.0
-        self.params['mooring_diameter'] = 1.5 #0.05
+        self.params['scope_ratio'] = 2.0
+        self.params['mooring_diameter'] = 0.05
         self.params['anchor_radius'] = 175.0
         self.params['number_of_mooring_lines'] = 3
         self.params['mooring_type'] = 'chain'
@@ -81,6 +81,7 @@ class TestMapMooring(unittest.TestCase):
 
         self.mymap = mapMooring.MapMooring()
         self.mymap.set_properties(self.params)
+        self.mymap.set_geometry(self.params, self.unknowns)
         self.mymap.finput = open(mapMooring.FINPUTSTR, 'wb')
         
     def tearDown(self):

@@ -41,7 +41,7 @@ class TestSpar(unittest.TestCase):
 
         self.params['mooring_mass'] = 50.0
         self.params['mooring_vertical_load'] = 25.0
-        self.params['mooring_horizontal_stiffness'] = 1e5
+        self.params['mooring_restoring_force'] = 1e5
         self.params['mooring_cost'] = 1e4
 
         self.params['ballast_cost_rate'] = 10.0
@@ -95,7 +95,7 @@ class TestSpar(unittest.TestCase):
         A  = 2*r
         D = q*A*cd
 
-        Fi = 0.5 * rho * A * cm * np.pi * r*r
+        Fi = rho * A * cm * np.pi * r*r
         Fp = Fi + D
         
         # Test drag only
@@ -333,7 +333,7 @@ class TestSpar(unittest.TestCase):
         expect = np.abs(M/Mr)*180./np.pi
         self.myspar.compute_forces_moments(self.params, self.unknowns)
         self.assertEqual(self.unknowns['heel_angle'], expect)
-        self.assertAlmostEqual(self.unknowns['offset_surge'], F/1e5) # 1e5=stiffness
+        self.assertAlmostEqual(self.unknowns['offset_force_ratio'], F/1e5) # 1e5=mooring
 
         # Only fluid forces, but constant along spar so no moment
         self.params['wind_reference_speed'] = 5.0
@@ -358,7 +358,7 @@ class TestSpar(unittest.TestCase):
         expect = 0.0
         self.myspar.compute_forces_moments(self.params, self.unknowns)
         self.assertAlmostEqual(self.unknowns['heel_angle'], expect)
-        self.assertAlmostEqual(self.unknowns['offset_surge'], F/1e5) # 1e5=stiffness
+        self.assertAlmostEqual(self.unknowns['offset_force_ratio'], F/1e5) # 1e5=stiffness
 
     def testAppliedHoop(self):
         # Use the API 2U Appendix B as a big unit test!
@@ -510,8 +510,8 @@ class TestSpar(unittest.TestCase):
         npt.assert_almost_equal(self.unknowns['flange_compactness'], 9.03/5.0 * np.ones((3,)), decimal=3)
         self.assertAlmostEqual(self.unknowns['axial_local_unity'][1], 1.07, 1)
         self.assertAlmostEqual(self.unknowns['axial_general_unity'][1], 0.34, 1)
-        self.assertAlmostEqual(self.unknowns['extern_local_unity'][1], 1.07, 1)
-        self.assertAlmostEqual(self.unknowns['extern_general_unity'][1], 0.59, 1)
+        self.assertAlmostEqual(self.unknowns['external_local_unity'][1], 1.07, 1)
+        self.assertAlmostEqual(self.unknowns['external_general_unity'][1], 0.59, 1)
         
     def testCheckCost(self):
         self.unknowns['ballast_mass'] = 50.0

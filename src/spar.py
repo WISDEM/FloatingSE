@@ -456,6 +456,7 @@ def compute_elastic_stress_limits(params, KthG, loading='hydrostatic'):
     nu           = params['nu'] # Poisson ratio
 
     # Geometry computations
+    nsections = R_od.size
     area_stiff, y_cg, Ixx, Iyy = TBeamProperties(h_web, t_web, w_flange, t_flange)
     area_stiff_bar = area_stiff / L_stiffener / t_wall
     R  = R_od - 0.5*t_wall
@@ -477,9 +478,9 @@ def compute_elastic_stress_limits(params, KthG, loading='hydrostatic'):
     a_thL = np.ones(m_x.shape)
     a_thL[m_x > 5.0] = 0.8
     # Find the buckling mode- closest integer that is root of solved equation
-    n   = np.zeros((NSECTIONS,))
+    n   = np.zeros((nsections,))
     maxn = 50
-    for k in xrange(NSECTIONS):
+    for k in xrange(nsections):
         c = L_stiffener[k] / np.pi / R[k]
         myfun = lambda x:((c*x)**2*(1 + (c*x)**2)**4/(2 + 3*(c*x)**2) - z_m[k])
         try:
@@ -523,7 +524,7 @@ def compute_elastic_stress_limits(params, KthG, loading='hydrostatic'):
     # Compute pressure leading to elastic failure
     n = np.zeros(R_od.shape)
     pressure_failure_peG = np.zeros(R_od.shape)
-    for k in xrange(NSECTIONS):
+    for k in xrange(nsections):
         peG = lambda x: ( E*lambda_G[k]**4*t_wall[k]/R[k]/(x**2+0.0*lambda_G[k]**2-1)/(x**2 + lambda_G[k]**2)**2 +
                           E*Ier[k]*(x**2-1)/L_stiffener[k]/Rc[k]**2/R_od[k] )
         minout = minimize_scalar(peG, bounds=(2.0, 15.0), method='bounded')
@@ -1056,7 +1057,6 @@ class Spar(Component):
 
         # RNA contribution: moment due to offset mass
         # Note this is in the opposite moment direction as the wind forces
-        # TODO: WHAT ABOUT THRUST?
         M -= rna_mass*gravity*rna_cg_x
 
         # Compute restoring moment under small angle assumptions

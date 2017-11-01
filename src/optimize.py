@@ -137,14 +137,14 @@ def optimize_spar(params):
     # Establish the optimization driver, then set design variables and constraints
     myopt={}
 
-    prob.driver = ScipyOptimizer()
-    prob.driver.options['optimizer'] = 'COBYLA'
+    #prob.driver = ScipyOptimizer()
+    #prob.driver.options['optimizer'] = 'COBYLA'
     #prob.driver.options['optimizer'] = 'SLSQP'
 
-    #prob.driver = pyOptSparseDriver()
+    prob.driver = pyOptSparseDriver()
     # Working
-    #prob.driver.options['optimizer'] = 'CONMIN'
-    #prob.driver.options['optimizer'] = 'PSQP'
+    #prob.driver.options['optimizer'] = 'CONMIN' # Takes too long and gets stuck
+    prob.driver.options['optimizer'] = 'PSQP'
     
     # Jumps to infeasible values
     #prob.driver.options['optimizer'] = 'ALPSO'
@@ -194,7 +194,12 @@ def optimize_spar(params):
 
     # CONSTRAINTS
     # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
+    # Ensure that fairlead attaches to draft
     prob.driver.add_constraint('sg.draft_depth_ratio',lower=0.0, upper=1.0)
+    prob.driver.add_constraint('sg.fairlead_draft_ratio',lower=0.0, upper=1.0)
+
+    # Ensure that the radius doesn't change dramatically over a section
+    prob.driver.add_constraint('sg.taper_ratio',upper=0.1)
 
     # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
     prob.driver.add_constraint('mm.safety_factor',lower=0.0, upper=0.8)
@@ -219,8 +224,8 @@ def optimize_spar(params):
     # Center of bouyancy should be above CG (difference should be positive)
     prob.driver.add_constraint('sp.static_stability', lower=0.1)
 
-    # Achieving non-zero variable ballast height means the spar can be balanced
-    prob.driver.add_constraint('sp.variable_ballast_height', lower=0.0, upper=100.0)
+    # Achieving non-zero variable ballast height means the spar can be balanced with margin as conditions change
+    prob.driver.add_constraint('sp.variable_ballast_height', lower=2.0, upper=100.0)
     prob.driver.add_constraint('sp.variable_ballast_mass', lower=0.0)
 
     # Surge restoring force should be greater than wave-wind forces (ratio < 1)
@@ -385,31 +390,30 @@ def example_spar():
 
     
 def psqp_optimal():
-    #OrderedDict([('sp.total_cost', array([ 0.16143901]))])
+    #OrderedDict([('sp.total_cost', array([ 0.34423499]))])
     params = get_static_params()
-    params['freeboard'] = 3.02358781
-    params['fairlead'] = 22.71487365
-    params['fairlead_offset_from_shell'] = 0.09693889
-    params['section_height'] = np.array([ 0.50004774,  15.82327125,  15.51932098,   0.5219992 ,   4.18208842])
-    params['outer_radius'] = np.array([ 1.10000132,   1.1       ,   1.1       ,   1.1       ,    19.86930083,   1.10000237])
+    params['freeboard'] = 0.0
+    params['fairlead'] = 10.41940347
+    params['fairlead_offset_from_shell'] = 4.41060035
+    params['section_height'] = np.array([ 4.20813001,  1.70160625,  1.07302402,  1.26936124,  2.16728195])
+    params['outer_radius'] = np.array([ 9.0636007 ,   9.96996077,  10.96695684,  12.06365253, 13.27001778,  14.59701956])
     params['wall_thickness'] = 0.005
-    params['scope_ratio'] = 2.59135764
-    params['anchor_radius'] = 449.93063704
-    params['mooring_diameter'] = 0.169975
-    params['stiffener_web_height']= np.array([ 0.02110444,  0.0813661 ,  0.07528898,  0.01000014,  0.06786745])
-    params['stiffener_web_thickness'] = np.array([ 0.00100006,  0.00337939,  0.00312699,  0.00165814,  0.00281875 ])
-    params['stiffener_flange_width'] = np.array([ 0.01      ,  0.02601685,  0.05294635,  0.01      ,  0.01035187 ])
-    params['stiffener_flange_thickness'] = np.array([ 0.30244019,  0.00394964,  0.00293208,  0.001     ,  0.00698588])
-    params['stiffener_spacing'] = np.array([ 0.32058061,  0.58286264,  1.16493776,  0.12679984,  0.25645317])
-    params['permanent_ballast_height'] = 16.28062693
+    params['scope_ratio'] = 2.39763604
+    params['anchor_radius'] = 444.79571073
+    params['mooring_diameter'] = 0.3389497
+    params['stiffener_web_height']= np.array([ 0.0813349 ,  0.05917536,  0.02257495,  0.01002641,  0.06057282])
+    params['stiffener_web_thickness'] = np.array([ 0.00337809,  0.00245774,  0.001     ,  0.00376891,  0.00288955 ])
+    params['stiffener_flange_width'] = np.array([ 0.01      ,  0.01637183,  0.01634859,  0.0137573 ,  0.01 ])
+    params['stiffener_flange_thickness'] = np.array([ 0.01703923,  0.00535814,  0.00167228,  0.00100091,  0.00101613])
+    params['stiffener_spacing'] = np.array([ 0.16948772,  0.1611674 ,  0.15404127,  0.16112703,  0.17907375])
+    params['permanent_ballast_height'] = 0.1
     prob = optimize_spar(params)
     prob.run_once()
     print prob.driver.get_constraints()
     print prob.driver.get_desvars()
     print prob.driver.get_objectives()
     '''
-OrderedDict([('sg.draft_depth_ratio', array([ 0.15377587])), ('mm.safety_factor', array([ 0.78616651])), ('mm.mooring_length_min', array([ 1.03405916])), ('mm.mooring_length_max', array([ 0.78431687])), ('sp.flange_spacing_ratio', array([ 0.0311934 ,  0.04463634,  0.04544994,  0.07886445,  0.04036553])), ('sp.web_radius_ratio', array([ 0.01918584,  0.07396919,  0.06844453,  0.00095379,  0.00647303])), ('sp.flange_compactness', array([ 546.14279531,    2.74138393,    1.00001419,    1.8057905 ,
-         12.18622626])), ('sp.web_compactness', array([ 1.14092402,  0.99999998,  1.        ,  3.99228174,  1.        ])), ('sp.axial_local_unity', array([ 0.61753424,  0.97030301,  0.98739345,  0.70297846,  0.99476968])), ('sp.axial_general_unity', array([ 0.05977748,  0.6202893 ,  0.57192377,  0.73564814,  0.99099851])), ('sp.external_local_unity', array([ 0.60311411,  0.97030301,  0.98739345,  0.63112958,  0.99476968])), ('sp.external_general_unity', array([ 0.29310656,  1.00002619,  0.8964679 ,  0.66934017,  1.00000005])), ('sp.metacentric_height', array([ 25.3058474])), ('sp.static_stability', array([ 0.09998754])), ('sp.variable_ballast_height', array([ 0.00016738])), ('sp.variable_ballast_mass', array([ 0.64625482])), ('sp.offset_force_ratio', array([ 0.4321952])), ('sp.heel_angle', array([ 10.00000335]))])
+OrderedDict([('sg.draft_depth_ratio', array([ 0.04779543])), ('sg.fairlead_draft_ratio', array([ 1.])), ('sg.taper_ratio', array([ 0.1,  0.1,  0.1,  0.1,  0.1])), ('mm.safety_factor', array([ 0.80086819])), ('mm.mooring_length_min', array([ 1.03975491])), ('mm.mooring_length_max', array([ 0.76290741])), ('sp.flange_spacing_ratio', array([ 0.05900132,  0.10158278,  0.10613121,  0.08538173,  0.05584291])), ('sp.web_radius_ratio', array([ 0.00854647,  0.00565273,  0.00196043,  0.00079155,  0.00434727])), ('sp.flange_compactness', array([ 30.76922756,   5.90994463,   1.84712678,   1.31380057,   1.83491286])), ('sp.web_compactness', array([ 1.00000007,  0.99999988,  1.06654393,  9.05056488,  1.1485697 ])), ('sp.axial_local_unity', array([ 0.99959764,  0.99970738,  0.98926096,  1.00000014,  1.00000046])), ('sp.axial_general_unity', array([ 1.00012054,  0.99990372,  1.00000529,  1.00194736,  1.00536217])), ('sp.external_local_unity', array([ 0.94545783,  0.93743304,  0.90580108,  0.92347502,  0.95691509])), ('sp.external_general_unity', array([ 0.95239967,  0.94001924,  0.91861837,  0.92602302,  0.96462832])), ('sp.metacentric_height', array([ 8.59989219])), ('sp.static_stability', array([ 0.10008457])), ('sp.variable_ballast_height', array([ 1.99932607])), ('sp.variable_ballast_mass', array([ 556385.54703457])), ('sp.offset_force_ratio', array([ 0.55586308])), ('sp.heel_angle', array([ 9.99991375]))])
     '''
 
 
