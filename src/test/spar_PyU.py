@@ -262,31 +262,31 @@ class TestSpar(unittest.TestCase):
         self.assertEqual(cg_turb, cg_expect)
 
     def testBouyancy(self):
-        m_displaced, z_cb, metacentre = self.myspar.compute_bouyancy(self.params)
+        m_displaced, z_cb, metacentre = self.myspar.compute_buoyancy(self.params)
 
         V_expect = np.pi * 100.0 * 35.0
         m_expect = V_expect * 1e3
         cb_expect = -17.5
         Ixx = 0.25 * np.pi * 1e4
         self.assertAlmostEqual(m_displaced, m_expect)
-        self.assertAlmostEqual(self.myspar.bouyancy_force, m_expect*g)
+        self.assertAlmostEqual(self.myspar.buoyancy_force, m_expect*g)
         self.assertAlmostEqual(z_cb, cb_expect)
         self.assertAlmostEqual(metacentre, cb_expect + Ixx/V_expect)
 
         self.params['outer_radius'] = np.array([10.0, 10.0, 7.0])
-        m_displaced, z_cb, metacentre = self.myspar.compute_bouyancy(self.params)
+        m_displaced, z_cb, metacentre = self.myspar.compute_buoyancy(self.params)
         r_water = 8.5
         V_expect = np.pi*100.0*20 + frustum.frustumVol_radius(10.0, r_water, 15.0) # last section height-freeboard=15
         m_expect = V_expect * 1e3
         self.assertEqual(m_displaced, m_expect)
-        self.assertEqual(self.myspar.bouyancy_force, m_expect*g)
+        self.assertEqual(self.myspar.buoyancy_force, m_expect*g)
         
     def testBalanceSpar(self):
         self.myspar.balance_spar(self.params, self.unknowns)
         m_spar, cg_spar = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
         m_ballast, cg_ballast, z_ballast_water = self.myspar.compute_ballast_mass_cg(self.params, self.unknowns)
         m_turb, cg_turb = spar.compute_turbine_mass_cg(self.params)
-        m_displaced, z_cb, metacentre = self.myspar.compute_bouyancy(self.params)
+        m_displaced, z_cb, metacentre = self.myspar.compute_buoyancy(self.params)
 
         m_mooring = self.params['mooring_mass']
         m_mooring_effective = self.params['mooring_vertical_load']/g
@@ -322,7 +322,7 @@ class TestSpar(unittest.TestCase):
         self.unknowns['total_mass'] = 100.0
         self.set_geometry()
         self.myspar.system_cg = -25.0
-        self.myspar.bouyancy_force = 100.0
+        self.myspar.buoyancy_force = 100.0
 
         F = 10.+50.
         Mtower = 10.*(5.+25.)
@@ -350,7 +350,7 @@ class TestSpar(unittest.TestCase):
         self.unknowns['total_mass'] = 100.0
         self.set_geometry()
         self.myspar.system_cg = 25.0
-        self.myspar.bouyancy_force = 100.0
+        self.myspar.buoyancy_force = 100.0
 
         D = spar.cylinder_forces_per_length(5.0, 0.0, 10.0, self.params['air_density'], self.params['air_viscosity'], 0.0)
         F = D*50.0
@@ -407,7 +407,7 @@ class TestSpar(unittest.TestCase):
         self.set_geometry()
         self.myspar.section_mass = np.zeros((3,))
 
-        expect = 9000 * kip_to_si / (2*np.pi*(self.params['outer_radius'][0]-0.5*self.params['wall_thickness'][0])*self.params['wall_thickness'][0])
+        expect = g*9000 * kip_to_si / (2*np.pi*(self.params['outer_radius'][0]-0.5*self.params['wall_thickness'][0])*self.params['wall_thickness'][0])
         npt.assert_almost_equal(spar.compute_applied_axial(self.params, self.myspar.section_mass), expect* np.ones((3,)), decimal=4)
         
     def testStiffenerFactors(self):
@@ -495,8 +495,8 @@ class TestSpar(unittest.TestCase):
         self.params['yield_stress'] = 50 * ksi_to_si
         self.params['bulkhead_nodes'] = [False, False, False, False]
         self.params['wave_height'] = 0.0 # gives only static pressure
-        self.params['tower_mass'] = 0.5 * 9000 * kip_to_si
-        self.params['rna_mass'] = 0.5 * 9000 * kip_to_si
+        self.params['tower_mass'] = 0.5 * 9000 * kip_to_si / g
+        self.params['rna_mass'] = 0.5 * 9000 * kip_to_si / g
         
         # Find pressure to give "head" of 60ft- put mid-point of middle section at this depth
         z = 60 * ft_to_si

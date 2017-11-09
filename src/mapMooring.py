@@ -39,6 +39,8 @@ class MapMooring(Component):
         self.add_param('scope_ratio', val=1.5, units='m',desc='total mooring line length (scope) to fairlead depth (fairlead anchor to sea floor)')
         self.add_param('anchor_radius', val=1.0, units='m', desc='radius from center of spar to mooring anchor point')
         self.add_param('mooring_diameter', val=0.2, units='m',desc='diameter of mooring line')
+
+        # User inputs (could be design variables)
         self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines', pass_by_obj=True)
         self.add_param('mooring_type', val='CHAIN', desc='chain, nylon, polyester, fiber, or iwrc', pass_by_obj=True)
         self.add_param('anchor_type', val='PILE', desc='PILE or DRAG', pass_by_obj=True)
@@ -48,14 +50,16 @@ class MapMooring(Component):
         self.add_param('mooring_cost_rate', val=1.1, desc='miscellaneous cost factor in percent')
 
         # Outputs
+        self.add_output('mooring_effective_mass', val=0.0, units='kg',desc='total effective mass of mooring based on vertical loading')
         self.add_output('mooring_mass', val=0.0, units='kg',desc='total mass of mooring')
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
         self.add_output('vertical_load', val=0.0, units='kg*m/s**2',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='kg*m/s**2',desc='sume of forces in x direction')
+
+        # Output constriants
         self.add_output('safety_factor', val=0.0, units='m',desc='range of damaged mooring')
         self.add_output('mooring_length_min', val=0.0, desc='mooring line length ratio to nodal distance')
         self.add_output('mooring_length_max', val=0.0, desc='mooring line length ratio to nodal distance')
-
         
     def solve_nonlinear(self, params, unknowns, resids):
         """Sets mooring line properties then writes MAP input file and executes MAP.
@@ -399,14 +403,12 @@ class MapMooring(Component):
             _,_,fz = mymap.get_fairlead_force_3d(k)
             Fz += fz
         unknowns['vertical_load'] = Fz
+        unknowns['mooring_effective_mass'] = Fz / gravity
         
         # Get angles by which to find the weakest line
         dangle  = 2.0
         angles  = np.deg2rad( np.arange(0.0, 360.0, dangle) )
         nangles = len(angles)
-
-        # Finite difference epsilon for stiffness linearization
-        epsilon = 1e-3
 
         # Get restoring force at weakest line at maximum allowable offset
         # Will global minimum always be along mooring angle?
@@ -479,3 +481,4 @@ class MapMooring(Component):
         # Total summations
         unknowns['mooring_cost'] = costFact*(legs_total + anchor_total)
         unknowns['mooring_mass'] = (self.wet_mass_per_length + rhoWater*0.25*np.pi*Dmooring**2)*self.scope*nlines
+        

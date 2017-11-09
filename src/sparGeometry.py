@@ -39,14 +39,16 @@ class SparGeometry(Component):
 
         # Outputs
         self.add_output('draft', val=0.0, units='m', desc='Spar draft (length of body under water)')
-        self.add_output('draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
-        self.add_output('fairlead_draft_ratio', val=0.0, desc='Ratio of fairlead to draft')
         self.add_output('z_nodes', val=np.zeros((NSECTIONS+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_output('z_section', val=np.zeros((NSECTIONS,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
         self.add_output('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
+
+        # Output constraints
+        self.add_output('draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
+        self.add_output('fairlead_draft_ratio', val=0.0, desc='Ratio of fairlead to draft')
         self.add_output('taper_ratio', val=np.zeros((NSECTIONS,)), desc='Ratio of outer radius change in a section to its starting value')
 
-        
+
     def solve_nonlinear(self, params, unknowns, resids):
         """Sets nodal points and sectional centers of mass in z-coordinate system with z=0 at the waterline.
         Nodal points are the beginning and end points of each section.
@@ -88,3 +90,4 @@ class SparGeometry(Component):
 
         # Create constraint output for manufacturability that limits the changes in outer radius from one node to the next
         unknowns['taper_ratio'] = np.abs( np.diff(R_od) / R_od[:-1] )
+

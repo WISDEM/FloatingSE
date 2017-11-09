@@ -353,7 +353,7 @@ def compute_applied_axial(params, section_mass):
     # Applied axial stresss at each section node
     m_turbine, _  = compute_turbine_mass_cg(params)
     # Add in weight of sections above it
-    axial_load    = m_turbine + np.r_[0.0, np.cumsum(section_mass[:-1])]
+    axial_load    = gravity * (m_turbine + np.r_[0.0, np.cumsum(section_mass[:-1])])
     # Divide by shell cross sectional area to get stress
     return (axial_load / (2.0 * np.pi * R * t_wall))
 
@@ -587,7 +587,7 @@ class Spar(Component):
         super(Spar,self).__init__()
 
         # Variables local to the class and not OpenMDAO
-        self.bouyancy_force = None # Weight of displaced water
+        self.buoyancy_force = None # Weight of displaced water
         self.section_mass   = None # Weight of spar by section
         self.system_cg      = None # z-position of center of gravity
         
@@ -668,7 +668,7 @@ class Spar(Component):
         self.add_output('external_general_unity', val=np.zeros((NSECTIONS,)), desc='unity check for external pressure - general instability')
 
         self.add_output('metacentric_height', val=0.0, units='m', desc='measure of static overturning stability')
-        self.add_output('static_stability', val=0.0, desc='static stability margin based on position of centers of gravity and bouyancy')
+        self.add_output('static_stability', val=0.0, desc='static stability margin based on position of centers of gravity and buoyancy')
 
         self.add_output('ballast_cost', val=0.0, units='USD', desc='cost of permanent ballast')
         self.add_output('ballast_mass', val=0.0, units='kg', desc='mass of permanent ballast')
@@ -689,8 +689,6 @@ class Spar(Component):
 
         self.add_output('offset_force_ratio', val=0.0, units='m', desc='maximum surge offset')
         self.add_output('heel_angle', val=0.0, units='deg', desc='static angle of heel for turbine and spar substructure')
-        
-        # TODO: Constraints draft<depth, draft>0, bulkhead keep in ballast?, R_od_top=tower base diam?, unity checks, compactness checks, heel<10 extreme, heel<6 ordinary, static_stability, metacentric, water_ballast_height>0, surge<10%depth, heave<input (will be zero), mooring stress@max surge<80%breaking limit, pass spar radius at fairlead
         
         
     def solve_nonlinear(self, params, unknowns, resids):
@@ -827,8 +825,8 @@ class Spar(Component):
         return m_ballast, z_cg, z_ballast_var
 
         
-    def compute_bouyancy(self, params):
-        """Computes bouyancy force by calculating mass of displaced water, its center of bouyancy and metacentre
+    def compute_buoyancy(self, params):
+        """Computes buoyancy force by calculating mass of displaced water, its center of buoyancy and metacentre
         
         INPUTS:
         ----------
@@ -836,9 +834,9 @@ class Spar(Component):
         
         OUTPUTS:
         ----------
-        bouyancy_force class variable set
+        buoyancy_force class variable set
         m_displaced  : mass of displaced water
-        z_cb         : z-position of center of bouyancy
+        z_cb         : z-position of center of buoyancy
         z_metacentre : z-position of metacentre
         """
         # Unpack variables
@@ -855,14 +853,14 @@ class Spar(Component):
         r_under     = np.r_[R_od[z_nodes < 0.0], r_waterline]
         V_under     = frustum.frustumVol_radius(r_under[:-1], r_under[1:], np.diff(z_under))
         m_displaced = rho_water * V_under.sum()
-        self.bouyancy_force  = m_displaced * gravity
+        self.buoyancy_force  = m_displaced * gravity
 
         # Compute Center of Bouyancy in z-coordinates (0=waterline)
         z_cg_under  = frustum.frustumCG_radius(r_under[:-1], r_under[1:], np.diff(z_under))
         z_cg_under += z_under[:-1]
         z_cb        = np.dot(V_under, z_cg_under) / V_under.sum()
 
-        # Compute the distance from the center of bouyancy to the metacentre (BM is naval architecture)
+        # Compute the distance from the center of buoyancy to the metacentre (BM is naval architecture)
         # BM = Iw / V where V is the displacement volume (just computed)
         # Iw is the moment of inertia of the water-plane cross section about the heel axis (without mass)
         # For a spar, we assume this is just the I of a ring about x or y
@@ -870,14 +868,14 @@ class Spar(Component):
         # https://en.wikipedia.org/wiki/List_of_moments_of_inertia
         # and http://farside.ph.utexas.edu/teaching/336L/Fluidhtml/node30.html
         Iwater                 = 0.25 * np.pi * r_waterline**4.0 
-        bouyancy_metacentre_BM = Iwater / V_under.sum()
-        z_metacentre             = bouyancy_metacentre_BM + z_cb
+        buoyancy_metacentre_BM = Iwater / V_under.sum()
+        z_metacentre             = buoyancy_metacentre_BM + z_cb
 
         return m_displaced, z_cb, z_metacentre
     
         
     def balance_spar(self, params, unknowns):
-        """Balances the weight of the spar with bouyancy force by setting variable (water) ballast
+        """Balances the weight of the spar with buoyancy force by setting variable (water) ballast
         Once this is determined, can set the system center of gravity and determine static stability margins
         
         INPUTS:
@@ -923,8 +921,8 @@ class Spar(Component):
         m_turbine, cg_turbine = compute_turbine_mass_cg(params)
         z_cg           += m_turbine * cg_turbine
 
-        # Get displaced water and the z-positions of the center of bouyancy and metacentre
-        m_displaced, center_bouyancy, z_metacentre = self.compute_bouyancy(params)
+        # Get displaced water and the z-positions of the center of buoyancy and metacentre
+        m_displaced, center_buoyancy, z_metacentre = self.compute_buoyancy(params)
 
         # Get mooring "effective" mass felt by the downward pull of the mooring lines
         # This is added to the CG as well at the attachment point
@@ -974,14 +972,14 @@ class Spar(Component):
         unknowns['total_mass']              = m_system + unknowns['outfitting_mass'] # Does not include weight of turbine or mooring
         
         # Measure static stability:
-        # 1. Center of bouyancy should be above CG (difference should be positive)
+        # 1. Center of buoyancy should be above CG (difference should be positive)
         # 2. Metacentric height should be positive
-        unknowns['static_stability'  ] = center_bouyancy - self.system_cg
+        unknowns['static_stability'  ] = center_buoyancy - self.system_cg
         unknowns['metacentric_height'] = metacentric_height
         
 
     def compute_forces_moments(self, params, unknowns):
-        """Balances the weight of the spar with bouyancy force by setting variable (water) ballast
+        """Balances the weight of the spar with buoyancy force by setting variable (water) ballast
         Once this is determined, can set the system center of gravity and determine static stability margins
         
         INPUTS:
@@ -1042,7 +1040,7 @@ class Spar(Component):
         # By setting acceleration to zero above waterline, hydrodynamic forces will be zero and only drag will remain
         Fspar = cylinder_forces_per_length(uvel, accel, r, rho, mu, Cm)
         # Compute pitch moments from spar forces about CG
-        Mspar = np.trapz((zpts-self.system_cg)*F, zpts)
+        Mspar = np.trapz((zpts-self.system_cg)*Fspar, zpts)
         Fspar = np.trapz(Fspar, zpts)
         F += Fspar
         M += Mspar
@@ -1061,7 +1059,7 @@ class Spar(Component):
 
         # Compute restoring moment under small angle assumptions
         # Metacentric height computed during spar balancing calculation
-        M_restoring = unknowns['metacentric_height'] * self.bouyancy_force
+        M_restoring = unknowns['metacentric_height'] * self.buoyancy_force
 
         # Comput heel angle
         unknowns['heel_angle'] = np.abs( np.rad2deg( M / M_restoring ) )

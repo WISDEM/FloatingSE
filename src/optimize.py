@@ -195,7 +195,7 @@ def optimize_spar(params):
     # CONSTRAINTS
     # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
     # Ensure that fairlead attaches to draft
-    prob.driver.add_constraint('sg.draft_depth_ratio',lower=0.0, upper=1.0)
+    prob.driver.add_constraint('sg.draft_depth_ratio',lower=0.0, upper=0.75)
     prob.driver.add_constraint('sg.fairlead_draft_ratio',lower=0.0, upper=1.0)
 
     # Ensure that the radius doesn't change dramatically over a section
@@ -221,7 +221,7 @@ def optimize_spar(params):
     # Metacentric height should be positive for static stability
     prob.driver.add_constraint('sp.metacentric_height', lower=0.1)
 
-    # Center of bouyancy should be above CG (difference should be positive)
+    # Center of buoyancy should be above CG (difference should be positive)
     prob.driver.add_constraint('sp.static_stability', lower=0.1)
 
     # Achieving non-zero variable ballast height means the spar can be balanced with margin as conditions change
@@ -382,8 +382,8 @@ def example_spar():
     params['stiffener_spacing'] = 0.4
 
     prob = optimize_spar(params)
-    prob.run()
-    #prob.run_once()
+    #prob.run()
+    prob.run_once()
     print prob.driver.get_constraints()
     print prob.driver.get_desvars()
     print prob.driver.get_objectives()
@@ -475,4 +475,4 @@ OrderedDict([('sg.draft_depth_ratio', array([ 0.3948845])), ('mm.safety_factor',
 if __name__ == '__main__':
     #example_mooring()
     example_spar()
-    
+    cobyla_optimal()
