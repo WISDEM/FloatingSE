@@ -1,6 +1,5 @@
 from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver
 from sparAssembly import SparAssembly
-from mooringAssembly import MooringAssembly
 from sparGeometry import NSECTIONS
 import numpy as np
 import time
@@ -9,54 +8,12 @@ def vecOption(x, in1s):
     myones = in1s if type(in1s) == type(np.array([])) else np.ones((in1s,))
     return (x*myones) if type(x)==type(0.0) or len(x) == 1 else x
 
-def optimize_mooring(params):
-
-    # Setup the problem
+def init_problem():
     prob = Problem()
-    prob.root = MooringAssembly()
-    
-    # Establish the optimization driver, then set design variables and constraints
-    myopt={}
-    prob.driver = ScipyOptimizer()
-    #prob.driver.options['optimizer'] = 'SLSQP'
-    prob.driver.options['optimizer'] = 'COBYLA'
-    prob.driver.options['tol'] = 1e-6
-    prob.driver.options['maxiter'] = 2000
-    
-    # DESIGN VARIABLES
-    #prob.driver.add_desvar('freeboard.x',lower=0.0, upper=20.0)
-    #prob.driver.add_desvar('fairlead.x',lower=0.0, upper=20.0)
-    #prob.driver.add_desvar('fairlead_offset_from_shell.x',lower=0.0, upper=1.0)
-    #prob.driver.add_desvar('section_height.x',lower=1e-2, upper=30.0)
-    #prob.driver.add_desvar('outer_radius.x',lower=1.0, upper=20.0)
-    #prob.driver.add_desvar('wall_thickness.x',lower=1e-2, upper=1.0)
+    prob.root = SparAssembly()
+    return prob
 
-    prob.driver.add_desvar('scope_ratio.x', lower=1.0, upper=5.0) #>1 means longer than water depth
-    prob.driver.add_desvar('anchor_radius.x', lower=0.0, scaler=1e-2)
-    prob.driver.add_desvar('mooring_diameter.x', lower=0.5, scaler=10)
-    #prob.driver.add_desvar('mooring_diameter.x', lower=0.07, upper=0.5)
-    # TODO: Integer design variables
-    #prob.driver.add_desvar('number_of_mooring_lines.x', lower=1)
-    #prob.driver.add_desvar('mooring_type.x')
-    #prob.driver.add_desvar('anchor_type.x')
-
-    
-    # CONSTRAINTS
-    # Ensure there is sufficient mooring line length, MAP doesn't give an error about this
-    prob.driver.add_constraint('mm.mooring_length_min',lower=1.0)
-    prob.driver.add_constraint('mm.mooring_length_max',upper=1.0)
-
-    # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
-    prob.driver.add_constraint('mm.safety_factor',upper=0.8)
-
-    # Mock restoring force need for substructure
-    #prob.driver.add_constraint('mm.max_offset_restoring_force',lower=200e3)
-    prob.driver.add_constraint('mm.max_offset_restoring_force',lower=2, scaler=1e-5)
-    
-    # OBJECTIVE FUNCTION: Minimize total cost!
-    prob.driver.add_objective('mm.mooring_cost', scaler=1e-6)
-
-    # Establish the problem
+def solve_spar(prob, params):
     # Note this command must be done after the constraints, design variables, and objective have been set,
     # but before the initial conditions are specified (unless we use the default initial conditions )
     # After setting the intial conditions, running setup() again will revert them back to default values
@@ -67,17 +24,28 @@ def optimize_mooring(params):
     prob['water_depth.x']                = params['water_depth']
     prob['freeboard.x']                  = params['freeboard']
     prob['fairlead.x']                   = params['fairlead']
+    prob['fairlead_offset_from_shell.x'] = params['fairlead_offset_from_shell']
     if params.has_key('spar_length'):
         prob['section_height.x']         = vecOption(params['spar_length']/NSECTIONS, NSECTIONS)
     elif params.has_key('section_height'):
         prob['section_height.x']         = params['section_height']
     else:
         raise ValueError('Need to include spar_length or section_height')
+
     prob['outer_radius.x']               = vecOption(params['outer_radius'], NSECTIONS+1)
     prob['wall_thickness.x']             = vecOption(params['wall_thickness'], NSECTIONS+1)
-    prob['fairlead_offset_from_shell.x'] = params['fairlead_offset_from_shell']
 
+    # Parameters heading into Turbine first
+    prob['rna_mass.x']                = params['rna_mass']
+    prob['rna_center_of_gravity.x']   = params['rna_center_of_gravity']
+    prob['rna_center_of_gravity_x.x'] = params['rna_center_of_gravity_x']
+    prob['rna_wind_force.x']          = params['rna_wind_force']
+    prob['tower_mass.x']              = params['tower_mass']
+    prob['tower_center_of_gravity.x'] = params['tower_center_of_gravity']
+    prob['tower_wind_force.x']        = params['tower_wind_force']
+    
     # Parameters heading into MAP Mooring second
+    prob['water_density.x']           = params['water_density']
     prob['scope_ratio.x']             = params['scope_ratio']
     prob['anchor_radius.x']           = params['anchor_radius']
     prob['mooring_diameter.x']        = params['mooring_diameter']
@@ -87,56 +55,49 @@ def optimize_mooring(params):
     prob['max_offset.x']              = 0.1*params['water_depth'] # Assumption!
     prob['mooring_cost_rate.x']       = params['mooring_cost_rate']
 
-    #Parameters heading into Spar
-    prob['water_density.x']             = params['water_density']
+    # Parameters heading into Cylinder first
+    prob['air_density.x']               = params['air_density']
+    prob['air_viscosity.x']             = params['air_viscosity']
+    prob['water_viscosity.x']           = params['water_viscosity']
+    prob['wave_height.x']               = params['wave_height']
+    prob['wave_period.x']               = params['wave_period']
+    prob['wind_reference_speed.x']      = params['wind_reference_speed']
+    prob['wind_reference_height.x']     = params['wind_reference_height']
+    prob['alpha.x']                     = params['alpha']
+    prob['morison_mass_coefficient.x']  = params['morison_mass_coefficient']
+    prob['material_density.x']          = params['material_density']
+    prob['E.x']                         = params['E']
+    prob['nu.x']                        = params['nu']
+    prob['yield_stress.x']              = params['yield_stress']
+    prob['permanent_ballast_density.x'] = params['permanent_ballast_density']
+    
+    prob['stiffener_web_height.x']       = vecOption(params['stiffener_web_height'], NSECTIONS)
+    prob['stiffener_web_thickness.x']    = vecOption(params['stiffener_web_thickness'], NSECTIONS)
+    prob['stiffener_flange_width.x']     = vecOption(params['stiffener_flange_width'], NSECTIONS)
+    prob['stiffener_flange_thickness.x'] = vecOption(params['stiffener_flange_thickness'], NSECTIONS)
+    prob['stiffener_spacing.x']          = vecOption(params['stiffener_spacing'], NSECTIONS)
+    
+    prob['bulkhead_nodes.x']             = [False] * (NSECTIONS+1)
+    prob['bulkhead_nodes.x'][0]          = True
+    prob['bulkhead_nodes.x'][1]          = True
+    prob['permanent_ballast_height.x']   = params['permanent_ballast_height']
+    prob['bulkhead_mass_factor.x']     = params['bulkhead_mass_factor']
+    prob['ring_mass_factor.x']         = params['ring_mass_factor']
+    prob['shell_mass_factor.x']        = params['shell_mass_factor']
+    prob['spar_mass_factor.x']         = params['spar_mass_factor']
+    prob['outfitting_mass_fraction.x'] = params['outfitting_mass_fraction']
+    prob['ballast_cost_rate.x']        = params['ballast_cost_rate']
+    prob['tapered_col_cost_rate.x']    = params['tapered_col_cost_rate']
+    prob['outfitting_cost_rate.x']     = params['outfitting_cost_rate']
     
     # Execute the optimization
     prob.check_setup()
     prob.pre_run_check()
-    prob.check_total_derivatives()
+    #prob.check_total_derivatives()
     return prob
-
-
-def example_mooring():
-    #tt = time.time()
-
-    params = {}
-    params['water_depth'] = 218.0
-    params['freeboard'] = 13.0
-    params['fairlead'] = 13.0
-    params['spar_length'] = 80.0
-    params['outer_radius'] = 3.0
-    params['wall_thickness'] = 0.1
-    params['fairlead_offset_from_shell'] = 0.5
-    params['scope_ratio'] = 1.5
-    params['anchor_radius'] = 150.0
-    params['mooring_diameter'] = 0.2
-    params['number_of_mooring_lines'] = 3
-    params['mooring_type'] = 'chain'
-    params['anchor_type'] = 'pile'
-    params['mooring_cost_rate'] = 1.1
-    params['water_density'] = 1025.0
     
-    prob = optimize_mooring(params)
-    
-    prob.run()
-    #prob.run_once()
-
-    print prob.driver.get_constraints()
-    print prob.driver.get_desvars()
-    print prob.driver.get_objectives()
-
-
-        
-def optimize_spar(params):
-
-    # Setup the problem
-    prob = Problem()
-    prob.root = SparAssembly()
-    
+def optimize_spar(prob):
     # Establish the optimization driver, then set design variables and constraints
-    myopt={}
-
     #prob.driver = ScipyOptimizer()
     #prob.driver.options['optimizer'] = 'COBYLA'
     #prob.driver.options['optimizer'] = 'SLSQP'
@@ -193,6 +154,8 @@ def optimize_spar(params):
             prob.driver.add_desvar(ivar[0], lower=iscale*ivar[1], upper=iscale*ivar[2], scaler=iscale)
 
     # CONSTRAINTS
+    # These are mostly the outputs that were not connected to another model
+    
     # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
     # Ensure that fairlead attaches to draft
     prob.driver.add_constraint('sg.draft_depth_ratio',lower=0.0, upper=0.75)
@@ -209,24 +172,24 @@ def optimize_spar(params):
     prob.driver.add_constraint('mm.mooring_length_max',upper=1.0)
     
     # API Bulletin 2U constraints
-    prob.driver.add_constraint('sp.flange_spacing_ratio', upper=0.5)
-    prob.driver.add_constraint('sp.web_radius_ratio', upper=0.5)
-    prob.driver.add_constraint('sp.flange_compactness', lower=1.0)
-    prob.driver.add_constraint('sp.web_compactness', lower=1.0)
-    prob.driver.add_constraint('sp.axial_local_unity', upper=1.0)
-    prob.driver.add_constraint('sp.axial_general_unity', upper=1.0)
-    prob.driver.add_constraint('sp.external_local_unity', upper=1.0)
-    prob.driver.add_constraint('sp.external_general_unity', upper=1.0)
+    prob.driver.add_constraint('cyl.flange_spacing_ratio', upper=0.5)
+    prob.driver.add_constraint('cyl.web_radius_ratio', upper=0.5)
+    prob.driver.add_constraint('cyl.flange_compactness', lower=1.0)
+    prob.driver.add_constraint('cyl.web_compactness', lower=1.0)
+    prob.driver.add_constraint('cyl.axial_local_unity', upper=1.0)
+    prob.driver.add_constraint('cyl.axial_general_unity', upper=1.0)
+    prob.driver.add_constraint('cyl.external_local_unity', upper=1.0)
+    prob.driver.add_constraint('cyl.external_general_unity', upper=1.0)
+
+    # Achieving non-zero variable ballast height means the spar can be balanced with margin as conditions change
+    prob.driver.add_constraint('sp.variable_ballast_height', lower=2.0, upper=100.0)
+    prob.driver.add_constraint('sp.variable_ballast_mass', lower=0.0)
 
     # Metacentric height should be positive for static stability
     prob.driver.add_constraint('sp.metacentric_height', lower=0.1)
 
     # Center of buoyancy should be above CG (difference should be positive)
     prob.driver.add_constraint('sp.static_stability', lower=0.1)
-
-    # Achieving non-zero variable ballast height means the spar can be balanced with margin as conditions change
-    prob.driver.add_constraint('sp.variable_ballast_height', lower=2.0, upper=100.0)
-    prob.driver.add_constraint('sp.variable_ballast_mass', lower=0.0)
 
     # Surge restoring force should be greater than wave-wind forces (ratio < 1)
     prob.driver.add_constraint('sp.offset_force_ratio',lower=0.0, upper=1.0)
@@ -237,87 +200,6 @@ def optimize_spar(params):
     
     # OBJECTIVE FUNCTION: Minimize total cost!
     prob.driver.add_objective('sp.total_cost', scaler=1e-9)
-
-    # Establish the problem
-    # Note this command must be done after the constraints, design variables, and objective have been set,
-    # but before the initial conditions are specified (unless we use the default initial conditions )
-    # After setting the intial conditions, running setup() again will revert them back to default values
-    prob.setup()
-
-    # INPUT PARAMETER SETTING
-    # Parameters heading into Spar Geometry first
-    prob['water_depth.x']                = params['water_depth']
-    prob['freeboard.x']                  = params['freeboard']
-    prob['fairlead.x']                   = params['fairlead']
-    prob['fairlead_offset_from_shell.x'] = params['fairlead_offset_from_shell']
-    if params.has_key('spar_length'):
-        prob['section_height.x']         = vecOption(params['spar_length']/NSECTIONS, NSECTIONS)
-    elif params.has_key('section_height'):
-        prob['section_height.x']         = params['section_height']
-    else:
-        raise ValueError('Need to include spar_length or section_height')
-
-    prob['outer_radius.x']               = vecOption(params['outer_radius'], NSECTIONS+1)
-    prob['wall_thickness.x']             = vecOption(params['wall_thickness'], NSECTIONS+1)
-
-    # Parameters heading into MAP Mooring second
-    prob['scope_ratio.x']             = params['scope_ratio']
-    prob['anchor_radius.x']           = params['anchor_radius']
-    prob['mooring_diameter.x']        = params['mooring_diameter']
-    prob['number_of_mooring_lines.x'] = params['number_of_mooring_lines']
-    prob['mooring_type.x']            = params['mooring_type']
-    prob['anchor_type.x']             = params['anchor_type']
-    prob['max_offset.x']              = 0.1*params['water_depth'] # Assumption!
-    prob['mooring_cost_rate.x']       = params['mooring_cost_rate']
-
-    #Parameters heading into Spar
-    prob['air_density.x']               = params['air_density']
-    prob['air_viscosity.x']             = params['air_viscosity']
-    prob['water_density.x']             = params['water_density']
-    prob['water_viscosity.x']           = params['water_viscosity']
-    prob['wave_height.x']               = params['wave_height']
-    prob['wave_period.x']               = params['wave_period']
-    prob['wind_reference_speed.x']      = params['wind_reference_speed']
-    prob['wind_reference_height.x']     = params['wind_reference_height']
-    prob['alpha.x']                     = params['alpha']
-    prob['morison_mass_coefficient.x']  = params['morison_mass_coefficient']
-    prob['material_density.x']          = params['material_density']
-    prob['E.x']                         = params['E']
-    prob['nu.x']                        = params['nu']
-    prob['yield_stress.x']              = params['yield_stress']
-    prob['permanent_ballast_density.x'] = params['permanent_ballast_density']
-    
-    prob['stiffener_web_height.x']       = vecOption(params['stiffener_web_height'], NSECTIONS)
-    prob['stiffener_web_thickness.x']    = vecOption(params['stiffener_web_thickness'], NSECTIONS)
-    prob['stiffener_flange_width.x']     = vecOption(params['stiffener_flange_width'], NSECTIONS)
-    prob['stiffener_flange_thickness.x'] = vecOption(params['stiffener_flange_thickness'], NSECTIONS)
-    prob['stiffener_spacing.x']          = vecOption(params['stiffener_spacing'], NSECTIONS)
-    prob['bulkhead_nodes.x']             = [False] * (NSECTIONS+1)
-    prob['bulkhead_nodes.x'][0]          = True
-    prob['bulkhead_nodes.x'][1]          = True
-    prob['permanent_ballast_height.x']   = params['permanent_ballast_height']
-    
-    prob['bulkhead_mass_factor.x']     = params['bulkhead_mass_factor']
-    prob['ring_mass_factor.x']         = params['ring_mass_factor']
-    prob['spar_mass_factor.x']         = params['spar_mass_factor']
-    prob['shell_mass_factor.x']        = params['shell_mass_factor']
-    prob['outfitting_mass_fraction.x'] = params['outfitting_mass_fraction']
-    prob['ballast_cost_rate.x']        = params['ballast_cost_rate']
-    prob['tapered_col_cost_rate.x']    = params['tapered_col_cost_rate']
-    prob['outfitting_cost_rate.x']     = params['outfitting_cost_rate']
-    
-    prob['rna_mass.x']                = params['rna_mass']
-    prob['rna_center_of_gravity.x']   = params['rna_center_of_gravity']
-    prob['rna_center_of_gravity_x.x'] = params['rna_center_of_gravity_x']
-    prob['rna_wind_force.x']          = params['rna_wind_force']
-    prob['tower_mass.x']              = params['tower_mass']
-    prob['tower_center_of_gravity.x'] = params['tower_center_of_gravity']
-    prob['tower_wind_force.x']        = params['tower_wind_force']
-    
-    # Execute the optimization
-    prob.check_setup()
-    prob.pre_run_check()
-    #prob.check_total_derivatives()
     return prob
 
 
@@ -381,39 +263,44 @@ def example_spar():
     params['stiffener_flange_thickness'] = 0.02
     params['stiffener_spacing'] = 0.4
 
-    prob = optimize_spar(params)
-    #prob.run()
-    prob.run_once()
+    prob = init_problem()
+    prob = optimize_spar(prob)
+    prob = solve_spar(prob, params)
+    prob.run()
+    #prob.run_once()
     print prob.driver.get_constraints()
     print prob.driver.get_desvars()
     print prob.driver.get_objectives()
-
     
 def psqp_optimal():
-    #OrderedDict([('sp.total_cost', array([ 0.34423499]))])
+    #OrderedDict([('sp.total_cost', array([ 3.68125491]))])
     params = get_static_params()
     params['freeboard'] = 0.0
-    params['fairlead'] = 10.41940347
-    params['fairlead_offset_from_shell'] = 4.41060035
-    params['section_height'] = np.array([ 4.20813001,  1.70160625,  1.07302402,  1.26936124,  2.16728195])
-    params['outer_radius'] = np.array([ 9.0636007 ,   9.96996077,  10.96695684,  12.06365253, 13.27001778,  14.59701956])
-    params['wall_thickness'] = 0.005
-    params['scope_ratio'] = 2.39763604
-    params['anchor_radius'] = 444.79571073
-    params['mooring_diameter'] = 0.3389497
-    params['stiffener_web_height']= np.array([ 0.0813349 ,  0.05917536,  0.02257495,  0.01002641,  0.06057282])
-    params['stiffener_web_thickness'] = np.array([ 0.00337809,  0.00245774,  0.001     ,  0.00376891,  0.00288955 ])
-    params['stiffener_flange_width'] = np.array([ 0.01      ,  0.01637183,  0.01634859,  0.0137573 ,  0.01 ])
-    params['stiffener_flange_thickness'] = np.array([ 0.01703923,  0.00535814,  0.00167228,  0.00100091,  0.00101613])
-    params['stiffener_spacing'] = np.array([ 0.16948772,  0.1611674 ,  0.15404127,  0.16112703,  0.17907375])
-    params['permanent_ballast_height'] = 0.1
-    prob = optimize_spar(params)
+    params['fairlead'] = 28.98778705
+    params['fairlead_offset_from_shell'] = 4.15123014
+    params['section_height'] = np.array([ 49.01203711,  52.29873288,  33.77996355,   1.98476181,  26.42465958])
+    params['outer_radius'] = np.array([ 3.76031187,  3.78714959,  4.16586455,  3.74927809,  3.37435028, 3.03691526])
+    params['wall_thickness'] = np.array([ 0.00661516,  0.01453792,  0.005     ,  0.0097314 ,  0.0059745 , 0.005     ])
+    params['scope_ratio'] = 2.60758833
+    params['anchor_radius'] = 448.0246413
+    params['mooring_diameter'] = 0.0724271
+    params['stiffener_web_height']= np.array([ 0.12411858,  0.12090302,  0.11733809,  0.07447426,  0.09330525])
+    params['stiffener_web_thickness'] = np.array([ 0.00515503,  0.00502148,  0.00487342,  0.00309315,  0.00387526 ])
+    params['stiffener_flange_width'] = np.array([ 0.01      ,  0.01      ,  0.01      ,  0.04525972,  0.01 ])
+    params['stiffener_flange_thickness'] = np.array([ 0.27650071,  0.21402134,  0.13546971,  0.00276745,  0.03429803])
+    params['stiffener_spacing'] = np.array([ 0.21849442,  0.26591885,  0.2661029 ,  0.32705785,  0.20720817])
+    params['permanent_ballast_height'] = 30.06223745
+
+    prob = init_problem()
+    prob = optimize_spar(prob)
+    prob = solve_spar(prob, params)
     prob.run_once()
     print prob.driver.get_constraints()
     print prob.driver.get_desvars()
     print prob.driver.get_objectives()
     '''
-OrderedDict([('sg.draft_depth_ratio', array([ 0.04779543])), ('sg.fairlead_draft_ratio', array([ 1.])), ('sg.taper_ratio', array([ 0.1,  0.1,  0.1,  0.1,  0.1])), ('mm.safety_factor', array([ 0.80086819])), ('mm.mooring_length_min', array([ 1.03975491])), ('mm.mooring_length_max', array([ 0.76290741])), ('sp.flange_spacing_ratio', array([ 0.05900132,  0.10158278,  0.10613121,  0.08538173,  0.05584291])), ('sp.web_radius_ratio', array([ 0.00854647,  0.00565273,  0.00196043,  0.00079155,  0.00434727])), ('sp.flange_compactness', array([ 30.76922756,   5.90994463,   1.84712678,   1.31380057,   1.83491286])), ('sp.web_compactness', array([ 1.00000007,  0.99999988,  1.06654393,  9.05056488,  1.1485697 ])), ('sp.axial_local_unity', array([ 0.99959764,  0.99970738,  0.98926096,  1.00000014,  1.00000046])), ('sp.axial_general_unity', array([ 1.00012054,  0.99990372,  1.00000529,  1.00194736,  1.00536217])), ('sp.external_local_unity', array([ 0.94545783,  0.93743304,  0.90580108,  0.92347502,  0.95691509])), ('sp.external_general_unity', array([ 0.95239967,  0.94001924,  0.91861837,  0.92602302,  0.96462832])), ('sp.metacentric_height', array([ 8.59989219])), ('sp.static_stability', array([ 0.10008457])), ('sp.variable_ballast_height', array([ 1.99932607])), ('sp.variable_ballast_mass', array([ 556385.54703457])), ('sp.offset_force_ratio', array([ 0.55586308])), ('sp.heel_angle', array([ 9.99991375]))])
+OrderedDict([('sg.draft_depth_ratio', array([ 0.75])), ('sg.fairlead_draft_ratio', array([ 0.17729533])), ('sg.taper_ratio', array([ 0.0071371,  0.1      ,  0.1      ,  0.1      ,  0.1      ])), ('mm.safety_factor', array([ 0.79959284])), ('mm.mooring_length_min', array([ 1.02897572])), ('mm.mooring_length_max', array([ 0.77368529])), ('cyl.flange_spacing_ratio', array([ 0.04576776,  0.03760546,  0.03757945,  0.13838446,  0.04826065])), ('cyl.web_radius_ratio', array([ 0.03289015,  0.03040433,  0.02964902,  0.02090908,  0.02910666])), ('cyl.flange_compactness', array([ 499.30160594,  386.47712046,  244.62955708,    1.10416659,
+         61.93496328])), ('cyl.web_compactness', array([ 1.        ,  1.        ,  1.        ,  0.99999999,  1.        ])), ('cyl.axial_local_unity', array([ 0.99999959,  0.99999964,  0.99998764,  0.9949145 ,  0.99660552])), ('cyl.axial_general_unity', array([ 0.99999958,  0.99982145,  0.91031899,  1.2161923 ,  0.93928689])), ('cyl.external_local_unity', array([ 0.85868796,  0.89067778,  0.95522241,  0.98490783,  0.99660552])), ('cyl.external_general_unity', array([ 0.92690846,  0.99999937,  1.00243   ,  1.27160385,  1.00003484])), ('sp.variable_ballast_height', array([ 9.45559567])), ('sp.variable_ballast_mass', array([ 432098.15110704])), ('sp.metacentric_height', array([ 46.5396792])), ('sp.static_stability', array([ 46.53063839])), ('sp.offset_force_ratio', array([ 1.00056272])), ('sp.heel_angle', array([ 10.0002829]))])
     '''
 
 
@@ -435,7 +322,10 @@ def conmin_optimal():
     params['stiffener_flange_thickness'] = np.array([ 0.02739561,  0.02327079,  0.01406197,  0.01304515,  0.01304842])
     params['stiffener_spacing'] = np.array([ 0.40020418,  0.40036638,  0.4008825 ,  0.4009331 ,  0.40093272])
     params['permanent_ballast_height'] = 10.0
-    prob = optimize_spar(params)
+
+    prob = init_problem()
+    prob = optimize_spar(prob)
+    prob = solve_spar(prob, params)
     prob.run_once()
     print prob.driver.get_constraints()
     print prob.driver.get_desvars()
@@ -463,7 +353,10 @@ def cobyla_optimal():
     params['stiffener_flange_thickness'] = np.array([ 0.02739561,  0.02327079,  0.01406197,  0.01304515,  0.01304842])
     params['stiffener_spacing'] = np.array([ 0.937472777,   0.913804583,   0.975992681,   0.940785141,  1.077950861])
     params['permanent_ballast_height'] = 2.1531719
-    prob = optimize_spar(params)
+
+    prob = init_problem()
+    prob = optimize_spar(prob)
+    prob = solve_spar(prob, params)
     prob.run_once()
     print prob.driver.get_constraints()
     print prob.driver.get_desvars()
@@ -473,6 +366,4 @@ OrderedDict([('sg.draft_depth_ratio', array([ 0.3948845])), ('mm.safety_factor',
     '''
         
 if __name__ == '__main__':
-    #example_mooring()
     example_spar()
-    cobyla_optimal()
