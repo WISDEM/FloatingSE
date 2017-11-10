@@ -35,7 +35,7 @@ class Semi(Component):
         self.add_param('base_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
         self.add_param('base_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
         self.add_param('base_cylinder_surge_force', val=np.zeros((NPTS,)), units='N', desc='Force vector in surge direction on cylinder')
-        self.add_param('base_cylinder_force_points', val=Xnp.zeros((NPTS,)), units='m', desc='zpts for force vector')
+        self.add_param('base_cylinder_force_points', val=np.zeros((NPTS,)), units='m', desc='zpts for force vector')
         self.add_param('base_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
         self.add_param('ballast_cylinder_mass', val=0.0, units='kg', desc='mass of cylinder')
@@ -48,12 +48,14 @@ class Semi(Component):
         self.add_param('ballast_cylinder_force_points', val=np.zeros((NPTS,)), units='m', desc='zpts for force vector')
         self.add_param('ballast_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
-        self.add_param('number_of_ballast_cylinders', val=3, desc='Number of ballast cylinders evenly spaced around base cylinder')
+        self.add_param('number_of_ballast_cylinders', val=3, desc='Number of ballast cylinders evenly spaced around base cylinder', pass_by_obj=True)
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('water_ballast_mass_vector', val=np.zeros((NPTS,)), units='kg', desc='mass vector of potential ballast mass')
         self.add_param('water_ballast_zpts_vector', val=np.zeros((NPTS,)), units='m', desc='z-points of potential ballast mass')
+        self.add_param('radius_to_ballast_cylinder', val=10.0, units='m',desc='Distance from base cylinder centerpoint to ballast cylinder centerpoint')
 
         # Outputs
+        self.add_output('total_displacement', val=0.0, units='m**3', desc='total volume of water displaced by semi structure')
         self.add_output('total_mass', val=0.0, units='kg', desc='total mass of spar and moorings')
         self.add_output('total_cost', val=0.0, units='USD', desc='total cost of spar and moorings')
         self.add_output('metacentric_height', val=0.0, units='m', desc='measure of static overturning stability')
@@ -63,6 +65,7 @@ class Semi(Component):
         self.add_output('variable_ballast_mass', val=0.0, units='kg', desc='Amount of variable water ballast')
         self.add_output('variable_ballast_height', val=0.0, units='m', desc='height of water ballast to balance spar')
         self.add_output('z_center_of_gravity', val=0.0, units='m', desc='Z-position of center of gravity (x,y = 0,0)')
+        self.add_output('z_center_of_buoyancy', val=0.0, units='m', desc='Z-position of center of gravity (x,y = 0,0)')
 
         
     def solve_nonlinear(self, params, unknowns, resids):
@@ -74,7 +77,7 @@ class Semi(Component):
         self.compute_stability(params, unknowns)
         
         # Sum all costs
-         self.compute_costs(params, unknowns)
+        self.compute_costs(params, unknowns)
 
         
     def balance_semi(self, params, unknowns):
@@ -169,6 +172,7 @@ class Semi(Component):
         
         F_restore         = params['mooring_surge_restoring_force']
         rhoWater          = params['water_density']
+        R_semi            = params['radius_to_ballast_cylinder']
         
         # Compute the distance from the center of buoyancy to the metacentre (BM is naval architecture)
         # BM = Iw / V where V is the displacement volume (just computed)
@@ -180,7 +184,7 @@ class Semi(Component):
 
         # Water plane area of all components with parallel axis theorem
         Iwater_system = Iwater_base
-        radii = R * np.cos( np.linspace(0, 2*pi, ncylinder+1) )
+        radii = R_semi * np.cos( np.linspace(0, 2*np.pi, ncylinder+1) )
         for k in xrange(ncylinder):
             Iwater_system += Iwater_cylinder + Awater_cylinder*radii[k]**2
         
@@ -229,10 +233,11 @@ class Semi(Component):
 
         
     def compute_costs(self, params, unknowns):
-        # TODO SEMI: set n_cylinder and ballast_cylinder_cost add n*param for total contributions
         # Unpack variables
+        ncylinder  = params['number_of_ballast_cylinders']
         c_mooring  = params['mooring_cost']
-        c_cylinder = params['base_cylinder_cost']
+        c_cylinder = params['ballast_cylinder_cost']
+        c_base     = params['base_cylinder_cost']
 
-        unknowns['total_cost'] = c_mooring + c_cylinder
+        unknowns['total_cost'] = c_mooring + ncylinder*c_cylinder + c_base
         

@@ -1,7 +1,8 @@
 from openmdao.api import Group, IndepVarComp
 from cylinder import Cylinder
 from spar import Spar
-from sparGeometry import SparGeometry, NSECTIONS
+from sparGeometry import SparGeometry
+from floatingInstance import NSECTIONS
 from mapMooring import MapMooring
 from turbine import Turbine
 import numpy as np

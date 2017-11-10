@@ -1,5 +1,6 @@
 from openmdao.api import Group, IndepVarComp
-from sparGeometry import SparGeometry, NSECTIONS
+from sparGeometry import SparGeometry
+from floatingInstance import NSECTIONS
 from mapMooring import MapMooring
 import numpy as np
 

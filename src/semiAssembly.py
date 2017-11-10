@@ -26,7 +26,7 @@ class SemiAssembly(Group):
         self.add('ball', Cylinder())
 
         # Run main Semi analysis
-        self.add('sm', Spar())
+        self.add('sm', Semi())
 
         # Define all input variables from all models
         # SemiGeometry
@@ -112,16 +112,17 @@ class SemiAssembly(Group):
 
         # Connect all input variables from all models
         self.connect('water_depth.x', ['sg.water_depth', 'mm.water_depth', 'base.water_depth', 'ball.water_depth'])
+        self.connect('radius_to_ballast_cylinder.x', ['sg.radius_to_ballast_cylinder', 'sm.radius_to_ballast_cylinder'])
 
         self.connect('freeboard_base.x', ['sg.base_freeboard', 'turb.freeboard'])
         self.connect('section_height_base.x', ['sg.base_section_height', 'base.section_height'])
         self.connect('outer_radius_base.x', ['sg.base_outer_radius', 'base.outer_radius'])
         self.connect('wall_thickness_base.x', ['sg.base_wall_thickness', 'base.wall_thickness'])
 
-        self.connect('freeboard_ball.x', ['sg.ball_freeboard', 'turb.freeboard'])
-        self.connect('section_height_ball.x', ['sg.ball_section_height', 'ball.section_height'])
-        self.connect('outer_radius_ball.x', ['sg.ball_outer_radius', 'ball.outer_radius'])
-        self.connect('wall_thickness_ball.x', ['sg.ball_wall_thickness', 'ball.wall_thickness'])
+        self.connect('freeboard_ballast.x', 'sg.ballast_freeboard')
+        self.connect('section_height_ballast.x', ['sg.ballast_section_height', 'ball.section_height'])
+        self.connect('outer_radius_ballast.x', ['sg.ballast_outer_radius', 'ball.outer_radius'])
+        self.connect('wall_thickness_ballast.x', ['sg.ballast_wall_thickness', 'ball.wall_thickness'])
 
         self.connect('fairlead.x', ['sg.fairlead', 'mm.fairlead','sm.fairlead'])
         self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
@@ -225,14 +226,45 @@ class SemiAssembly(Group):
         self.connect('ball.surge_force_vector', 'sm.ballast_cylinder_surge_force')
         self.connect('ball.surge_force_points', 'sm.ballast_cylinder_force_points')
 
-        # Use complex number finite differences
-        self.deriv_options['type'] = 'fd'
-        #self.deriv_options['type'] = 'cs'
-        self.deriv_options['form'] = 'central'
-        self.deriv_options['step_size'] = 1e-5
-        self.deriv_options['step_calc'] = 'relative'
-        self.deriv_options['check_type'] = 'fd'
-        self.deriv_options['check_form'] = 'central'
-        self.deriv_options['check_step_size'] = 1e-5
-        self.deriv_options['check_step_calc'] = 'relative'
-        self.deriv_options['linearize'] = False
+
+         # Use complex number finite differences
+        typeStr = 'fd'
+        formStr = 'central'
+        stepVal = 1e-5
+        stepStr = 'relative'
+        
+        self.deriv_options['type'] = typeStr
+        self.deriv_options['form'] = formStr
+        self.deriv_options['step_size'] = stepVal
+        self.deriv_options['step_calc'] = stepStr
+
+        self.sg.deriv_options['type'] = typeStr
+        self.sg.deriv_options['form'] = formStr
+        self.sg.deriv_options['step_size'] = stepVal
+        self.sg.deriv_options['step_calc'] = stepStr
+
+        self.mm.deriv_options['type'] = typeStr
+        self.mm.deriv_options['form'] = formStr
+        self.mm.deriv_options['step_size'] = stepVal
+        self.mm.deriv_options['step_calc'] = stepStr
+
+        self.base.deriv_options['type'] = typeStr
+        self.base.deriv_options['form'] = formStr
+        self.base.deriv_options['step_size'] = stepVal
+        self.base.deriv_options['step_calc'] = stepStr
+
+        self.ball.deriv_options['type'] = typeStr
+        self.ball.deriv_options['form'] = formStr
+        self.ball.deriv_options['step_size'] = stepVal
+        self.ball.deriv_options['step_calc'] = stepStr
+
+        self.turb.deriv_options['type'] = typeStr
+        self.turb.deriv_options['form'] = formStr
+        self.turb.deriv_options['step_size'] = stepVal
+        self.turb.deriv_options['step_calc'] = stepStr
+
+        self.sm.deriv_options['type'] = typeStr
+        self.sm.deriv_options['form'] = formStr
+        self.sm.deriv_options['step_size'] = stepVal
+        self.sm.deriv_options['step_calc'] = stepStr
+

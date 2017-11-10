@@ -1,22 +1,7 @@
 from openmdao.api import Component
 import numpy as np
 import commonse.Frustum as frustum
-
-NSECTIONS = 5
-
-def nodal2sectional(x):
-    """Averages nodal data to be length-1 vector of sectional data
-
-    INPUTS:
-    ----------
-    x   : float vector, nodal data
-
-    OUTPUTS:
-    -------
-    y   : float vector,  sectional data
-    """
-    return 0.5*(x[:-1] + x[1:])
-
+from floatingInstance import NSECTIONS
 
 class SemiGeometry(Component):
     """
@@ -93,7 +78,7 @@ class SemiGeometry(Component):
             R       = R_od - 0.5*t_wall
             cm_sec  = frustum.frustumShellCG_radius(R[:-1], R[1:], h_section)
             z_sec   = z_nodes[:-1] + cm_sec
-            return z_nodes, z_section
+            return z_nodes, z_sec
         
         z_nodes_base   , z_section_base    = cyl_geom(freeboard_base   , h_section_base   , R_od_base   , t_wall_base)
         z_nodes_ballast, z_section_ballast = cyl_geom(freeboard_ballast, h_section_ballast, R_od_ballast, t_wall_ballast)

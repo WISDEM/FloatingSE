@@ -1,23 +1,7 @@
 from openmdao.api import Component
 import numpy as np
 import commonse.Frustum as frustum
-
-NSECTIONS = 5
-
-def nodal2sectional(x):
-    """Averages nodal data to be length-1 vector of sectional data
-
-    INPUTS:
-    ----------
-    x   : float vector, nodal data
-
-    OUTPUTS:
-    -------
-    y   : float vector,  sectional data
-    """
-    return 0.5*(x[:-1] + x[1:])
-
-
+from floatingInstance import NSECTIONS
 
 class SparGeometry(Component):
     """

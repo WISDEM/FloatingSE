@@ -4,7 +4,7 @@ from scipy.optimize import brentq, minimize_scalar
 from scipy.integrate import cumtrapz
 
 from constants import gravity
-from sparGeometry import nodal2sectional, NSECTIONS
+from floatingInstance import nodal2sectional, NSECTIONS
 from commonse.WindWaveDrag import cylinderDrag
 import commonse.Frustum as frustum
 
@@ -575,7 +575,7 @@ class Cylinder(Component):
         self.add_param('wind_reference_height', val=0.0, units='m', desc='reference height')
         self.add_param('alpha', val=0.0, desc='power law exponent')
         self.add_param('morison_mass_coefficient', val=2.0, desc='One plus the added mass coefficient')
-        self.add_param('stack_mass_in', val=0.0, units='kg', desc='Weight above the cylinder column')
+        self.add_param('stack_mass_in', val=1e-12, units='kg', desc='Weight above the cylinder column')
         
         # Material properties
         self.add_param('material_density', val=7850., units='kg/m**3', desc='density of spar material')
