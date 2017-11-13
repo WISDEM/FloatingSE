@@ -1,29 +1,13 @@
 from floatingInstance import FloatingInstance, NSECTIONS, vecOption
 from sparAssembly import SparAssembly
 import numpy as np
-
-        
+    
 class SparInstance(FloatingInstance):
     def __init__(self):
         super(SparInstance, self).__init__()
 
+        # Parameters beyond those in superclass
         # Typically static- set defaults
-        self.water_depth = 218.0
-        self.max_offset  = 0.1*self.water_depth # Assumption        
-        self.number_of_mooring_lines = 3
-        self.mooring_type = 'chain'
-        self.anchor_type = 'pile'
-        self.mooring_cost_rate = 1.1
-        self.air_density = 1.198
-        self.air_viscosity = 1.81e-5
-        self.water_density = 1025.0
-        self.water_viscosity = 8.9e-4
-        self.wave_height = 10.8
-        self.wave_period = 9.8
-        self.wind_reference_speed = 11.0
-        self.wind_reference_height = 119.0
-        self.alpha = 0.11
-        self.morison_mass_coefficient = 2.0
         self.material_density = 7850.0
         self.E = 200e9
         self.nu = 0.3
@@ -37,13 +21,6 @@ class SparInstance(FloatingInstance):
         self.ballast_cost_rate = 100.0
         self.tapered_col_cost_rate = 4720.0
         self.outfitting_cost_rate = 6980.0
-        self.rna_mass= 180e3
-        self.rna_center_of_gravity = 3.5 + 80.0
-        self.rna_center_of_gravity_x = 5.75
-        self.tower_mass = 180e3
-        self.tower_center_of_gravity = 35.0
-        self.rna_wind_force = 820818.0
-        self.tower_wind_force = 33125.0
 
         # Typically design
         self.freeboard = 5.0
@@ -52,10 +29,6 @@ class SparInstance(FloatingInstance):
         self.outer_radius = 7.0
         self.wall_thickness = 0.05
         self.fairlead_offset_from_shell = 0.05
-        self.scope_ratio = 2.41
-        self.anchor_radius = 450.0
-        self.mooring_diameter = 0.19
-        self.number_of_mooring_lines = 3
         self.permanent_ballast_height = 10.0
         self.stiffener_web_height= 0.1
         self.stiffener_web_thickness = 0.04
@@ -154,3 +127,16 @@ class SparInstance(FloatingInstance):
 
         # OBJECTIVE FUNCTION: Minimize total cost!
         self.prob.driver.add_objective('sp.total_cost', scaler=1e-9)
+
+        
+    def visualize(self, fname=None):
+        fig = self.init_figure()
+
+        self.draw_ocean(fig)
+
+        mooringMat = self.prob['mm.plot_matrix']
+        self.draw_mooring(fig, mooringMat)
+
+        self.draw_cylinder(fig, [0.0, 0.0], self.freeboard, self.section_height, self.outer_radius, self.stiffener_spacing)
+
+        self.set_figure(fig, fname)

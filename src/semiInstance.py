@@ -7,23 +7,8 @@ class SemiInstance(FloatingInstance):
     def __init__(self):
         super(SemiInstance, self).__init__()
 
+        # Parameters beyond those in superclass
         # Typically static- set defaults
-        self.water_depth = 218.0
-        self.max_offset  = 0.1*self.water_depth # Assumption        
-        self.number_of_mooring_lines = 3
-        self.mooring_type = 'chain'
-        self.anchor_type = 'pile'
-        self.mooring_cost_rate = 1.1
-        self.air_density = 1.198
-        self.air_viscosity = 1.81e-5
-        self.water_density = 1025.0
-        self.water_viscosity = 8.9e-4
-        self.wave_height = 10.8
-        self.wave_period = 9.8
-        self.wind_reference_speed = 11.0
-        self.wind_reference_height = 119.0
-        self.alpha = 0.11
-        self.morison_mass_coefficient = 2.0
         self.material_density = 7850.0
         self.E = 200e9
         self.nu = 0.3
@@ -37,16 +22,9 @@ class SemiInstance(FloatingInstance):
         self.ballast_cost_rate = 100.0
         self.tapered_col_cost_rate = 4720.0
         self.outfitting_cost_rate = 6980.0
-        self.rna_mass= 180e3
-        self.rna_center_of_gravity = 3.5 + 80.0
-        self.rna_center_of_gravity_x = 5.75
-        self.tower_mass = 180e3
-        self.tower_center_of_gravity = 35.0
-        self.rna_wind_force = 820818.0
-        self.tower_wind_force = 33125.0
 
         # Typically design
-        self.radius_to_ballast_cylinder = 10.0
+        self.radius_to_ballast_cylinder = 20.0
         self.freeboard_base = 5.0
         self.freeboard_ballast = 5.0
         self.fairlead = 7.57
@@ -55,10 +33,6 @@ class SemiInstance(FloatingInstance):
         self.wall_thickness_base = 0.05
         self.outer_radius_ballast = 7.0
         self.wall_thickness_ballast = 0.05
-        self.scope_ratio = 2.41
-        self.anchor_radius = 450.0
-        self.mooring_diameter = 0.19
-        self.number_of_mooring_lines = 3
         self.number_of_ballast_columns = 3
         self.permanent_ballast_height_base = 10.0
         self.stiffener_web_height_base= 0.1
@@ -156,6 +130,7 @@ class SemiInstance(FloatingInstance):
         self.prob.driver.add_constraint('sg.base_draft_depth_ratio',lower=0.0, upper=0.75)
         self.prob.driver.add_constraint('sg.ballast_draft_depth_ratio',lower=0.0, upper=0.75)
         self.prob.driver.add_constraint('sg.fairlead_draft_ratio',lower=0.0, upper=1.0)
+        self.prob.driver.add_constraint('sg.base_ballast_spacing',lower=0.0, upper=1.0)
 
         # Ensure that the radius doesn't change dramatically over a section
         self.prob.driver.add_constraint('sg.base_taper_ratio',upper=0.1)
@@ -206,3 +181,28 @@ class SemiInstance(FloatingInstance):
 
         # OBJECTIVE FUNCTION: Minimize total cost!
         self.prob.driver.add_objective('sm.total_cost', scaler=1e-9)
+
+
+        
+    def visualize(self, fname=None):
+        fig = self.init_figure()
+
+        self.draw_ocean(fig)
+
+        mooringMat = self.prob['mm.plot_matrix']
+        self.draw_mooring(fig, mooringMat)
+
+        self.draw_cylinder(fig, [0.0, 0.0], self.freeboard_base, self.section_height_base,
+                           self.outer_radius_base, self.stiffener_spacing_base)
+
+        R_semi    = self.radius_to_ballast_cylinder
+        ncylinder = self.number_of_ballast_columns
+        angles = np.linspace(0, 2*np.pi, ncylinder+1)
+        x = R_semi * np.cos( angles )
+        y = R_semi * np.sin( angles )
+        for k in xrange(ncylinder):
+            self.draw_cylinder(fig, [x[k], y[k]], self.freeboard_ballast, self.section_height_ballast,
+                               self.outer_radius_ballast, self.stiffener_spacing_ballast)
+            
+        self.set_figure(fig, fname)
+        

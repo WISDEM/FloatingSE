@@ -43,7 +43,7 @@ class SemiGeometry(Component):
         self.add_output('fairlead_draft_ratio', val=0.0, desc='Ratio of fairlead to draft')
         self.add_output('base_taper_ratio', val=np.zeros((NSECTIONS,)), desc='Ratio of outer radius change in a section to its starting value')
         self.add_output('ballast_taper_ratio', val=np.zeros((NSECTIONS,)), desc='Ratio of outer radius change in a section to its starting value')
-
+        self.add_output('base_ballast_spacing', val=0.0, desc='Radius of base and ballast cylinders relative to spacing')
 
     def solve_nonlinear(self, params, unknowns, resids):
         """Sets nodal points and sectional centers of mass in z-coordinate system with z=0 at the waterline.
@@ -72,6 +72,9 @@ class SemiGeometry(Component):
         fair_off       = params['fairlead_offset_from_shell']
         D_water        = params['water_depth']
         R_semi         = params['radius_to_ballast_cylinder']
+
+        # Set spacing constraint
+        unknowns['base_ballast_spacing'] = (R_od_base.max() + R_od_ballast.max()) / R_semi
         
         def cyl_geom(freeboard, h_section, R_od, t_wall):
             z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )

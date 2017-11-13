@@ -55,6 +55,7 @@ class MapMooring(Component):
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
         self.add_output('vertical_load', val=0.0, units='kg*m/s**2',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='kg*m/s**2',desc='sume of forces in x direction')
+        self.add_output('plot_matrix', val=np.zeros((3, 20, 3)), units='m', desc='data matrix for plotting') 
 
         # Output constriants
         self.add_output('safety_factor', val=0.0, units='m',desc='range of damaged mooring')
@@ -397,13 +398,19 @@ class MapMooring(Component):
         mymap.read_file(FINPUTSTR)
         mymap.init( )
 
-        # Get the vertical load on the spar
+        # Get the vertical load on the spar and plotting data
         Fz = 0.0
+        npltpts = 20
+        plotMat = np.zeros((nlines, npltpts, 3))
         for k in xrange(nlines):
             _,_,fz = mymap.get_fairlead_force_3d(k)
             Fz += fz
+            plotMat[k,:,0] = mymap.plot_x(k, npltpts)
+            plotMat[k,:,1] = mymap.plot_y(k, npltpts)
+            plotMat[k,:,2] = mymap.plot_z(k, npltpts)
         unknowns['vertical_load'] = Fz
         unknowns['mooring_effective_mass'] = Fz / gravity
+        unknowns['plot_matrix'] = plotMat
         
         # Get angles by which to find the weakest line
         dangle  = 2.0
