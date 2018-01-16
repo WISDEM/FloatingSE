@@ -120,8 +120,8 @@ class MapMooring(Component):
             #self.min_break_load      = 2.74e7  * Dmooring2 * (44.0 - 80.0*Dmooring)
             # Use a linear fit to the other fit becuase it is poorly conditioned for optimization
             self.min_break_load      = 1e3*np.maximum(1.0, -5445.2957034820683+176972.68498888266*Dmooring)
-            self.wet_mass_per_length = 19.9e3  * Dmooring2
-            self.axial_stiffness     = 8.54e10 * Dmooring2
+            self.wet_mass_per_length = 9593.4  * Dmooring2 #19.9e3  * Dmooring2
+            self.axial_stiffness     = 4.74374e10 * Dmooring2 #8.54e10 * Dmooring2
             self.area                = 2.0 * 0.25 * np.pi * Dmooring2
             self.cost_per_length     = 3.415e4  * Dmooring2 #0.58*1e-3*self.min_break_load/gravity - 87.6
 
