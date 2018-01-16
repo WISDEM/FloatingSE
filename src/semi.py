@@ -1,6 +1,7 @@
 from openmdao.api import Component
 import numpy as np
 
+from floatingInstance import NSECTIONS
 from constants import gravity
 
 NPTS = 100
@@ -29,8 +30,14 @@ class Semi(Component):
         self.add_param('mooring_surge_restoring_force', val=0.0, units='N', desc='Restoring force in surge direction from mooring system')
         self.add_param('mooring_cost', val=0.0, units='USD', desc='Cost of mooring system')
 
-        self.add_param('base_cylinder_mass', val=0.0, units='kg', desc='mass of cylinder')
-        self.add_param('base_cylinder_displaced_volume', val=0.0, units='m**3', desc='cylinder volume of water displaced')
+        self.add_param('pontoon_mass', val=0.0, units='kg', desc='Mass of pontoon elements and connecting truss')
+        self.add_param('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
+        self.add_param('pontoon_buoyancy', val=0.0, units='N', desc='Buoyancy force of submerged pontoon elements')
+        self.add_param('pontoon_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of pontoon buoyancy force')
+        self.add_param('pontoon_center_of_gravity', val=0.0, units='m', desc='z-position of center of pontoon mass')
+        
+        self.add_param('base_cylinder_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='mass of cylinder by section')
+        self.add_param('base_cylinder_displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='cylinder volume of water displaced by section')
         self.add_param('base_cylinder_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of cylinder buoyancy force')
         self.add_param('base_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
         self.add_param('base_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
@@ -38,8 +45,8 @@ class Semi(Component):
         self.add_param('base_cylinder_force_points', val=np.zeros((NPTS,)), units='m', desc='zpts for force vector')
         self.add_param('base_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
-        self.add_param('ballast_cylinder_mass', val=0.0, units='kg', desc='mass of cylinder')
-        self.add_param('ballast_cylinder_displaced_volume', val=0.0, units='m**3', desc='cylinder volume of water displaced')
+        self.add_param('ballast_cylinder_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='mass of cylinder by section')
+        self.add_param('ballast_cylinder_displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='cylinder volume of water displaced by section')
         self.add_param('ballast_cylinder_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of cylinder buoyancy force')
         self.add_param('ballast_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
         self.add_param('ballast_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
@@ -84,20 +91,25 @@ class Semi(Component):
         # Unpack variables
         ncylinder    = params['number_of_ballast_cylinders']
         m_turb       = params['turbine_mass']
-        m_mooring    = params['mooring_effective_mass']
+        m_mooringE   = params['mooring_effective_mass']
+        m_mooring    = params['mooring_mass']
         m_base       = params['base_cylinder_mass']
         m_cylinder   = params['ballast_cylinder_mass']
+        m_pontoon    = params['pontoon_mass']
         
         V_base       = params['base_cylinder_displaced_volume']
-        V_cylinder   = params['base_cylinder_displaced_volume']
+        V_cylinder   = params['ballast_cylinder_displaced_volume']
+        F_pontoon    = params['pontoon_buoyancy']
         
         z_base       = params['base_cylinder_center_of_gravity']
         z_cylinder   = params['ballast_cylinder_center_of_gravity']
+        z_pontoon    = params['pontoon_center_of_gravity']
         z_turb       = params['turbine_center_of_gravity']
         z_fairlead   = params['fairlead']*(-1)
 
         z_cb_base     = params['base_cylinder_center_of_buoyancy']
         z_cb_cylinder = params['ballast_cylinder_center_of_buoyancy']
+        z_cb_pontoon  = params['pontoon_center_of_buoyancy']
         
         m_water_data = params['water_ballast_mass_vector']
         z_water_data = params['water_ballast_zpts_vector']
@@ -107,12 +119,13 @@ class Semi(Component):
 
         # Make sure total mass of system with variable water ballast balances against displaced volume
         # Water ballast should be buried in m_cylinder
-        m_system  = m_base + ncylinder*m_cylinder + m_mooring + m_turb
-        V_system  = V_base + ncylinder*V_cylinder
+        m_system  = m_base.sum() + ncylinder*m_cylinder.sum() + m_mooringE + m_turb + m_pontoon
+        V_pontoon = F_pontoon/rhoWater/gravity
+        V_system  = V_base.sum() + ncylinder*V_cylinder.sum() + V_pontoon
         m_water   = V_system*rhoWater - m_system
 
         # Output substructure total mass, different than system mass
-        unknowns['total_mass'] = m_system - m_turb
+        unknowns['total_mass'] = m_system - m_turb - m_mooringE + m_mooring
         unknowns['total_displacement'] = V_system
         m_system += m_water
 
@@ -129,7 +142,7 @@ class Semi(Component):
         unknowns['variable_ballast_height'] = h_water
 
         # Find cb (center of buoyancy) for whole system
-        z_cb = (V_base*z_cb_base + ncylinder*V_cylinder*z_cb_cylinder) / V_system
+        z_cb = (V_base.sum()*z_cb_base + ncylinder*V_cylinder.sum()*z_cb_cylinder + V_pontoon*z_cb_pontoon) / V_system
         unknowns['z_center_of_buoyancy'] = z_cb
         
         # Find cg of whole system
@@ -140,9 +153,8 @@ class Semi(Component):
         zpts    = np.linspace(z_water_data[0], z_end, NPTS)
         dmdz    = np.interp(zpts, z_water_data, dmdz)
         z_water = np.trapz(zpts * dmdz, zpts) / m_water
-
-        z_cg = (m_turb*z_turb + ncylinder*m_cylinder*z_cylinder + m_base*z_base +
-                m_mooring*z_fairlead + m_water*z_water) / m_system
+        z_cg = (m_turb*z_turb + ncylinder*m_cylinder.sum()*z_cylinder + m_base.sum()*z_base +
+                m_mooringE*z_fairlead + m_water*z_water + m_pontoon*z_pontoon) / m_system
         unknowns['z_center_of_gravity'] = z_cg 
 
         
@@ -204,8 +216,8 @@ class Semi(Component):
         M_cylinder = np.trapz((zpts_cylinder-z_cg)*F_cylinder_vector, zpts_cylinder)
 
         M_buoy_weight = 0.0
-        F_buoy_cylinder = V_cylinder * rhoWater * gravity
-        W_cylinder      = m_cylinder * gravity
+        F_buoy_cylinder = V_cylinder.sum() * rhoWater * gravity
+        W_cylinder      = m_cylinder.sum() * gravity
         for k in xrange(ncylinder):
             M_buoy_weight += radii[k]*(F_buoy_cylinder - W_cylinder)
         
@@ -238,6 +250,7 @@ class Semi(Component):
         c_mooring  = params['mooring_cost']
         c_cylinder = params['ballast_cylinder_cost']
         c_base     = params['base_cylinder_cost']
+        c_pontoon  = params['pontoon_cost']
 
-        unknowns['total_cost'] = c_mooring + ncylinder*c_cylinder + c_base
+        unknowns['total_cost'] = c_mooring + ncylinder*c_cylinder + c_base + c_pontoon
         

@@ -9,10 +9,6 @@ class SemiInstance(FloatingInstance):
 
         # Parameters beyond those in superclass
         # Typically static- set defaults
-        self.material_density = 7850.0
-        self.E = 200e9
-        self.nu = 0.3
-        self.yield_stress = 3.45e8
         self.permanent_ballast_density = 4492.0
         self.bulkhead_mass_factor = 1.0
         self.ring_mass_factor = 1.0
@@ -22,33 +18,59 @@ class SemiInstance(FloatingInstance):
         self.ballast_cost_rate = 100.0
         self.tapered_col_cost_rate = 4720.0
         self.outfitting_cost_rate = 6980.0
+        self.cross_attachment_pontoons = True
+        self.lower_attachment_pontoons = True
+        self.upper_attachment_pontoons = True
+        self.lower_ring_pontoons = True
+        self.upper_ring_pontoons = True
+        self.pontoon_cost_rate = 6.250
 
-        # Typically design
-        self.radius_to_ballast_cylinder = 20.0
-        self.freeboard_base = 5.0
-        self.freeboard_ballast = 5.0
-        self.fairlead = 7.57
-        self.fairlead_offset_from_shell = 0.05
-        self.outer_radius_base = 7.0
-        self.wall_thickness_base = 0.05
-        self.outer_radius_ballast = 7.0
-        self.wall_thickness_ballast = 0.05
+        # Typically design (start at OC4 semi)
+        self.radius_to_ballast_cylinder = 28.867513459481287
         self.number_of_ballast_columns = 3
+        self.freeboard_base = 10.0
+        self.freeboard_ballast = 12.0
+        self.fairlead = 14.0
+        self.fairlead_offset_from_shell = 40.868-28.867513459481287-6.0
+        self.outer_radius_base = 3.25
+        self.wall_thickness_base = 0.03
+        self.outer_radius_ballast = 7.0
+        self.wall_thickness_ballast = 0.06
         self.permanent_ballast_height_base = 10.0
         self.stiffener_web_height_base= 0.1
         self.stiffener_web_thickness_base = 0.04
         self.stiffener_flange_width_base = 0.1
         self.stiffener_flange_thickness_base = 0.02
         self.stiffener_spacing_base = 0.4
-        self.permanent_ballast_height_ballast = 10.0
+        self.permanent_ballast_height_ballast = 0.1
         self.stiffener_web_height_ballast= 0.1
         self.stiffener_web_thickness_ballast = 0.04
         self.stiffener_flange_width_ballast = 0.1
         self.stiffener_flange_thickness_ballast = 0.02
         self.stiffener_spacing_ballast = 0.4
+        self.outer_pontoon_radius = 1.6
+        self.inner_pontoon_radius = 1.6-0.0175
 
-        self.set_length_base( 40.0 )
-        self.set_length_ballast( 20.0 )
+        # OC4
+        self.water_depth = 200.0
+        self.wave_height = 10.8
+        self.wave_period = 9.8
+        self.wind_reference_speed = 11.0
+        self.wind_reference_height = 119.0
+        self.alpha = 0.11
+        self.morison_mass_coefficient = 2.0
+
+        self.max_offset  = 0.1*self.water_depth # Assumption        
+        self.number_of_mooring_lines = 3
+        self.scope_ratio = 835.5 / (self.water_depth-self.fairlead) 
+        self.anchor_radius = 837.6
+        self.mooring_diameter = 0.0766
+
+        self.set_length_base( 30.0 )
+        self.set_length_ballast( 32.0 )
+
+        self.section_height_ballast = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
+        self.outer_radius_ballast = np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
         
         # Change scalars to vectors where needed
         self.check_vectors()
@@ -96,6 +118,8 @@ class SemiInstance(FloatingInstance):
                       ('section_height_ballast.x',1e-1, 100.0, 1e1),
                       ('outer_radius_ballast.x',1.1, 25.0, 10.0),
                       ('wall_thickness_ballast.x',5e-3, 1.0, 1e3),
+                      ('outer_pontoon_radius.x', 0.1, 5.0, 1.0),
+                      ('inner_pontoon_radius.x', 0.02, 4.95, 1.0),
                       ('scope_ratio.x', 1.0, 5.0, 1.0),
                       ('anchor_radius.x', 1.0, 1e3, 1e-2),
                       ('mooring_diameter.x', 0.05, 1.0, 1e1),
@@ -118,6 +142,11 @@ class SemiInstance(FloatingInstance):
         #prob.driver.add_desvar('mooring_type.x')
         #prob.driver.add_desvar('anchor_type.x')
         #prob.driver.add_desvar('bulkhead_nodes.x')
+        #prob.driver.add_desvar('cross_attachment_pontoons.x')
+        #prob.driver.add_desvar('lower_attachment_pontoons.x')
+        #prob.driver.add_desvar('upper_attachment_pontoons.x')
+        #prob.driver.add_desvar('lower_ring_pontoons.x')
+        #prob.driver.add_desvar('upper_ring_pontoons.x')
         return desvarList
 
     def add_constraints_objective(self):
@@ -136,6 +165,9 @@ class SemiInstance(FloatingInstance):
         self.prob.driver.add_constraint('sg.base_taper_ratio',upper=0.1)
         self.prob.driver.add_constraint('sg.ballast_taper_ratio',upper=0.1)
 
+        # Ensure that the spar top matches the tower base
+        self.prob.driver.add_constraint('sg.transition_radius',lower=0.0, upper=5.0)
+        
         # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
         self.prob.driver.add_constraint('mm.safety_factor',lower=0.0, upper=0.8)
 
@@ -162,6 +194,13 @@ class SemiInstance(FloatingInstance):
         self.prob.driver.add_constraint('ball.external_local_unity', upper=1.0)
         self.prob.driver.add_constraint('ball.external_general_unity', upper=1.0)
 
+        # Pontoon tube radii
+        self.prob.driver.add_constraint('pon.pontoon_radii_ratio', upper=1.0)
+
+        # Pontoon stress safety factor
+        self.prob.driver.add_constraint('pon.axial_stress_factor', upper=0.8)
+        self.prob.driver.add_constraint('pon.shear_stress_factor', upper=0.8)
+        
         # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
         self.prob.driver.add_constraint('sm.variable_ballast_height', lower=2.0, upper=100.0)
         self.prob.driver.add_constraint('sm.variable_ballast_mass', lower=0.0)
@@ -191,6 +230,10 @@ class SemiInstance(FloatingInstance):
 
         mooringMat = self.prob['mm.plot_matrix']
         self.draw_mooring(fig, mooringMat)
+
+        pontoonMat = self.prob['pon.plot_matrix']
+        zcut = 1.0 + np.maximum( self.freeboard_base, self.freeboard_ballast )
+        self.draw_pontoons(fig, pontoonMat, self.outer_pontoon_radius, zcut)
 
         self.draw_cylinder(fig, [0.0, 0.0], self.freeboard_base, self.section_height_base,
                            self.outer_radius_base, self.stiffener_spacing_base)

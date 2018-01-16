@@ -27,6 +27,7 @@ class SemiGeometry(Component):
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_offset_from_shell', val=0.5, units='m',desc='fairlead offset from shell')
         self.add_param('radius_to_ballast_cylinder', val=10.0, units='m',desc='Distance from base cylinder centerpoint to ballast cylinder centerpoint')
+        self.add_param('tower_base_radius', val=3.25, units='m', desc='outer radius of tower at base')
 
         # Outputs
         self.add_output('base_draft', val=0.0, units='m', desc='Spar draft (length of body under water)')
@@ -44,6 +45,7 @@ class SemiGeometry(Component):
         self.add_output('base_taper_ratio', val=np.zeros((NSECTIONS,)), desc='Ratio of outer radius change in a section to its starting value')
         self.add_output('ballast_taper_ratio', val=np.zeros((NSECTIONS,)), desc='Ratio of outer radius change in a section to its starting value')
         self.add_output('base_ballast_spacing', val=0.0, desc='Radius of base and ballast cylinders relative to spacing')
+        self.add_output('transition_radius', val=0.0, units='m', desc='Buffer between spar top and tower base')
 
     def solve_nonlinear(self, params, unknowns, resids):
         """Sets nodal points and sectional centers of mass in z-coordinate system with z=0 at the waterline.
@@ -59,6 +61,7 @@ class SemiGeometry(Component):
         """
         # Unpack variables
         R_od_base      = params['base_outer_radius']
+        R_tower        = params['tower_base_radius']
         t_wall_base    = params['base_wall_thickness']
         h_section_base = params['base_section_height']
         freeboard_base = params['base_freeboard'] # length of spar under water
@@ -107,6 +110,9 @@ class SemiGeometry(Component):
 
         # Determine radius at mooring connection point (fairlead)
         unknowns['fairlead_radius'] = R_semi + fair_off + np.interp(-fairlead, z_nodes_ballast, R_od_ballast)
+
+        # Constrain base column top to be at least greater than tower base
+        unknowns['transition_radius'] = R_od_base[-1] - R_tower
 
 
 
