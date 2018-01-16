@@ -16,6 +16,7 @@ generated
 
 # C extensions
 *.so
+*.o
 
 # Packages
 *.egg
@@ -58,6 +59,7 @@ nosetests.xml
 *.exe
 *.o
 *.so
+*.dylib
 
 # Packages #
 ############
@@ -88,6 +90,10 @@ nosetests.xml
 Icon?
 ehthumbs.db
 Thumbs.db
+
+# Emacs #
+#########
+*~
 
 # LaTeX #
 #########
