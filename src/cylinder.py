@@ -578,10 +578,10 @@ class Cylinder(Component):
         self.add_param('stack_mass_in', val=1e-12, units='kg', desc='Weight above the cylinder column')
         
         # Material properties
-        self.add_param('material_density', val=7850., units='kg/m**3', desc='density of spar material')
-        self.add_param('E', val=200.e9, units='Pa', desc='Modulus of elasticity (Youngs) of spar material')
+        self.add_param('material_density', val=7850., units='kg/m**3', desc='density of material')
+        self.add_param('E', val=200e9, units='Pa', desc='Modulus of elasticity (Youngs) of material')
         self.add_param('nu', val=0.3, desc='poissons ratio of spar material')
-        self.add_param('yield_stress', val=345000000., units='Pa', desc='yield stress of spar material')
+        self.add_param('yield_stress', val=345e6, units='Pa', desc='yield stress of material')
         self.add_param('permanent_ballast_density', val=4492.0, units='kg/m**3', desc='density of permanent ballast')
 
         # Inputs from SparGeometry
@@ -622,7 +622,7 @@ class Cylinder(Component):
         self.add_output('z_center_of_buoyancy', val=0.0, units='m', desc='z-position CofB of cylinder')
         self.add_output('Awater', val=0.0, units='m**2', desc='Area of waterplace cross section')
         self.add_output('Iwater', val=0.0, units='m**4', desc='Second moment of area of waterplace cross section')
-        self.add_output('displaced_volume', val=0.0, units='m**3', desc='Volume of water displaced by cylinder')
+        self.add_output('displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='Volume of water displaced by cylinder by section')
  
         self.add_output('spar_cost', val=0.0, units='USD', desc='cost of spar structure')
         self.add_output('spar_mass', val=0.0, units='kg', desc='mass of spar structure')
@@ -636,7 +636,7 @@ class Cylinder(Component):
         self.add_output('outfitting_cost', val=0.0, units='USD', desc='cost of outfitting the spar')
         self.add_output('outfitting_mass', val=0.0, units='kg', desc='cost of outfitting the spar')
 
-        self.add_output('total_mass', val=0.0, units='kg', desc='total mass of cylinder')
+        self.add_output('total_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='total mass of cylinder by section')
         self.add_output('total_cost', val=0.0, units='USD', desc='total cost of cylinder')
         
         # Output constraints
@@ -771,10 +771,13 @@ class Cylinder(Component):
         # Assume they are bottled in cylinders a the keel of the spar- first the permanent then the fixed
         zpts      = np.linspace(z_draft, z_draft+h_ballast, NPTS)
         R_id      = np.interp(zpts, z_nodes, R_od-t_wall)
-        V_perm    = np.trapz(np.pi*R_id**2, zpts)
+        V_perm    = np.pi * np.trapz(R_id**2, zpts)
         m_perm    = rho_ballast * V_perm
-        z_cg_perm = rho_ballast * np.trapz(zpts*np.pi*R_id**2, zpts) / m_perm
-
+        z_cg_perm = rho_ballast * np.pi * np.trapz(zpts*R_id**2, zpts) / m_perm
+        for k in xrange(z_nodes.size-1):
+            ind = np.logical_and(zpts>=z_nodes[k], zpts<=z_nodes[k+1]) 
+            self.section_mass[k] += rho_ballast * np.pi * np.trapz(R_id[ind]**2, zpts[ind])
+        
         # Water ballast will start at top of fixed ballast
         z_water_start = z_draft + h_ballast
 
@@ -810,31 +813,42 @@ class Cylinder(Component):
         metacentric_height      in 'unknowns' dictionary set
         """
         # Unpack variables
-        R_od             = params['outer_radius']
-        t_wall           = params['wall_thickness']
-        z_nodes          = params['z_nodes']
+        R_od              = params['outer_radius']
+        t_wall            = params['wall_thickness']
+        z_nodes           = params['z_nodes']
+        self.section_mass = np.zeros((z_nodes.size-1,))
         
         # Add in contributions from the spar and permanent ballast assumed to start at draft point
         m_spar   , cg_spar     = self.compute_spar_mass_cg(params, unknowns)
         m_ballast, cg_ballast  = self.compute_ballast_mass_cg(params, unknowns)
         m_outfit               = unknowns['outfitting_mass']
         m_total                = m_spar + m_ballast + m_outfit
-        unknowns['total_mass'] = m_total
+        self.section_mass     += m_outfit / self.section_mass.size
+        unknowns['total_mass'] = self.section_mass
         unknowns['z_center_of_gravity'] = ( (m_spar+m_outfit)*cg_spar + m_ballast*cg_ballast ) / m_total
         
         # Compute volume of each section and mass of displaced water by section
         # Find the radius at the waterline so that we can compute the submerged volume as a sum of frustum sections
-        r_waterline = np.interp(0.0, z_nodes, R_od)
-        t_waterline = np.interp(0.0, z_nodes, t_wall)
-        z_under     = np.r_[z_nodes[z_nodes < 0.0], 0.0]
-        r_under     = np.r_[R_od[z_nodes < 0.0], r_waterline]
+        if z_nodes[-1] > 0.0:
+            r_waterline = np.interp(0.0, z_nodes, R_od)
+            z_under     = np.r_[z_nodes[z_nodes < 0.0], 0.0]
+            r_under     = np.r_[R_od[z_nodes < 0.0], r_waterline]
+        else:
+            r_waterline = R_od[-1]
+            r_under     = R_od
+            z_under     = z_nodes
+            
         V_under     = frustum.frustumVol_radius(r_under[:-1], r_under[1:], np.diff(z_under))
-        unknowns['displaced_volume'] = V_under.sum()
+        # 0-pad so that it has the length of sections
+        add0        = np.maximum(0, self.section_mass.size-V_under.size)
+        V_under     = np.r_[V_under, np.zeros((add0,))]
+        unknowns['displaced_volume'] = V_under
 
         # Compute Center of Buoyancy in z-coordinates (0=waterline)
         # First get z-coordinates of CG of all frustums
         z_cg_under  = frustum.frustumCG_radius(r_under[:-1], r_under[1:], np.diff(z_under))
         z_cg_under += z_under[:-1]
+        z_cg_under  = np.r_[z_cg_under, np.zeros((add0,))]
         # Now take weighted average of these CG points with volume
         unknowns['z_center_of_buoyancy'] = np.dot(V_under, z_cg_under) / V_under.sum()
 

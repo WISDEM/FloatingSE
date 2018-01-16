@@ -23,6 +23,7 @@ class TestCylinder(unittest.TestCase):
         self.params['fairlead_offset_from_shell'] = 0.0
         self.params['stack_mass_in'] = 0.0
         self.params['system_z_center_of_gravity'] = 25.0
+        self.params['tower_base_radius'] = 5.0
         
         self.params['material_density'] = 5.0
         self.params['bulkhead_mass_factor'] = 1.5
@@ -64,6 +65,7 @@ class TestCylinder(unittest.TestCase):
         self.set_geometry()
 
         self.myspar = cylinder.Cylinder()
+        self.myspar.section_mass = np.zeros((2,))
 
         
     def set_geometry(self):
@@ -248,9 +250,9 @@ class TestCylinder(unittest.TestCase):
         cg_water = self.params['z_nodes'][0] + 1.0 + 0.5*h_expect
         cg_expect = (m_perm*cg_perm + 1e6*cg_water) / m_expect
         
-        self.assertEqual(self.unknowns['ballast_mass'], m_perm)
+        self.assertAlmostEqual(self.unknowns['ballast_mass'], m_perm)
         
-        self.assertEqual(m_ballast, m_perm)
+        self.assertAlmostEqual(m_ballast, m_perm)
         self.assertAlmostEqual(cg_ballast, cg_perm)
 
 
@@ -262,18 +264,27 @@ class TestCylinder(unittest.TestCase):
         m_expect = m_spar + m_ballast + m_out
         cg_system = ((m_spar+m_out)*cg_spar + m_ballast*cg_ballast) / m_expect
 
-        self.assertAlmostEqual(m_expect, self.unknowns['total_mass'])
+        self.assertAlmostEqual(m_expect, self.unknowns['total_mass'].sum())
         self.assertAlmostEqual(cg_system, self.unknowns['z_center_of_gravity'])
 
         V_expect = np.pi * 100.0 * 35.0
         cb_expect = -17.5
         Ixx = 0.25 * np.pi * 1e4
         Axx = np.pi * 1e2
-        self.assertAlmostEqual(self.unknowns['displaced_volume'], V_expect)
+        self.assertAlmostEqual(self.unknowns['displaced_volume'].sum(), V_expect)
         self.assertAlmostEqual(self.unknowns['z_center_of_buoyancy'], cb_expect)
         self.assertAlmostEqual(self.unknowns['Iwater'], Ixx)
         self.assertAlmostEqual(self.unknowns['Awater'], Axx)
 
+        # Test if everything under water
+        self.params['freeboard'] = -5.0
+        self.set_geometry()
+        self.myspar.balance_cylinder(self.params, self.unknowns)
+        V_expect = np.pi * 100.0 * 50.0
+        cb_expect = -25.0 - 5
+        self.assertAlmostEqual(self.unknowns['displaced_volume'].sum(), V_expect)
+        self.assertAlmostEqual(self.unknowns['z_center_of_buoyancy'], cb_expect)
+        
 
         
     def testSurgePitch(self):
