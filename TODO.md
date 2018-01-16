@@ -1,7 +1,16 @@
 - Inject manufacturing realism that ordering large quantities of constant thickness steel is cheaper than lots of individual orders of slightly varying thickness
-- Refactor spar.py and sparAssembly.py to allow for substructure to have multiple cylindrical columns
-- Create a semiAssembly.py that gets sized for bouyancy just with columns
-- Add truss connections between columns that is analyzed with pyFrame3DD
 - Allow for more complicated wave and hydrodynamic loads
-- Allow for change in materials
+- Move to mass, damper, and stiffness matrices for 6DOF dynamics
+- Incorporate mooring into frame calculation
+- Taught moorings- angled, vertical
+- Tension arms
+- Heave plates on vertical cylinders
+- Add horizontal cylinder/floaters
+- Gravity anchors
+- Get GA working
+- Separate out fatigue and extreme loading
+- Allow for change in materials- concrete (pre/post tensioned), carbon fiber, different steel alloys
+- Do summation of moments of inertia along with mass
+- Give totals of mass with and without mooring system
+- All floating turbine assembly
 
