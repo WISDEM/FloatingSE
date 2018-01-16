@@ -4,36 +4,38 @@ import time
 
 def example_spar():
     myspar = SparInstance()
+    #myspar.evaluate('psqp')
+    #myspar.visualize('spar-initial.jpg')
     myspar.run('psqp')
     return myspar
     
 def psqp_optimal():
-    #OrderedDict([('sp.total_cost', array([ 3.68453183]))])
+    #OrderedDict([('sp.total_cost', array([5.07931743]))])
     myspar = SparInstance()
 
-    myspar.freeboard = 0.00073617
-    myspar.fairlead = 30.23430604
-    myspar.fairlead_offset_from_shell = 2.2463426
-    myspar.section_height = np.array([ 44.75012676,  55.68533593,  32.61582977,   3.02858163,  27.42086207])
-    myspar.outer_radius = np.array([ 3.87057022,  3.7579668 ,  4.13376348,  3.72038713,  3.34834842,  3.01351358])
-    myspar.wall_thickness = np.array([ 0.00548463,  0.0155159 ,  0.005     ,  0.00797428,  0.00563697, 0.00534425])
-    myspar.scope_ratio = 2.62638518
-    myspar.anchor_radius = 446.90323797
-    myspar.mooring_diameter = 0.07158603
-    myspar.stiffener_web_height = np.array([ 0.12444224,  0.12299485,  0.12015385,  0.04633428,  0.09467203])
-    myspar.stiffener_web_thickness = np.array([ 0.00517162,  0.00510837,  0.00499036,  0.00200576,  0.00393203])
-    myspar.stiffener_flange_width = np.array([ 0.01,  0.01,  0.01,  0.01,  0.01])
-    myspar.stiffener_flange_thickness = np.array([ 0.28415801,  0.21538891,  0.13165469,  0.01070565,  0.03621131])
-    myspar.stiffener_spacing = np.array([ 0.21430004,  0.27690039,  0.22438445,  0.22835077,  0.20710628])
-    myspar.permanent_ballast_height = 28.85285134
+    myspar.freeboard = 5.10158277e-15
+    myspar.fairlead = 71.10786714
+    myspar.fairlead_offset_from_shell = 0.89788471
+    myspar.section_height = np.array([46.90829885, 47.09591478, 42.98780181, 15.62142311, 27.12647036])
+    myspar.outer_radius = np.array([3.42031956, 3.76211996, 4.13833196, 3.74070578, 3.36663524, 3.25 ])
+    myspar.wall_thickness = np.array([0.005 , 0.01798306, 0.01634286, 0.0305431 , 0.01614555, 0.02401723])
+    myspar.scope_ratio = 3.5943495
+    myspar.anchor_radius = 853.84311789
+    myspar.mooring_diameter = 0.07110683
+    myspar.stiffener_web_height = np.array([0.12446595, 0.11906005, 0.13367389, 0.09986728, 0.20104476])
+    myspar.stiffener_web_thickness = np.array([0.00516946, 0.00494494, 0.00555185, 0.01137231, 0.01044597])
+    myspar.stiffener_flange_width = np.array([0.01 , 0.01 , 0.01 , 0.02438453, 0.10485385])
+    myspar.stiffener_flange_thickness = np.array([0.27895428, 0.3056761 , 0.49283386, 0.11848842, 0.01322849])
+    myspar.stiffener_spacing = np.array([0.21985983, 0.40572512, 1.50992577, 2.76799805, 2.87945321])
+    myspar.permanent_ballast_height = 30.18703972
 
-    #myspar.run('psqp')
     myspar.evaluate('psqp')
     myspar.visualize('spar-psqp.jpg')
     return myspar
     '''
-OrderedDict([('sg.draft_depth_ratio', array([ 0.75])), ('sg.fairlead_draft_ratio', array([ 0.1849193])), ('sg.taper_ratio', array([ 0.0290922,  0.1      ,  0.1      ,  0.1      ,  0.1      ])), ('mm.safety_factor', array([ 0.80077762])), ('mm.mooring_length_min', array([ 1.02894038])), ('mm.mooring_length_max', array([ 0.77701146])), ('cyl.flange_spacing_ratio', array([ 0.04666355,  0.03611407,  0.04456637,  0.04379228,  0.04828439])), ('cyl.web_radius_ratio', array([ 0.03262545,  0.03117057,  0.03059627,  0.01310964,  0.02976237])), ('cyl.flange_compactness', array([ 513.12906831,  388.94666584,  237.74043564,   19.33213787,
-         65.3899373 ])), ('cyl.web_compactness', array([ 1.00060886,  1.00000124,  0.99999885,  1.04227273,  1.00000112])), ('cyl.axial_local_unity', array([ 0.99995958,  0.99997138,  0.99910551,  0.96884098,  0.99947767])), ('cyl.axial_general_unity', array([ 0.99996728,  0.9999819 ,  0.92221693,  1.96011483,  0.93508148])), ('cyl.external_local_unity', array([ 0.85767765,  0.88856371,  0.95347875,  0.92097095,  0.99947767])), ('cyl.external_general_unity', array([ 0.92365281,  0.99859238,  1.00000347,  1.98874548,  0.99881369])), ('sp.variable_ballast_height', array([ 9.27801885])), ('sp.variable_ballast_mass', array([ 425368.15674026])), ('sp.metacentric_height', array([ 46.32487187])), ('sp.static_stability', array([ 46.31605265])), ('sp.offset_force_ratio', array([ 0.99874671])), ('sp.heel_angle', array([ 10.0000636]))])
+OrderedDict([('freeboard.x', array([5.10158277e-15])), ('fairlead.x', array([71.10786714])), ('fairlead_offset_from_shell.x', array([0.89788471])), ('section_height.x', array([46.90829885, 47.09591478, 42.98780181, 15.62142311, 27.12647036])), ('outer_radius.x', array([3.42031956, 3.76211996, 4.13833196, 3.74070578, 3.36663524,
+       3.25      ])), ('wall_thickness.x', array([0.005     , 0.01798306, 0.01634286, 0.0305431 , 0.01614555,
+       0.02401723])), ('scope_ratio.x', array([3.5943495])), ('anchor_radius.x', array([853.84311789])), ('mooring_diameter.x', array([0.07110683])), ('stiffener_web_height.x', array([0.12446595, 0.11906005, 0.13367389, 0.09986728, 0.20104476])), ('stiffener_web_thickness.x', array([0.00516946, 0.00494494, 0.00555185, 0.01137231, 0.01044597])), ('stiffener_flange_width.x', array([0.01      , 0.01      , 0.01      , 0.02438453, 0.10485385])), ('stiffener_flange_thickness.x', array([0.27895428, 0.3056761 , 0.49283386, 0.11848842, 0.01322849])), ('stiffener_spacing.x', array([0.21985983, 0.40572512, 1.50992577, 2.76799805, 2.87945321])), ('permanent_ballast_height.x', array([30.18703972]))])
     '''
 
 
@@ -90,3 +92,4 @@ OrderedDict([('sg.draft_depth_ratio', array([ 0.3948845])), ('mm.safety_factor',
         
 if __name__ == '__main__':
     example_spar()
+    #psqp_optimal()

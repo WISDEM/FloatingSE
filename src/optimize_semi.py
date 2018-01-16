@@ -4,47 +4,56 @@ import time
 
 def example_semi():
     mysemi = SemiInstance()
+    #mysemi.evaluate('psqp')
+    #mysemi.visualize('semi-initial.jpg')
     mysemi.run('psqp')
     return mysemi
 
 def psqp_optimal():
-    #OrderedDict([('sm.total_cost', array([ 0.478222]))])
+    #OrderedDict([('sm.total_cost', array([0.65987536]))])
     mysemi = SemiInstance()
-    mysemi.fairlead = 0.98837804
-    mysemi.fairlead_offset_from_shell = 0.03492563
-    mysemi.radius_to_ballast_cylinder = 12.50450881
-    mysemi.freeboard_base =  4.73371486e-05
-    mysemi.section_height_base = np.array([ 6.87136507,  6.73962166,  7.10951696,  7.74446946,  5.06246213])
-    mysemi.outer_radius_base = np.array([ 4.22649245,  4.6491417 ,  5.11405587,  4.60265028,  4.14238525, 3.72814673])
-    mysemi.wall_thickness_base = np.array([ 0.005     ,  0.005     ,  0.005     ,  0.005     ,  0.005     , 0.00803123])
-    mysemi.freeboard_ballast = 1.34505626
-    mysemi.section_height_ballast = np.array([ 0.46278875,  0.26941733,  0.25622358,  0.65026967,  0.69473497])
-    mysemi.outer_radius_ballast = np.array([ 1.1     ,  1.21    ,  1.331   ,  1.4641  ,  1.31769 ,  1.185921])
-    mysemi.wall_thickness_ballast = np.array([ 0.005,  0.005,  0.005,  0.005,  0.005,  0.005])
-    mysemi.scope_ratio = 2.33930678
-    mysemi.anchor_radius = 449.98914924
-    mysemi.mooring_diameter = 0.43319508
-    mysemi.stiffener_web_height_base = np.array([ 0.08808218,  0.08498695,  0.07744793,  0.0651362 ,  0.06189142])
-    mysemi.stiffener_web_thickness_base = np.array([ 0.00365833,  0.00352977,  0.00321665,  0.00270531,  0.00257054])
-    mysemi.stiffener_flange_width_base = np.array([ 0.01      ,  0.01      ,  0.01      ,  0.01      ,  0.02975293])
-    mysemi.stiffener_flange_thickness_base = np.array([ 0.02582615,  0.02323277,  0.01759444,  0.0116956 ,  0.00332889])
-    mysemi.stiffener_spacing_base = np.array([ 0.15536269,  0.16733385,  0.1943853 ,  0.24621259,  0.29430671])
-    mysemi.permanent_ballast_height_base = 4.44060642
-    mysemi.stiffener_web_height_ballast = np.array([ 0.02407717,  0.01      ,  0.01      ,  0.01      ,  0.0108659 ])
-    mysemi.stiffener_web_thickness_ballast = np.array([ 0.001,  0.001,  0.001,  0.001,  0.001])
-    mysemi.stiffener_flange_width_ballast = np.array([ 0.01      ,  0.01      ,  0.04717587,  0.01      ,  0.01      ])
-    mysemi.stiffener_flange_thickness_ballast = np.array([ 0.001     ,  0.001     ,  0.00261248,  0.001     ,  0.0020657 ])
-    mysemi.stiffener_spacing_ballast = np.array([ 0.85071975,  1.27903722,  1.2899592 ,  1.65261691,  1.68134627])
-    mysemi.permanent_ballast_height_ballast = 0.1
+
+    mysemi.fairlead = 22.2366002
+    mysemi.fairlead_offset_from_shell = 4.99949523
+    mysemi.radius_to_ballast_cylinder = 26.79698385
+    mysemi.freeboard_base = 4.97159308
+    mysemi.section_height_base = np.array([6.72946378, 5.97993104, 5.47072089, 5.71437475, 5.44290777])
+    mysemi.outer_radius_base = np.array([2.0179943 , 2.21979373, 2.4417731 , 2.68595041, 2.95454545, 3.25 ])
+    mysemi.wall_thickness_base = np.array([0.01100738, 0.00722966, 0.00910002, 0.01033024, 0.00639292, 0.00560714])
+    mysemi.freeboard_ballast = -1.14370386e-20
+    mysemi.section_height_ballast = np.array([1.44382195, 2.71433629, 6.1047888 , 5.14428218, 6.82937098])
+    mysemi.outer_radius_ballast = np.array([2.57228724, 2.82647421, 3.10005118, 3.40594536, 3.74653989, 4.12119389])
+    mysemi.wall_thickness_ballast = np.array([0.01558312, 0.005 , 0.005 , 0.005 , 0.005 , 0.005 ])
+    mysemi.outer_pontoon_radius = 0.92428188
+    mysemi.inner_pontoon_radius = 0.88909984
+    mysemi.scope_ratio = 4.71531904
+    mysemi.anchor_radius = 837.58954811
+    mysemi.mooring_diameter = 0.36574595
+    mysemi.stiffener_web_height_base = np.array([0.01625364, 0.04807025, 0.07466081, 0.0529478 , 0.03003529])
+    mysemi.stiffener_web_thickness_base = np.array([0.00263325, 0.00191218, 0.00404707, 0.00495706, 0.00137335])
+    mysemi.stiffener_flange_width_base = np.array([0.0100722 , 0.06406752, 0.01342377, 0.07119415, 0.01102604])
+    mysemi.stiffener_flange_thickness_base = np.array([0.06126737, 0.00481305, 0.01584461, 0.00980356, 0.01218029])
+    mysemi.stiffener_spacing_base = np.array([1.09512893, 0.67001459, 1.60080836, 1.27068546, 0.2687786 ])
+    mysemi.permanent_ballast_height_base = 5.34047386
+    mysemi.stiffener_web_height_ballast = np.array([0.04750412, 0.03926778, 0.04484479, 0.04255339, 0.05903525])
+    mysemi.stiffener_web_thickness_ballast = np.array([0.00197299, 0.00162998, 0.00186254, 0.00176738, 0.00245192])
+    mysemi.stiffener_flange_width_ballast = np.array([0.01176864, 0.01018018, 0.01062256, 0.01119399, 0.01023957])
+    mysemi.stiffener_flange_thickness_ballast = np.array([0.00182314, 0.00428608, 0.01616793, 0.0109717 , 0.00814284])
+    mysemi.stiffener_spacing_ballast = np.array([0.88934305, 0.19623501, 0.29410086, 0.30762027, 0.4208429 ])
+    mysemi.permanent_ballast_height_ballast = 0.10007504
 
     mysemi.evaluate('psqp')
     mysemi.visualize('semi-psqp.jpg')
     return mysemi
     
     '''
-OrderedDict([('sg.base_draft_depth_ratio', array([ 0.15379536])), ('sg.ballast_draft_depth_ratio', array([ 0.00453384])), ('sg.fairlead_draft_ratio', array([ 1.])), ('sg.base_taper_ratio', array([ 0.1,  0.1,  0.1,  0.1,  0.1])), ('sg.ballast_taper_ratio', array([ 0.1,  0.1,  0.1,  0.1,  0.1])), ('mm.safety_factor', array([ 0.79999972])), ('mm.mooring_length_min', array([ 1.0417004])), ('mm.mooring_length_max', array([ 0.76110371])), ('base.flange_spacing_ratio', array([ 0.06436552,  0.05976077,  0.05144422,  0.04061531,  0.10109498])), ('base.web_radius_ratio', array([ 0.01984809,  0.01740966,  0.01594119,  0.01489673,  0.01572738])), ('base.flange_compactness', array([ 46.63655042,  41.9534534 ,  31.77183121,  21.11977822,   2.02039828])), ('base.web_compactness', array([ 1.,  1.,  1.,  1.,  1.])), ('base.axial_local_unity', array([ 1.        ,  0.99999957,  1.        ,  0.99999998,  0.4951127 ])), ('base.axial_general_unity', array([ 1.        ,  1.00000011,  0.9963726 ,  0.95711537,  0.96815567])), ('base.external_local_unity', array([ 0.92480828,  0.93984832,  0.97171596,  0.99999998,  0.4951127 ])), ('base.external_general_unity', array([ 0.95265914,  0.96616978,  1.        ,  1.00000019,  1.00000176])), ('ball.flange_spacing_ratio', array([ 0.01175475,  0.00781838,  0.0365716 ,  0.00605101,  0.00594761])), ('ball.web_radius_ratio', array([ 0.02084604,  0.00787092,  0.00715538,  0.00718962,  0.00868018])), ('ball.flange_compactness', array([ 1.8057878 ,  1.8057878 ,  1.        ,  1.8057878 ,  3.73021882])), ('ball.web_compactness', array([ 1.        ,  2.40771706,  2.40771706,  2.40771706,  2.21584734])), ('ball.axial_local_unity', array([ 0.34513666,  0.57609198,  0.65011859,  0.88163762,  0.87608159])), ('ball.axial_general_unity', array([ 0.16949242,  0.1365349 ,  0.09848718,  0.92523936,  0.95183049])), ('ball.external_local_unity', array([ 0.34513666,  0.57609198,  0.65011859,  0.88163762,  0.87608159])), ('ball.external_general_unity', array([ 0.17928123,  0.14093933,  0.11602595,  0.95372108,  1.00045621])), ('sm.variable_ballast_height', array([ 28.68929657])), ('sm.variable_ballast_mass', array([ 1929784.88830389])), ('sm.metacentric_height', array([ 1.42537821])), ('sm.static_stability', array([ 1.22470678])), ('sm.offset_force_ratio', array([ 0.17013327])), ('sm.heel_angle', array([ 10.00000501]))])
+OrderedDict([('fairlead.x', array([22.2366002])), ('fairlead_offset_from_shell.x', array([4.99949523])), ('radius_to_ballast_cylinder.x', array([26.79698385])), ('freeboard_base.x', array([4.97159308])), ('section_height_base.x', array([6.72946378, 5.97993104, 5.47072089, 5.71437475, 5.44290777])), ('outer_radius_base.x', array([2.0179943 , 2.21979373, 2.4417731 , 2.68595041, 2.95454545,
+       3.25      ])), ('wall_thickness_base.x', array([0.01100738, 0.00722966, 0.00910002, 0.01033024, 0.00639292,
+       0.00560714])), ('freeboard_ballast.x', array([-1.14370386e-20])), ('section_height_ballast.x', array([1.44382195, 2.71433629, 6.1047888 , 5.14428218, 6.82937098])), ('outer_radius_ballast.x', array([2.57228724, 2.82647421, 3.10005118, 3.40594536, 3.74653989,
+       4.12119389])), ('wall_thickness_ballast.x', array([0.01558312, 0.005     , 0.005     , 0.005     , 0.005     ,
+       0.005     ])), ('outer_pontoon_radius.x', array([0.92428188])), ('inner_pontoon_radius.x', array([0.88909984])), ('scope_ratio.x', array([4.71531904])), ('anchor_radius.x', array([837.58954811])), ('mooring_diameter.x', array([0.36574595])), ('stiffener_web_height_base.x', array([0.01625364, 0.04807025, 0.07466081, 0.0529478 , 0.03003529])), ('stiffener_web_thickness_base.x', array([0.00263325, 0.00191218, 0.00404707, 0.00495706, 0.00137335])), ('stiffener_flange_width_base.x', array([0.0100722 , 0.06406752, 0.01342377, 0.07119415, 0.01102604])), ('stiffener_flange_thickness_base.x', array([0.06126737, 0.00481305, 0.01584461, 0.00980356, 0.01218029])), ('stiffener_spacing_base.x', array([1.09512893, 0.67001459, 1.60080836, 1.27068546, 0.2687786 ])), ('permanent_ballast_height_base.x', array([5.34047386])), ('stiffener_web_height_ballast.x', array([0.04750412, 0.03926778, 0.04484479, 0.04255339, 0.05903525])), ('stiffener_web_thickness_ballast.x', array([0.00197299, 0.00162998, 0.00186254, 0.00176738, 0.00245192])), ('stiffener_flange_width_ballast.x', array([0.01176864, 0.01018018, 0.01062256, 0.01119399, 0.01023957])), ('stiffener_flange_thickness_ballast.x', array([0.00182314, 0.00428608, 0.01616793, 0.0109717 , 0.00814284])), ('stiffener_spacing_ballast.x', array([0.88934305, 0.19623501, 0.29410086, 0.30762027, 0.4208429 ])), ('permanent_ballast_height_ballast.x', array([0.10007504]))])
     '''
     
 if __name__ == '__main__':
-    psqp_optimal()
-    #example_semi()
+    #psqp_optimal()
+    example_semi()
