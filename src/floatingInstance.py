@@ -77,19 +77,27 @@ class FloatingInstance(object):
         self.mooring_type = 'chain'
         self.anchor_type = 'pile'
         self.mooring_cost_rate = 1.1
-        self.scope_ratio = 2.41
-        self.anchor_radius = 450.0
-        self.mooring_diameter = 0.19
+        self.scope_ratio = 2.6
+        self.anchor_radius = 420.0
+        self.mooring_diameter = 0.14
 
         # Turbine parameters
         self.rna_mass= 180e3
         self.rna_center_of_gravity = 3.5 + 80.0
         self.rna_center_of_gravity_x = 5.75
-        self.tower_mass = 180e3
-        self.tower_center_of_gravity = 35.0
+        self.tower_mass = 249718.0
+        self.tower_center_of_gravity = 43.4
         self.rna_wind_force = 820818.0
         self.tower_wind_force = 33125.0
+        self.tower_base_radius = 3.25
 
+        # Steel properties
+        self.material_density = 7850.0
+        self.E = 200e9
+        self.G = 79.3e9
+        self.nu = 0.26
+        self.yield_stress = 3.45e8
+        
     def get_assembly(self):
         raise NotImplementedError("Subclasses should implement this!")
 
@@ -103,7 +111,7 @@ class FloatingInstance(object):
             return
         elif optimizer.upper() in ['COBYLA','SLSQP']:
             self.prob.driver = ScipyOptimizer()
-        elif optimizer.upper() in ['CONMIN', 'PSQP']:
+        elif optimizer.upper() in ['CONMIN', 'PSQP','SNOPT']:
             self.prob.driver = pyOptSparseDriver()
         elif optimizer.upper() in ['ALPSO', 'NSGA2', 'SLSQP']:
             raise ValueError('These optimizers run but jump to infeasible values. '+validStr)
@@ -122,7 +130,7 @@ class FloatingInstance(object):
 
         # Add in design variables
         desvarList = self.get_design_variables()
-        if optimizer.upper() in ['CONMIN','PSQP','ALPSO','NSGA2','SLSQP']:
+        if optimizer.upper() in ['CONMIN','PSQP','ALPSO','NSGA2','SLSQP','SNOPT']:
             for ivar in desvarList:
                 self.prob.driver.add_desvar(ivar[0], lower=ivar[1], upper=ivar[2])
         else:
@@ -196,49 +204,77 @@ class FloatingInstance(object):
         raise NotImplementedError("Subclasses should implement this!")
 
     def init_figure(self):
+        mysky   = np.array([135, 206, 250]) / 255.0
+        mysky   = tuple(mysky.tolist())
         #fig = plt.figure()
         #ax = fig.add_subplot(111, projection='3d')
-        fig = mlab.figure(bgcolor=(1,)*3, size=(1600,1100))
-        #fig = mlab.figure(bgcolor=(0,)*3, size=(1600,1100))
+        #fig = mlab.figure(bgcolor=(1,)*3, size=(1600,1100))
+        #fig = mlab.figure(bgcolor=mysky, size=(1600,1100))
+        fig = mlab.figure(bgcolor=(0,)*3, size=(1600,1100))
         return fig
 
     def draw_ocean(self, fig=None):
         if fig is None: fig=self.init_figure()
-        npts = 3
+        npts = 100
         
-        mybrown = np.array([244, 170, 66]) / 256.0
-        mybrown = tuple(mybrown.tolist())
-        mywater = (0.0, 0.0, 0.8)
-        alpha   = 0.5
+        #mybrown = np.array([244, 170, 66]) / 255.0
+        #mybrown = tuple(mybrown.tolist())
+        mywater = np.array([95, 158, 160 ]) / 255.0 #(0.0, 0.0, 0.8) [143, 188, 143]
+        mywater = tuple(mywater.tolist())
+        alpha   = 0.6
 
         # Waterplane box
-        x = y = 500 * np.linspace(-1, 1, npts)
+        x = y = 50 * np.linspace(-1, 1, npts)
         X,Y = np.meshgrid(x,y)
-        Z = np.zeros(X.shape)
+        Z   = np.sin(100*X*Y) #np.zeros(X.shape)
         #ax.plot_surface(X, Y, Z, alpha=alpha, color=mywater)
-        mlab.mesh(X,Y,Z, opacity=alpha, color=mywater, figure=fig)
+        mlab.mesh(X, Y, Z, opacity=alpha, color=mywater, figure=fig)
         
         # Sea floor
+        Z = -self.water_depth * np.ones(X.shape)
+        #ax.plot_surface(10*X, 10*Y, Z, alpha=1.0, color=mybrown)
+        #mlab.mesh(10*X,10*Y,Z, opacity=1.0, color=mybrown, figure=fig)
+
+        # Sides
+        #x = 500 * np.linspace(-1, 1, npts)
+        #z = self.water_depth * np.linspace(-1, 0, npts)
+        #X,Z = np.meshgrid(x,z)
+        #Y = x.max()*np.ones(Z.shape)
+        ##ax.plot_surface(X, Y, Z, alpha=alpha, color=mywater)
+        #mlab.mesh(X,Y,Z, opacity=alpha, color=mywater, figure=fig)
+        #mlab.mesh(X,-Y,Z, opacity=alpha, color=mywater, figure=fig)
+        #mlab.mesh(Y,X,Z, opacity=alpha, color=mywater, figure=fig)
+        ##mlab.mesh(-Y,X,Z, opacity=alpha, color=mywater, figure=fig)
+
+    def draw_mooring(self, fig, mooring):
+        mybrown = np.array([244, 170, 66]) / 255.0
+        mybrown = tuple(mybrown.tolist())
+        npts    = 100
+        
+        # Sea floor
+        r  = np.linspace(0, self.anchor_radius, npts)
+        th = np.linspace(0, 2*np.pi, npts)
+        R, TH = np.meshgrid(r, th)
+        X = R*np.cos(TH)
+        Y = R*np.sin(TH)
         Z = -self.water_depth * np.ones(X.shape)
         #ax.plot_surface(X, Y, Z, alpha=1.0, color=mybrown)
         mlab.mesh(X,Y,Z, opacity=1.0, color=mybrown, figure=fig)
 
-        # Sides
-        x = 500 * np.linspace(-1, 1, npts)
-        z = self.water_depth * np.linspace(-1, 0, npts)
-        X,Z = np.meshgrid(x,z)
-        Y = x.max()*np.ones(Z.shape)
-        #ax.plot_surface(X, Y, Z, alpha=alpha, color=mywater)
-        mlab.mesh(X,Y,Z, opacity=alpha, color=mywater, figure=fig)
-        mlab.mesh(X,-Y,Z, opacity=alpha, color=mywater, figure=fig)
-        mlab.mesh(Y,X,Z, opacity=alpha, color=mywater, figure=fig)
-        mlab.mesh(-Y,X,Z, opacity=alpha, color=mywater, figure=fig)
-
-    def draw_mooring(self, fig, mooring):
+        cmoor = (0,1,0)
         for k in xrange(self.number_of_mooring_lines):
             #ax.plot(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], 'k', lw=2)
-            mlab.plot3d(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], color=(0,0,0), tube_radius=0.5*self.mooring_diameter, figure=fig)
+            mlab.plot3d(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], color=cmoor, tube_radius=0.5*self.mooring_diameter, figure=fig)
 
+            
+    def draw_pontoons(self, fig, truss, R, freeboard):
+        nE = truss.shape[0]
+        c = (0.5,0,0)
+        for k in xrange(nE):
+            if np.any(truss[k,2,:] > freeboard): continue
+            mlab.plot3d(truss[k,0,:], truss[k,1,:], truss[k,2,:], color=c, tube_radius=R, figure=fig)
+
+            
     def draw_cylinder(self, fig, centerline, freeboard, h_section, r_nodes, spacingVec=None):
         npts = 20
         
@@ -256,7 +292,7 @@ class FloatingInstance(object):
             # Draw parameters
             ck = (0.6,)*3 if np.mod(k,2) == 0 else (0.4,)*3
             #ax.plot_surface(X, Y, Z, alpha=0.5, color=ck)
-            mlab.mesh(X, Y, Z, opacity=0.7, color=ck, figure=fig)
+            mlab.mesh(X, Y, Z, opacity=0.9, color=ck, figure=fig)
 
             if spacingVec is None: continue
             
@@ -297,8 +333,8 @@ class FloatingInstance(object):
         #ax.set_zlim([-220, 30])
         #plt.axis('off')
         #plt.show()
-        mlab.move([  54.07536213,  491.25570681, -129.57949652], [ -0.91553504, -10.79549838, -72.14984462])
-        mlab.view(83.749171381090378, 96.487236277416159, 508.30854441570983,[ -0.91553504, -10.79549838, -72.14984462])
+        mlab.move([-517.16728532, -87.0711504, 5.60826224], [1.35691603e+01, -2.84217094e-14, -1.06547500e+02])
+        mlab.view(-170.68320804213343, 78.220729198686854, 549.40101471336777, [1.35691603e+01,  0.0, -1.06547500e+02])
         if not fname is None: mlab.savefig(fname, figure=fig)
         mlab.show(stop=True)
 
