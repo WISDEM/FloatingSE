@@ -8,10 +8,6 @@ class SparInstance(FloatingInstance):
 
         # Parameters beyond those in superclass
         # Typically static- set defaults
-        self.material_density = 7850.0
-        self.E = 200e9
-        self.nu = 0.3
-        self.yield_stress = 3.45e8
         self.permanent_ballast_density = 4492.0
         self.bulkhead_mass_factor = 1.0
         self.ring_mass_factor = 1.0
@@ -21,14 +17,16 @@ class SparInstance(FloatingInstance):
         self.ballast_cost_rate = 100.0
         self.tapered_col_cost_rate = 4720.0
         self.outfitting_cost_rate = 6980.0
-
-        # Typically design
-        self.freeboard = 5.0
-        self.fairlead = 7.57
-        self.set_length(95.0)
-        self.outer_radius = 7.0
+        self.morison_mass_coefficient = 1.969954
+        
+        # Typically design (OC3)
+        self.freeboard = 10.0
+        self.fairlead = 70.0
+        self.set_length(130.0)
+        self.section_height = np.array([36.0, 36.0, 36.0, 8.0, 14.0])
+        self.outer_radius = np.array([4.7, 4.7, 4.7, 4.7, 3.25, 3.25])
         self.wall_thickness = 0.05
-        self.fairlead_offset_from_shell = 0.05
+        self.fairlead_offset_from_shell = 5.2-4.7
         self.permanent_ballast_height = 10.0
         self.stiffener_web_height= 0.1
         self.stiffener_web_thickness = 0.04
@@ -36,11 +34,26 @@ class SparInstance(FloatingInstance):
         self.stiffener_flange_thickness = 0.02
         self.stiffener_spacing = 0.4
 
+        # OC3
+        self.water_depth = 320.0
+        self.wave_height = 10.8
+        self.wave_period = 9.8
+        self.wind_reference_speed = 11.0
+        self.wind_reference_height = 119.0
+        self.alpha = 0.11
+        self.morison_mass_coefficient = 2.0
+
+        self.max_offset  = 0.1*self.water_depth # Assumption        
+        self.number_of_mooring_lines = 3
+        self.scope_ratio = 902.2 / (self.water_depth-self.fairlead) 
+        self.anchor_radius = 853.87
+        self.mooring_diameter = 0.09
+
         # Change scalars to vectors where needed
         self.check_vectors()
 
     def set_length(self, inval):
-        self.section_height =  vecOption(inval/NSECTIONS, NSECTIONS)
+        self.section_height = vecOption(inval/NSECTIONS, NSECTIONS)
 
     def check_vectors(self):
         self.outer_radius               = vecOption(self.outer_radius, NSECTIONS+1)
@@ -91,6 +104,9 @@ class SparInstance(FloatingInstance):
 
         # Ensure that the radius doesn't change dramatically over a section
         self.prob.driver.add_constraint('sg.taper_ratio',upper=0.1)
+
+        # Ensure that the spar top matches the tower base
+        self.prob.driver.add_constraint('sg.transition_radius',lower=0.0, upper=5.0)
 
         # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
         self.prob.driver.add_constraint('mm.safety_factor',lower=0.0, upper=0.8)

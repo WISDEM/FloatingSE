@@ -5,6 +5,7 @@ import unittest
 import spar
 
 from constants import gravity as g
+NSECTIONS = 5
 
 class TestSpar(unittest.TestCase):
     def setUp(self):
@@ -16,8 +17,8 @@ class TestSpar(unittest.TestCase):
         self.params['turbine_mass'] = 1e4
         self.params['mooring_mass'] = 50.0
         self.params['mooring_effective_mass'] = 40.0
-        self.params['base_cylinder_mass'] = 2e4
-        self.params['base_cylinder_displaced_volume'] = 2e2
+        self.params['base_cylinder_mass'] = 2e4/NSECTIONS  * np.ones((NSECTIONS,))
+        self.params['base_cylinder_displaced_volume'] = 2e2/NSECTIONS  * np.ones((NSECTIONS,))
         self.params['base_cylinder_center_of_buoyancy'] = -10.0
         self.params['base_cylinder_center_of_gravity'] = -8.0
         self.params['water_ballast_mass_vector'] = 1e5*np.arange(5)
@@ -45,7 +46,7 @@ class TestSpar(unittest.TestCase):
         cg_expect = (1e4*2 + 2e4*(-8) + 40*(-1) + m_water*(0.5*h_expect-10)) / (m_expect+m_water)
         self.assertEqual(self.unknowns['variable_ballast_mass'], m_water)
         self.assertEqual(self.unknowns['variable_ballast_height'], h_expect)
-        self.assertEqual(self.unknowns['total_mass'], m_expect - 1e4)
+        self.assertEqual(self.unknowns['total_mass'], m_expect - 1e4 - 40.0 + 50.0)
         self.assertEqual(self.unknowns['z_center_of_gravity'], cg_expect)
 
         
@@ -61,7 +62,7 @@ class TestSpar(unittest.TestCase):
         self.assertEqual(self.unknowns['static_stability'], static_expect)
         self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
         self.assertEqual(self.unknowns['offset_force_ratio'], (Fc+13)/200.0)
-        self.assertEqual(self.unknowns['heel_angle'], (180/np.pi)*(16+Mc)/(2e2*g*1e3*meta_expect))
+        self.assertAlmostEqual(self.unknowns['heel_angle'], (180/np.pi)*(16+Mc)/(2e2*g*1e3*meta_expect))
 
 
     def testCost(self):

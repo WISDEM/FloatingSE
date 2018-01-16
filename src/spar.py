@@ -1,6 +1,7 @@
 from openmdao.api import Component
 import numpy as np
 
+from floatingInstance import NSECTIONS
 from constants import gravity
 
 NPTS = 100
@@ -29,8 +30,8 @@ class Spar(Component):
         self.add_param('mooring_surge_restoring_force', val=0.0, units='N', desc='Restoring force in surge direction from mooring system')
         self.add_param('mooring_cost', val=0.0, units='USD', desc='Cost of mooring system')
 
-        self.add_param('base_cylinder_mass', val=0.0, units='kg', desc='mass of cylinder')
-        self.add_param('base_cylinder_displaced_volume', val=0.0, units='m**3', desc='cylinder volume of water displaced')
+        self.add_param('base_cylinder_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='mass of cylinder')
+        self.add_param('base_cylinder_displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='cylinder volume of water displaced')
         self.add_param('base_cylinder_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of cylinder buoyancy force')
         self.add_param('base_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
         self.add_param('base_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
@@ -70,7 +71,8 @@ class Spar(Component):
         # TODO SEMI: set n_cylinder and ballast_cylinder_mass/vol add n*param for total contributions
         # Unpack variables
         m_turb       = params['turbine_mass']
-        m_mooring    = params['mooring_effective_mass']
+        m_mooringE   = params['mooring_effective_mass']
+        m_mooring    = params['mooring_mass']
         m_cylinder   = params['base_cylinder_mass']
         m_water_data = params['water_ballast_mass_vector']
         V_cylinder   = params['base_cylinder_displaced_volume']
@@ -84,12 +86,12 @@ class Spar(Component):
 
         # Make sure total mass of system with variable water ballast balances against displaced volume
         # Water ballast should be buried in m_cylinder
-        m_system  = m_cylinder + m_mooring + m_turb
-        V_system  = V_cylinder
+        m_system  = m_cylinder.sum() + m_mooringE + m_turb
+        V_system  = V_cylinder.sum()
         m_water   = V_system*rhoWater - m_system
 
         # Output substructure total mass, different than system mass
-        unknowns['total_mass'] = m_system - m_turb
+        unknowns['total_mass'] = m_system - m_turb - m_mooringE + m_mooring
         m_system += m_water
 
         # Find height given interpolant functions from cylinders
@@ -111,16 +113,17 @@ class Spar(Component):
         z_water = np.trapz(zpts * dmdz, zpts) / m_water
 
         # Find cg of whole system
-        z_cg = (m_turb*z_turb + m_cylinder*z_cylinder + m_mooring*z_fairlead + m_water*z_water) / m_system
+        z_cg = (m_turb*z_turb + m_cylinder.sum()*z_cylinder + m_mooringE*z_fairlead + m_water*z_water) / m_system
         unknowns['variable_ballast_mass']   = m_water
         unknowns['variable_ballast_height'] = h_water
-        unknowns['z_center_of_gravity']     = z_cg 
+        unknowns['z_center_of_gravity']     = z_cg
+        #print unknowns['total_mass'], z_cg, V_system*rhoWater*gravity
 
         
     def compute_stability(self, params, unknowns):
         # Unpack variables
         z_cg              = unknowns['z_center_of_gravity']
-        V_system          = params['base_cylinder_displaced_volume']
+        V_cylinder        = params['base_cylinder_displaced_volume']
         z_cb              = params['base_cylinder_center_of_buoyancy']
         Iwater_system     = params['base_cylinder_Iwaterplane']
         F_cylinder_vector = params['base_cylinder_surge_force']
@@ -146,6 +149,7 @@ class Spar(Component):
         # Measure static stability:
         # 1. Center of buoyancy should be above CG (difference should be positive)
         # 2. Metacentric height should be positive
+        V_system = V_cylinder.sum()
         buoyancy2metacentre_BM         = Iwater_system / V_system
         unknowns['static_stability'  ] = z_cb - z_cg
         unknowns['metacentric_height'] = buoyancy2metacentre_BM + unknowns['static_stability']

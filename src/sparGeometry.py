@@ -19,7 +19,8 @@ class SparGeometry(Component):
         self.add_param('section_height', val=np.zeros((NSECTIONS,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
         self.add_param('outer_radius', val=np.zeros((NSECTIONS+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('wall_thickness', val=np.zeros((NSECTIONS+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('fairlead_offset_from_shell', .5, units='m',desc='fairlead offset from shell')
+        self.add_param('fairlead_offset_from_shell', val=0.5, units='m',desc='fairlead offset from shell')
+        self.add_param('tower_base_radius', val=3.25, units='m', desc='outer radius of tower at base')
 
         # Outputs
         self.add_output('draft', val=0.0, units='m', desc='Spar draft (length of body under water)')
@@ -31,6 +32,7 @@ class SparGeometry(Component):
         self.add_output('draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
         self.add_output('fairlead_draft_ratio', val=0.0, desc='Ratio of fairlead to draft')
         self.add_output('taper_ratio', val=np.zeros((NSECTIONS,)), desc='Ratio of outer radius change in a section to its starting value')
+        self.add_output('transition_radius', val=0.0, units='m', desc='Buffer between spar top and tower base')
 
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -48,6 +50,7 @@ class SparGeometry(Component):
         # Unpack variables
         D_water   = params['water_depth']
         R_od      = params['outer_radius']
+        R_tower   = params['tower_base_radius']
         t_wall    = params['wall_thickness']
         h_section = params['section_height']
         freeboard = params['freeboard'] # length of spar under water
@@ -70,8 +73,11 @@ class SparGeometry(Component):
 
         # Create constraint output that draft is less than water depth and fairlead is less than draft
         unknowns['draft_depth_ratio'] = unknowns['draft'] / D_water
-        unknowns['fairlead_draft_ratio'] = fairlead / unknowns['draft'] 
+        unknowns['fairlead_draft_ratio'] = 0.0 if z_nodes[0] == 0.0 else fairlead / unknowns['draft'] 
 
         # Create constraint output for manufacturability that limits the changes in outer radius from one node to the next
         unknowns['taper_ratio'] = np.abs( np.diff(R_od) / R_od[:-1] )
+
+        # Constrain spar top to be at least greater than tower base
+        unknowns['transition_radius'] = R_od[-1] - R_tower
 

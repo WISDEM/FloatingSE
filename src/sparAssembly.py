@@ -36,6 +36,7 @@ class SparAssembly(Group):
         self.add('outer_radius',               IndepVarComp('x', np.zeros((NSECTIONS+1,))))
         self.add('wall_thickness',             IndepVarComp('x', np.zeros((NSECTIONS+1,))))
         self.add('fairlead_offset_from_shell', IndepVarComp('x', 0.0))
+        self.add('tower_base_radius',          IndepVarComp('x', 0.0))
 
         # Turbine
         self.add('rna_mass',                   IndepVarComp('x', 0.0))
@@ -98,6 +99,7 @@ class SparAssembly(Group):
         self.connect('outer_radius.x', ['sg.outer_radius', 'cyl.outer_radius'])
         self.connect('wall_thickness.x', ['sg.wall_thickness', 'cyl.wall_thickness'])
         self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
+        self.connect('tower_base_radius.x', 'sg.tower_base_radius')
 
         self.connect('rna_mass.x', 'turb.rna_mass')
         self.connect('rna_center_of_gravity.x', 'turb.rna_center_of_gravity')

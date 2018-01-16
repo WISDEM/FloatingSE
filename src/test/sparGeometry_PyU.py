@@ -3,7 +3,7 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import sparGeometry
-import commonse.Frustum as frustum
+from floatingInstance import nodal2sectional
 
 myones = np.ones((100,))
 
@@ -21,12 +21,13 @@ class TestSpar(unittest.TestCase):
         self.params['freeboard'] = 15.0
         self.params['fairlead'] = 10.0
         self.params['fairlead_offset_from_shell'] = 1.0
+        self.params['tower_base_radius'] = 7.0
 
         self.mysparG = sparGeometry.SparGeometry()
         
         
     def testNodal2Sectional(self):
-        npt.assert_equal(sparGeometry.nodal2sectional(np.array([8.0, 10.0, 12.0])), np.array([9.0, 11.0]))
+        npt.assert_equal(nodal2sectional(np.array([8.0, 10.0, 12.0])), np.array([9.0, 11.0]))
 
     def testSetGeometry(self):
         self.mysparG.solve_nonlinear(self.params, self.unknowns, None)
@@ -39,6 +40,7 @@ class TestSpar(unittest.TestCase):
         self.assertEqual(self.unknowns['fairlead_radius'], 11.0)
         self.assertEqual(self.unknowns['draft_depth_ratio'], 0.35)
         self.assertEqual(self.unknowns['fairlead_draft_ratio'], 10./35.)
+        self.assertEqual(self.unknowns['transition_radius'], 3.0)
         npt.assert_equal(self.unknowns['z_section'], np.array([-25.0, 0.0]))
 
     def testTaperRatio(self):
