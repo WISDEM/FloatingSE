@@ -38,7 +38,34 @@ OrderedDict([('freeboard.x', array([5.10158277e-15])), ('fairlead.x', array([71.
        0.02401723])), ('scope_ratio.x', array([3.5943495])), ('anchor_radius.x', array([853.84311789])), ('mooring_diameter.x', array([0.07110683])), ('stiffener_web_height.x', array([0.12446595, 0.11906005, 0.13367389, 0.09986728, 0.20104476])), ('stiffener_web_thickness.x', array([0.00516946, 0.00494494, 0.00555185, 0.01137231, 0.01044597])), ('stiffener_flange_width.x', array([0.01      , 0.01      , 0.01      , 0.02438453, 0.10485385])), ('stiffener_flange_thickness.x', array([0.27895428, 0.3056761 , 0.49283386, 0.11848842, 0.01322849])), ('stiffener_spacing.x', array([0.21985983, 0.40572512, 1.50992577, 2.76799805, 2.87945321])), ('permanent_ballast_height.x', array([30.18703972]))])
     '''
 
+def nsga2_optimal():
+    #OrderedDict([('sp.total_cost', array([20.63726002]))])
+    myspar = SparInstance()
+    myspar.freeboard = 5.0
+    myspar.fairlead = 7.57
+    myspar.fairlead_offset_from_shell = 0.05
+    myspar.section_height = np.array([ 18.99987492,  18.9998873 ,  18.99990693,  18.99990914,  18.99990425])
+    myspar.outer_radius = np.array([ 6.99962345,  6.99955813,  6.99973629,  6.99978022,  6.99976883, 6.99988])
+    myspar.wall_thickness = np.array([ 0.03712666,  0.02787312,  0.02712097,  0.02206188,  0.02157211, 0.03579269])
+    myspar.scope_ratio = 2.40997737
+    myspar.anchor_radius = 450.0
+    myspar.mooring_diameter = 0.1909802
+    myspar.stiffener_web_height= np.array([ 0.10557588,  0.10316776,  0.09795284,  0.09743845,  0.09743956])
+    myspar.stiffener_web_thickness = np.array([ 0.03599046,  0.03502903,  0.03323707,  0.03302298,  0.0330262 ])
+    myspar.stiffener_flange_width = np.array([ 0.10066915,  0.10029873,  0.09894232,  0.09882406,  0.0988245 ])
+    myspar.stiffener_flange_thickness = np.array([ 0.02739561,  0.02327079,  0.01406197,  0.01304515,  0.01304842])
+    myspar.stiffener_spacing = np.array([ 0.40020418,  0.40036638,  0.4008825 ,  0.4009331 ,  0.40093272])
+    myspar.permanent_ballast_height = 10.0
 
+    myspar.evaluate('nsga2')
+    return myspar
+    '''
+OrderedDict([('freeboard.x', array([0.00069167])), ('fairlead.x', array([56.66277188])), ('fairlead_offset_from_shell.x', array([1.6697556])), ('section_height.x', array([ 0.10006407,  0.14512127,  0.10581745, 57.69806749, 68.18564309])), ('outer_radius.x', array([7.31308737, 8.04138111, 8.4117183 , 8.81644148, 8.29272943,
+       7.49543486])), ('wall_thickness.x', array([0.30333932, 0.21646852, 0.17457961, 0.06684975, 0.00500993,
+       0.08599076])), ('scope_ratio.x', array([2.11730873])), ('anchor_radius.x', array([472.81702723])), ('mooring_diameter.x', array([0.30137977])), ('stiffener_web_height.x', array([0.40461526, 0.68960035, 0.5429272 , 0.69121104, 0.51499444])), ('stiffener_web_thickness.x', array([0.2180976 , 0.3769686 , 0.19939452, 0.03318099, 0.03211645])), ('stiffener_flange_width.x', array([1.5147774 , 2.40651869, 3.39142326, 0.01592095, 0.04746711])), ('stiffener_flange_thickness.x', array([0.47712255, 0.26231218, 0.26817643, 0.23783247, 0.16175234])), ('stiffener_spacing.x', array([78.61377022, 27.38214287, 12.19569693,  1.1797688 ,  4.05719905])), ('permanent_ballast_height.x', array([18.26590056]))])
+    '''
+
+    
 def conmin_optimal():
     #OrderedDict([('sp.total_cost', array([ 8.15839897]))])
     myspar = SparInstance()

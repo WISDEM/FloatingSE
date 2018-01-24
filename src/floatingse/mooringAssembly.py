@@ -1,7 +1,7 @@
 from openmdao.api import Group, IndepVarComp
 from sparGeometry import SparGeometry
 from floatingInstance import NSECTIONS
-from mapMooring import MapMooring
+from mapMooring import MapMooring, Anchor
 import numpy as np
 
 class MooringAssembly(Group):
@@ -23,7 +23,7 @@ class MooringAssembly(Group):
         self.add('mooring_diameter',           IndepVarComp('x', 0.0))
         self.add('number_of_mooring_lines',    IndepVarComp('x', 0, pass_by_obj=True))
         self.add('mooring_type',               IndepVarComp('x', 'chain', pass_by_obj=True))
-        self.add('anchor_type',                IndepVarComp('x', 'pile', pass_by_obj=True))
+        self.add('anchor_type',                IndepVarComp('x', Anchor['SUCTIONPILE'], pass_by_obj=True))
         self.add('mooring_cost_rate',          IndepVarComp('x', 0.0))
         self.add('max_offset',                 IndepVarComp('x', 0.0))
 

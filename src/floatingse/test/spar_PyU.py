@@ -1,10 +1,9 @@
-import __init__
 import numpy as np
 import numpy.testing as npt
 import unittest
-import spar
+import floatingse.spar as spar
 
-from constants import gravity as g
+from commonse import gravity as g
 NSECTIONS = 5
 
 class TestSpar(unittest.TestCase):

@@ -3,7 +3,7 @@ import numpy as np
 from scipy.optimize import brentq, minimize_scalar
 from scipy.integrate import cumtrapz
 
-from constants import gravity
+from commonse import gravity
 from floatingInstance import nodal2sectional, NSECTIONS
 from commonse.WindWaveDrag import cylinderDrag
 import commonse.Frustum as frustum

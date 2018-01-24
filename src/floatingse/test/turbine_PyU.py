@@ -1,10 +1,9 @@
-import __init__
 import numpy as np
 import numpy.testing as npt
 import unittest
-import turbine
+import floatingse.turbine as turbine
 import commonse.Frustum as frustum
-from constants import gravity as g
+from commonse import gravity as g
 
 class TestTurbine(unittest.TestCase):
     def setUp(self):

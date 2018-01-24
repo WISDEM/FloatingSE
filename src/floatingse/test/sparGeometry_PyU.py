@@ -1,9 +1,8 @@
-import __init__
 import numpy as np
 import numpy.testing as npt
 import unittest
-import sparGeometry
-from floatingInstance import nodal2sectional
+import floatingse.sparGeometry as sparGeometry
+from floatingse.floatingInstance import nodal2sectional
 
 myones = np.ones((100,))
 
@@ -55,5 +54,6 @@ def suite():
     suite.addTest(unittest.makeSuite(TestSpar))
     return suite
 
-if __name__ == '__main__':
+if __name__ == '__main__' and __package__ is None:
+    __package__ = 'floatingse.test.sparGeometry_PyU'
     unittest.TextTestRunner().run(suite())

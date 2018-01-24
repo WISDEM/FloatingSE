@@ -1,13 +1,12 @@
-import __init__
 import numpy as np
 import numpy.testing as npt
 import unittest
-import semiPontoon as sP
-import semiGeometry
+import floatingse.semiPontoon as sP
+import floatingse.semiGeometry as semiGeometry
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from constants import gravity as g
+from commonse import gravity as g
 myones = np.ones((100,))
 
 NSECTIONS = 5

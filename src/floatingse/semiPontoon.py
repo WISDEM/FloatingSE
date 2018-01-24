@@ -1,10 +1,10 @@
 import collections
 from openmdao.api import Component
 import numpy as np
-import frame3dd
+import pyframe3dd.frame3dd as frame3dd
 from floatingInstance import nodal2sectional, NSECTIONS
 
-from constants import gravity
+from commonse import gravity
 NPTS = 100
 
 def TubeProperties(R_od, R_id):

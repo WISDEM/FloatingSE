@@ -1,12 +1,11 @@
-import __init__
 import numpy as np
 import numpy.testing as npt
 import unittest
-import cylinder
-import sparGeometry
+import floatingse.cylinder as cylinder
+import floatingse.sparGeometry as sparGeometry
 import commonse.Frustum as frustum
 
-from constants import gravity as g
+from commonse import gravity as g
 myones = np.ones((100,))
 
 class TestCylinder(unittest.TestCase):
@@ -503,5 +502,6 @@ def suite():
     suite.addTest(unittest.makeSuite(TestCylinder))
     return suite
 
-if __name__ == '__main__':
+if __name__ == '__main__' and __package__ is None:
+    __package__ = 'src.test.cylinder_PyU'
     unittest.TextTestRunner().run(suite())

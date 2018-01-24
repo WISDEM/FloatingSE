@@ -30,10 +30,12 @@ elif platform == "darwin":
     maplib = 'libmap-1.20.10.dylib'
 elif platform == "win32":
     maplib = 'map_x64.dll'
+
+libpath = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + os.path.sep + 'map' + os.path.sep + maplib
     
 class MapAPI(object):
     """A collection of methods for the MAP++ program"""
-    lib = cdll.LoadLibrary(maplib)
+    lib = cdll.LoadLibrary(libpath)
 
     # these are the fortran derived types created by the FAST registry.
     f_type_init = None

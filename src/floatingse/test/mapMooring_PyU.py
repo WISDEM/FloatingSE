@@ -1,11 +1,10 @@
-import __init__
 import numpy as np
 import numpy.testing as npt
 import unittest
-import mapMooring
-import sparGeometry
+import floatingse.mapMooring as mapMooring
+import floatingse.sparGeometry as sparGeometry
 
-from constants import gravity as g
+from commonse import gravity as g
 
 def myisnumber(instr):
     try:
@@ -72,7 +71,7 @@ class TestMapMooring(unittest.TestCase):
         self.params['anchor_radius'] = 175.0
         self.params['number_of_mooring_lines'] = 3
         self.params['mooring_type'] = 'chain'
-        self.params['anchor_type'] = 'pile'
+        self.params['anchor_type'] = 'suctionpile'
         self.params['max_offset'] = 10.0
 
         self.params['mooring_cost_rate'] = 1.1

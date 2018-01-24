@@ -2,7 +2,7 @@ from openmdao.api import Component
 import numpy as np
 
 from floatingInstance import NSECTIONS
-from constants import gravity
+from commonse import gravity
 
 NPTS = 100
 

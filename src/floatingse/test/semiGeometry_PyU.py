@@ -1,8 +1,7 @@
-import __init__
 import numpy as np
 import numpy.testing as npt
 import unittest
-import semiGeometry
+import floatingse.semiGeometry as semiGeometry
 
 myones = np.ones((100,))
 

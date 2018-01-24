@@ -1,6 +1,6 @@
 from openmdao.api import Component
 import numpy as np
-from constants import gravity as g
+from commonse import gravity as g
 
 class Turbine(Component):
     

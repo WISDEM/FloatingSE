@@ -75,7 +75,7 @@ class FloatingInstance(object):
         self.max_offset  = 0.1*self.water_depth # Assumption        
         self.number_of_mooring_lines = 3
         self.mooring_type = 'chain'
-        self.anchor_type = 'pile'
+        self.anchor_type = 'suctionpile'
         self.mooring_cost_rate = 1.1
         self.scope_ratio = 2.6
         self.anchor_radius = 420.0
@@ -111,10 +111,11 @@ class FloatingInstance(object):
             return
         elif optimizer.upper() in ['COBYLA','SLSQP']:
             self.prob.driver = ScipyOptimizer()
-        elif optimizer.upper() in ['CONMIN', 'PSQP','SNOPT']:
+        elif optimizer.upper() in ['CONMIN', 'PSQP','SNOPT', 'NSGA2']:
             self.prob.driver = pyOptSparseDriver()
-        elif optimizer.upper() in ['ALPSO', 'NSGA2', 'SLSQP']:
-            raise ValueError('These optimizers run but jump to infeasible values. '+validStr)
+        elif optimizer.upper() in ['ALPSO', 'SLSQP']:
+            print 'WARNING: These optimizers run but jump to infeasible values. '+validStr
+            self.prob.driver = pyOptSparseDriver()
         else:
             raise ValueError('Unknown or unworking optimizer. '+validStr)
 
@@ -124,6 +125,12 @@ class FloatingInstance(object):
             self.prob.driver.opt_settings['ITMAX'] = 1000
         elif optimizer.upper() in ['PSQP']:
             self.prob.driver.opt_settings['MIT'] = 10000
+        elif optimizer.upper() in ['NSGA2']:
+            self.prob.driver.opt_settings['PopSize'] = 200
+            self.prob.driver.opt_settings['maxGen'] = 2000
+        elif optimizer.upper() in ['SNOPT']:
+            self.prob.driver.opt_settings['Major iterations limit'] = 10000
+            self.prob.driver.opt_settings['Minor iterations limit'] = 1000
         elif optimizer.upper() in ['COBYLA','SLSQP']:
             self.prob.driver.options['tol'] = 1e-6
             self.prob.driver.options['maxiter'] = 100000

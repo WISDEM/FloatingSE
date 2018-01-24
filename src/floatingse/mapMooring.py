@@ -4,10 +4,12 @@ import os
 import sys
 from mapapi import *
 
-from constants import gravity
+from commonse import gravity
+from commonse import Enum
 
 FINPUTSTR = os.path.abspath('input.map')
-        
+Anchor    = Enum('DRAGEMBEDMENT SUCTIONPILE')
+
 class MapMooring(Component):
     """
     OpenMDAO Component class for mooring system attached to sub-structure of floating offshore wind turbines.
@@ -43,7 +45,7 @@ class MapMooring(Component):
         # User inputs (could be design variables)
         self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines', pass_by_obj=True)
         self.add_param('mooring_type', val='CHAIN', desc='chain, nylon, polyester, fiber, or iwrc', pass_by_obj=True)
-        self.add_param('anchor_type', val='PILE', desc='PILE or DRAG', pass_by_obj=True)
+        self.add_param('anchor_type', val=Anchor['SUCTIONPILE'], desc='SUCTIONPILE or DRAGEMBEDMENT', pass_by_obj=True)
         self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
 
         # Cost rates
@@ -51,8 +53,10 @@ class MapMooring(Component):
 
         # Outputs
         self.add_output('mooring_effective_mass', val=0.0, units='kg',desc='total effective mass of mooring based on vertical loading')
+        self.add_output('mooring_length', val=0.0, units='m',desc='total length of a single mooring line (scope)')
         self.add_output('mooring_mass', val=0.0, units='kg',desc='total mass of mooring')
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
+        self.add_output('anchor_cost', val=0.0, units='USD',desc='total cost for anchor')
         self.add_output('vertical_load', val=0.0, units='kg*m/s**2',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='kg*m/s**2',desc='sume of forces in x direction')
         self.add_output('plot_matrix', val=np.zeros((3, 20, 3)), units='m', desc='data matrix for plotting') 
@@ -174,6 +178,7 @@ class MapMooring(Component):
         node_dist   = np.sqrt( np.sum( (anchor_node - vessel_node)**2) )
 
         # Create constraint that there is at least enough line to cover this distance
+        unknowns['mooring_length']     = self.scope
         unknowns['mooring_length_min'] = self.scope / node_dist
         unknowns['mooring_length_max'] = self.scope / (R_anchor + waterDepth - fairleadDepth)
         
@@ -469,23 +474,24 @@ class MapMooring(Component):
         nlines        = params['number_of_mooring_lines']
         rhoWater      = params['water_density']
         Dmooring      = params['mooring_diameter']
-        anchorType    = params['anchor_type'].upper()
+        anchorType    = params['anchor_type']
         costFact      = params['mooring_cost_rate']
         
         # Cost of all of the mooring lines
         legs_total = nlines * self.cost_per_length * self.scope
 
         # Cost of anchors
-        anchor_rate = 1e-3 * self.min_break_load / gravity / 20*2000
-        #if anchorType =='DRAG':
-        #    anchor_rate = 1e-3 * self.min_break_load / gravity / 20*2000
-        #elif anchorType  == 'PILE':
-        #    anchor_rate = 150000.* np.sqrt(1e-3*self.min_break_load/gravity/1250.)
-        #else:
-        #    raise ValueError('Anchor Type must be DRAG or PILE')
+        if type(anchorType) == type(''): anchorType = Anchor[anchorType.upper()]
+        if anchorType == Anchor['DRAGEMBEDMENT']:
+            anchor_rate = 1e-3 * self.min_break_load / gravity / 20*2000
+        elif anchorType  == Anchor['SUCTIONPILE']:
+            anchor_rate = 150000.* np.sqrt(1e-3*self.min_break_load/gravity/1250.)
+        else:
+            raise ValueError('Anchor Type must be DRAGEMBEDMENT or SUCTIONPILE')
         anchor_total = anchor_rate*nlines
 
         # Total summations
+        unknowns['anchor_cost']  = anchor_total
         unknowns['mooring_cost'] = costFact*(legs_total + anchor_total)
         unknowns['mooring_mass'] = (self.wet_mass_per_length + rhoWater*0.25*np.pi*Dmooring**2)*self.scope*nlines
         
