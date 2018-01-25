@@ -4,6 +4,7 @@ from spar import Spar
 from sparGeometry import SparGeometry
 from mapMooring import MapMooring, Anchor
 from turbine import Turbine
+from commonse.UtilizationSupplement import GeometricConstraints
 import numpy as np
 
 class SparAssembly(Group):
@@ -25,6 +26,9 @@ class SparAssembly(Group):
 
         # Run main Spar analysis
         self.add('sp', Spar(nSection, nIntPts))
+
+        # Manufacturing and Welding constraints
+        self.add('gc', GeometricConstraints(nSection+1))
 
         # Define all input variables from all models
         # SparGeometry
@@ -91,13 +95,17 @@ class SparAssembly(Group):
         self.add('tapered_col_cost_rate',      IndepVarComp('x', 0.0))
         self.add('outfitting_cost_rate',       IndepVarComp('x', 0.0))
 
+        # Design constraints
+        self.add('min_taper_ratio',            IndepVarComp('x', 0.0))
+        self.add('min_diameter_thickness_ratio', IndepVarComp('x', 0.0))
+
         # Connect all input variables from all models
         self.connect('water_depth.x', ['sg.water_depth', 'mm.water_depth', 'cyl.water_depth'])
         self.connect('freeboard.x', ['sg.freeboard', 'turb.freeboard'])
         self.connect('fairlead.x', ['sg.fairlead', 'mm.fairlead','sp.fairlead'])
         self.connect('section_height.x', ['sg.section_height', 'cyl.section_height'])
-        self.connect('outer_radius.x', ['sg.outer_radius', 'cyl.outer_radius'])
-        self.connect('wall_thickness.x', ['sg.wall_thickness', 'cyl.wall_thickness'])
+        self.connect('outer_radius.x', ['sg.outer_radius', 'cyl.outer_radius', 'gc.r'])
+        self.connect('wall_thickness.x', ['sg.wall_thickness', 'cyl.wall_thickness', 'gc.t'])
         self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
         self.connect('tower_base_radius.x', 'sg.tower_base_radius')
 
@@ -149,6 +157,9 @@ class SparAssembly(Group):
         self.connect('ballast_cost_rate.x', 'cyl.ballast_cost_rate')
         self.connect('tapered_col_cost_rate.x', 'cyl.tapered_col_cost_rate')
         self.connect('outfitting_cost_rate.x', 'cyl.outfitting_cost_rate')
+
+        self.connect('min_taper_ratio', 'gc.min_taper')
+        self.connect('min_diameter_thickness_ratio', 'gc.min_d_to_t')
         
         # Link outputs from one model to inputs to another
         self.connect('sg.fairlead_radius', 'mm.fairlead_radius')

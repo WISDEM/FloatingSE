@@ -30,7 +30,6 @@ class SparGeometry(Component):
         # Output constraints
         self.add_output('draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
         self.add_output('fairlead_draft_ratio', val=0.0, desc='Ratio of fairlead to draft')
-        self.add_output('taper_ratio', val=np.zeros((nSection,)), desc='Ratio of outer radius change in a section to its starting value')
         self.add_output('transition_radius', val=0.0, units='m', desc='Buffer between spar top and tower base')
 
 
@@ -73,9 +72,6 @@ class SparGeometry(Component):
         # Create constraint output that draft is less than water depth and fairlead is less than draft
         unknowns['draft_depth_ratio'] = unknowns['draft'] / D_water
         unknowns['fairlead_draft_ratio'] = 0.0 if z_nodes[0] == 0.0 else fairlead / unknowns['draft'] 
-
-        # Create constraint output for manufacturability that limits the changes in outer radius from one node to the next
-        unknowns['taper_ratio'] = np.abs( np.diff(R_od) / R_od[:-1] )
 
         # Constrain spar top to be at least greater than tower base
         unknowns['transition_radius'] = R_od[-1] - R_tower

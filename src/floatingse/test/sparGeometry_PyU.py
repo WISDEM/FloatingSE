@@ -42,12 +42,6 @@ class TestSpar(unittest.TestCase):
         self.assertEqual(self.unknowns['transition_radius'], 3.0)
         npt.assert_equal(self.unknowns['z_section'], np.array([-25.0, 0.0]))
 
-    def testTaperRatio(self):
-        self.params['outer_radius'] = np.array([10.0, 9.0, 10.0])
-    
-        self.mysparG.solve_nonlinear(self.params, self.unknowns, None)
-        npt.assert_equal(self.unknowns['taper_ratio'], np.array([0.1, 1./9.]))
-
         
 def suite():
     suite = unittest.TestSuite()

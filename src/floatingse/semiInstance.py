@@ -162,8 +162,10 @@ class SemiInstance(FloatingInstance):
         self.prob.driver.add_constraint('sg.base_ballast_spacing',lower=0.0, upper=1.0)
 
         # Ensure that the radius doesn't change dramatically over a section
-        self.prob.driver.add_constraint('sg.base_taper_ratio',upper=0.1)
-        self.prob.driver.add_constraint('sg.ballast_taper_ratio',upper=0.1)
+        self.prob.driver.add_constraint('gcBase.manufacturability',upper=0.0)
+        self.prob.driver.add_constraint('gcBase.weldability',upper=0.0)
+        self.prob.driver.add_constraint('gcBall.manufacturability',upper=0.0)
+        self.prob.driver.add_constraint('gcBall.weldability',upper=0.0)
 
         # Ensure that the spar top matches the tower base
         self.prob.driver.add_constraint('sg.transition_radius',lower=0.0, upper=5.0)

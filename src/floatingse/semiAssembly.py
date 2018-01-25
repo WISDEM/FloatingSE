@@ -5,6 +5,7 @@ from semiPontoon import SemiPontoon
 from semiGeometry import SemiGeometry
 from mapMooring import MapMooring, Anchor
 from turbine import Turbine
+from commonse.UtilizationSupplement import GeometricConstraints
 import numpy as np
 
 class SemiAssembly(Group):
@@ -31,6 +32,10 @@ class SemiAssembly(Group):
         
         # Run main Semi analysis
         self.add('sm', Semi(nSection, nIntPts))
+
+        # Manufacturing and Welding constraints
+        self.add('gcBase', GeometricConstraints(nSection+1))
+        self.add('gcBall', GeometricConstraints(nSection+1))
 
         # Define all input variables from all models
         # SemiGeometry
@@ -125,19 +130,23 @@ class SemiAssembly(Group):
         self.add('upper_ring_pontoons',        IndepVarComp('x', True, pass_by_obj=True))
         self.add('pontoon_cost_rate',          IndepVarComp('x', 0.0))
 
+        # Design constraints
+        self.add('min_taper_ratio',            IndepVarComp('x', 0.0))
+        self.add('min_diameter_thickness_ratio', IndepVarComp('x', 0.0))
+
         # Connect all input variables from all models
         self.connect('water_depth.x', ['sg.water_depth', 'mm.water_depth', 'base.water_depth', 'ball.water_depth'])
         self.connect('radius_to_ballast_cylinder.x', ['sg.radius_to_ballast_cylinder', 'pon.radius_to_ballast_cylinder', 'sm.radius_to_ballast_cylinder'])
 
         self.connect('freeboard_base.x', ['sg.base_freeboard', 'turb.freeboard'])
         self.connect('section_height_base.x', ['sg.base_section_height', 'base.section_height'])
-        self.connect('outer_radius_base.x', ['sg.base_outer_radius', 'base.outer_radius', 'pon.base_outer_radius', ])
-        self.connect('wall_thickness_base.x', ['sg.base_wall_thickness', 'base.wall_thickness', 'pon.base_wall_thickness', ])
+        self.connect('outer_radius_base.x', ['sg.base_outer_radius', 'base.outer_radius', 'pon.base_outer_radius', 'gcBase.r'])
+        self.connect('wall_thickness_base.x', ['sg.base_wall_thickness', 'base.wall_thickness', 'pon.base_wall_thickness', 'gcBase.t'])
 
         self.connect('freeboard_ballast.x', 'sg.ballast_freeboard')
         self.connect('section_height_ballast.x', ['sg.ballast_section_height', 'ball.section_height'])
-        self.connect('outer_radius_ballast.x', ['sg.ballast_outer_radius', 'ball.outer_radius', 'pon.ballast_outer_radius'])
-        self.connect('wall_thickness_ballast.x', ['sg.ballast_wall_thickness', 'ball.wall_thickness', 'pon.ballast_wall_thickness'])
+        self.connect('outer_radius_ballast.x', ['sg.ballast_outer_radius', 'ball.outer_radius', 'pon.ballast_outer_radius', 'gcBall.r'])
+        self.connect('wall_thickness_ballast.x', ['sg.ballast_wall_thickness', 'ball.wall_thickness', 'pon.ballast_wall_thickness', 'gcBall.t'])
 
         self.connect('fairlead.x', ['sg.fairlead', 'mm.fairlead','sm.fairlead'])
         self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
@@ -214,6 +223,9 @@ class SemiAssembly(Group):
 
         self.connect('number_of_ballast_columns.x', ['pon.number_of_ballast_cylinders', 'sm.number_of_ballast_cylinders'])
 
+        self.connect('min_taper_ratio', 'gc.min_taper')
+        self.connect('min_diameter_thickness_ratio', 'gc.min_d_to_t')
+        
         # Link outputs from one model to inputs to another
         self.connect('sg.fairlead_radius', 'mm.fairlead_radius')
         self.connect('sg.base_z_nodes', ['base.z_nodes', 'pon.base_z_nodes'])

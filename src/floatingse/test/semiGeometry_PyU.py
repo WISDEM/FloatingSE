@@ -57,14 +57,6 @@ class TestSemiGeom(unittest.TestCase):
 
         self.assertEqual(self.unknowns['base_ballast_spacing'], 20.0/25.0)
         
-    def testTaperRatio(self):
-        self.params['base_outer_radius'] = np.array([10.0, 9.0, 10.0])
-        self.params['ballast_outer_radius'] = np.array([10.0, 9.0, 10.0])
-    
-        self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
-        npt.assert_equal(self.unknowns['base_taper_ratio'], np.array([0.1, 1./9.]))
-        npt.assert_equal(self.unknowns['ballast_taper_ratio'], np.array([0.1, 1./9.]))
-
         
 def suite():
     suite = unittest.TestSuite()

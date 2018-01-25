@@ -41,8 +41,6 @@ class SemiGeometry(Component):
         self.add_output('base_draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
         self.add_output('ballast_draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
         self.add_output('fairlead_draft_ratio', val=0.0, desc='Ratio of fairlead to draft')
-        self.add_output('base_taper_ratio', val=np.zeros((nSection,)), desc='Ratio of outer radius change in a section to its starting value')
-        self.add_output('ballast_taper_ratio', val=np.zeros((nSection,)), desc='Ratio of outer radius change in a section to its starting value')
         self.add_output('base_ballast_spacing', val=0.0, desc='Radius of base and ballast cylinders relative to spacing')
         self.add_output('transition_radius', val=0.0, units='m', desc='Buffer between spar top and tower base')
 
@@ -97,10 +95,6 @@ class SemiGeometry(Component):
         unknowns['ballast_draft']     = np.abs(z_nodes_ballast[0])
         unknowns['ballast_z_nodes']   = z_nodes_ballast
         unknowns['ballast_z_section'] = z_section_ballast
-        
-        # Create constraint output for manufacturability that limits the changes in outer radius from one node to the next
-        unknowns['base_taper_ratio']    = np.abs( np.diff(R_od_base   ) / R_od_base[:-1]    )
-        unknowns['ballast_taper_ratio'] = np.abs( np.diff(R_od_ballast) / R_od_ballast[:-1] )
         
         # Create constraint output that draft is less than water depth and fairlead is less than draft
         unknowns['base_draft_depth_ratio']    = unknowns['base_draft'] / D_water

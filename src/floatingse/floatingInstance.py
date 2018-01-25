@@ -100,6 +100,10 @@ class FloatingInstance(object):
         self.G = 79.3e9
         self.nu = 0.26
         self.yield_stress = 3.45e8
+
+        # Design parameters
+        self.min_taper_ratio = 0.4
+        self.min_diameter_thickness_ratio = 120.0
         
     def get_assembly(self):
         raise NotImplementedError("Subclasses should implement this!")
