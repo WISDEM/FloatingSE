@@ -1,6 +1,6 @@
 from openmdao.api import Group, IndepVarComp, DirectSolver, ScipyGMRES, Newton, NLGaussSeidel, Brent, RunOnce
 from cylinder import Cylinder, CylinderGeometry
-from semi import Semi
+from semi import Semi, SemiGeometry
 from semiPontoon import SemiPontoon
 from mapMooring import MapMooring, Anchor
 from turbine import Turbine
@@ -17,6 +17,9 @@ class SemiAssembly(Group):
         self.add('geomBase', CylinderGeometry(nSection))
         self.add('geomBall', CylinderGeometry(nSection))
 
+        # Run Semi Geometry for interfaces
+        self.add('sg', SemiGeometry(nSection))
+        
         # Run Turbine setup second
         self.add('turb', Turbine())
 
@@ -140,20 +143,20 @@ class SemiAssembly(Group):
 
         # Connect all input variables from all models
         self.connect('water_depth.x', ['geomBase.water_depth', 'geomBall.water_depth', 'mm.water_depth', 'base.water_depth', 'ball.water_depth'])
-        self.connect('radius_to_ballast_cylinder.x', ['geomBase.radius_to_ballast_cylinder', 'pon.radius_to_ballast_cylinder', 'sm.radius_to_ballast_cylinder'])
+        self.connect('radius_to_ballast_cylinder.x', ['sg.radius_to_ballast_cylinder', 'pon.radius_to_ballast_cylinder', 'sm.radius_to_ballast_cylinder'])
 
         self.connect('freeboard_base.x', ['geomBase.freeboard', 'turb.freeboard'])
         self.connect('section_height_base.x', ['geomBase.section_height', 'base.section_height'])
-        self.connect('outer_radius_base.x', ['geomBase.outer_radius', 'base.outer_radius', 'pon.base_outer_radius', 'gcBase.r', 'tt.base_radius'])
+        self.connect('outer_radius_base.x', ['geomBase.outer_radius', 'base.outer_radius', 'sg.base_outer_radius', 'pon.base_outer_radius', 'gcBase.r', 'tt.base_radius'])
         self.connect('wall_thickness_base.x', ['geomBase.wall_thickness', 'base.wall_thickness', 'pon.base_wall_thickness', 'gcBase.t'])
 
         self.connect('freeboard_ballast.x', 'geomBall.ballast_freeboard')
         self.connect('section_height_ballast.x', ['geomBall.ballast_section_height', 'ball.section_height'])
-        self.connect('outer_radius_ballast.x', ['geomBall.ballast_outer_radius', 'ball.outer_radius', 'pon.ballast_outer_radius', 'gcBall.r'])
+        self.connect('outer_radius_ballast.x', ['geomBall.ballast_outer_radius', 'ball.outer_radius', 'sg.ballast_outer_radius', 'pon.ballast_outer_radius', 'gcBall.r'])
         self.connect('wall_thickness_ballast.x', ['geomBall.ballast_wall_thickness', 'ball.wall_thickness', 'pon.ballast_wall_thickness', 'gcBall.t'])
 
-        self.connect('fairlead.x', ['geomBase.fairlead', 'geomBall.fairlead', 'mm.fairlead','sm.fairlead'])
-        self.connect('fairlead_offset_from_shell.x', 'geomBase.fairlead_offset_from_shell')
+        self.connect('fairlead.x', ['geomBase.fairlead', 'geomBall.fairlead', 'sg.fairlead', 'mm.fairlead','sm.fairlead'])
+        self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
         self.connect('tower_radius.x', ['tt.tower_radius', 'pon.tower_radius'])
 
         self.connect('rna_mass.x', ['turb.rna_mass', 'pon.rna_mass'])
@@ -234,7 +237,7 @@ class SemiAssembly(Group):
         self.connect('geomBase.fairlead_radius', 'mm.fairlead_radius')
         self.connect('geomBase.z_nodes', ['base.z_nodes', 'pon.base_z_nodes'])
         self.connect('geomBase.z_section', 'base.z_section')
-        self.connect('geomBall.z_nodes', ['ball.z_nodes', 'pon.ballast_z_nodes'])
+        self.connect('geomBall.z_nodes', ['ball.z_nodes', 'sg.ballast_z_nodes', 'pon.ballast_z_nodes'])
         self.connect('geomBall.z_section', 'ball.z_section')
         
         self.connect('turb.total_mass', ['base.stack_mass_in', 'sm.turbine_mass'])
@@ -295,6 +298,11 @@ class SemiAssembly(Group):
         self.geomBall.deriv_options['form'] = formStr
         self.geomBall.deriv_options['step_size'] = stepVal
         self.geomBall.deriv_options['step_calc'] = stepStr
+
+        self.sg.deriv_options['type'] = typeStr
+        self.sg.deriv_options['form'] = formStr
+        self.sg.deriv_options['step_size'] = stepVal
+        self.sg.deriv_options['step_calc'] = stepStr
 
         self.gcBase.deriv_options['type'] = typeStr
         self.gcBase.deriv_options['form'] = formStr
