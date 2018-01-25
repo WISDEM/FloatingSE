@@ -51,7 +51,7 @@ class TestCylinder(unittest.TestCase):
         self.params['base_cylinder_displaced_volume'] = 1e2
         self.params['ballast_cylinder_displaced_volume'] = 1e1
         
-        self.mytruss = sP.SemiPontoon()
+        self.mytruss = sP.SemiPontoon(NSECTIONS)
 
         
     def testTubeProperties(self):

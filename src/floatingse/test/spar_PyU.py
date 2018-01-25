@@ -34,7 +34,7 @@ class TestSpar(unittest.TestCase):
         self.params['mooring_cost'] = 2.0
         self.params['base_cylinder_cost'] = 2.5
 
-        self.myspar = spar.Spar()
+        self.myspar = spar.Spar(NSECTIONS)
 
     def testBalance(self):
         self.myspar.balance_spar(self.params, self.unknowns)

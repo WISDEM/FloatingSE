@@ -1,7 +1,6 @@
 from openmdao.api import Component
 import numpy as np
 
-from floatingInstance import NSECTIONS
 from commonse import gravity
 
 NPTS = 100
@@ -12,7 +11,7 @@ class Semi(Component):
     Should be tightly coupled with MAP Mooring class for full system representation.
     """
 
-    def __init__(self):
+    def __init__(self, nSection):
         super(Semi,self).__init__()
 
         # Environment
@@ -36,8 +35,8 @@ class Semi(Component):
         self.add_param('pontoon_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of pontoon buoyancy force')
         self.add_param('pontoon_center_of_gravity', val=0.0, units='m', desc='z-position of center of pontoon mass')
         
-        self.add_param('base_cylinder_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='mass of cylinder by section')
-        self.add_param('base_cylinder_displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='cylinder volume of water displaced by section')
+        self.add_param('base_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of cylinder by section')
+        self.add_param('base_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced by section')
         self.add_param('base_cylinder_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of cylinder buoyancy force')
         self.add_param('base_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
         self.add_param('base_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
@@ -45,8 +44,8 @@ class Semi(Component):
         self.add_param('base_cylinder_force_points', val=np.zeros((NPTS,)), units='m', desc='zpts for force vector')
         self.add_param('base_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
-        self.add_param('ballast_cylinder_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='mass of cylinder by section')
-        self.add_param('ballast_cylinder_displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='cylinder volume of water displaced by section')
+        self.add_param('ballast_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of cylinder by section')
+        self.add_param('ballast_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced by section')
         self.add_param('ballast_cylinder_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of cylinder buoyancy force')
         self.add_param('ballast_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
         self.add_param('ballast_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')

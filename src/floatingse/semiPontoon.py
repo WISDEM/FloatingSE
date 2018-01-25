@@ -2,7 +2,7 @@ import collections
 from openmdao.api import Component
 import numpy as np
 import pyframe3dd.frame3dd as frame3dd
-from floatingInstance import nodal2sectional, NSECTIONS
+from floatingInstance import nodal2sectional
 
 from commonse import gravity
 NPTS = 100
@@ -32,7 +32,7 @@ class SemiPontoon(Component):
     Should be tightly coupled with Semi and Mooring classes for full system representation.
     """
 
-    def __init__(self):
+    def __init__(self, nSection):
         super(SemiPontoon,self).__init__()
 
         self.frame = None
@@ -47,20 +47,20 @@ class SemiPontoon(Component):
         self.add_param('yield_stress', val=345e6, units='Pa', desc='yield stress of material')
 
         # Base cylinder
-        self.add_param('base_z_nodes', val=np.zeros((NSECTIONS+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('base_outer_radius', val=np.zeros((NSECTIONS+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('base_wall_thickness', val=np.zeros((NSECTIONS+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('base_cylinder_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='mass of base cylinder by section')
-        self.add_param('base_cylinder_displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='cylinder volume of water displaced by section')
+        self.add_param('base_z_nodes', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('base_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('base_wall_thickness', val=np.zeros((nSection+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('base_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of base cylinder by section')
+        self.add_param('base_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced by section')
         #self.add_param('base_cylinder_surge_force', val=np.zeros((NPTS,)), units='N', desc='Force vector in surge direction on cylinder')
         #self.add_param('base_cylinder_force_points', val=np.zeros((NPTS,)), units='m', desc='zpts for force vector')
 
         # Ballast cylinders
-        self.add_param('ballast_z_nodes', val=np.zeros((NSECTIONS+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('ballast_outer_radius', val=np.zeros((NSECTIONS+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('ballast_wall_thickness', val=np.zeros((NSECTIONS+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('ballast_cylinder_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='mass of ballast cylinder by section')
-        self.add_param('ballast_cylinder_displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='cylinder volume of water displaced by section')
+        self.add_param('ballast_z_nodes', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('ballast_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('ballast_wall_thickness', val=np.zeros((nSection+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('ballast_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of ballast cylinder by section')
+        self.add_param('ballast_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced by section')
         #self.add_param('ballast_cylinder_surge_force', val=np.zeros((NPTS,)), units='N', desc='Force vector in surge direction on cylinder')
         #self.add_param('ballast_cylinder_force_points', val=np.zeros((NPTS,)), units='m', desc='zpts for force vector')
 

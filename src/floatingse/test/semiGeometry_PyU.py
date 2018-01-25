@@ -30,7 +30,7 @@ class TestSemiGeom(unittest.TestCase):
         
         self.params['tower_base_radius'] = 7.0
 
-        self.mysemiG = semiGeometry.SemiGeometry()
+        self.mysemiG = semiGeometry.SemiGeometry(2)
 
 
     def testSetGeometry(self):

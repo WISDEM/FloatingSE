@@ -63,12 +63,12 @@ class TestCylinder(unittest.TestCase):
 
         self.set_geometry()
 
-        self.myspar = cylinder.Cylinder()
+        self.myspar = cylinder.Cylinder(2)
         self.myspar.section_mass = np.zeros((2,))
 
         
     def set_geometry(self):
-        sparGeom = sparGeometry.SparGeometry()
+        sparGeom = sparGeometry.SparGeometry(2)
         tempUnknowns = {}
         sparGeom.solve_nonlinear(self.params, tempUnknowns, None)
         for pairs in tempUnknowns.items():

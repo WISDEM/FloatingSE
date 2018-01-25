@@ -57,7 +57,7 @@ class TestSemi(unittest.TestCase):
 
         self.params['water_density'] = 1e3
 
-        self.mysemi = semi.Semi()
+        self.mysemi = semi.Semi(NSECTIONS)
 
     def testBalance(self):
         self.mysemi.balance_semi(self.params, self.unknowns)

@@ -4,7 +4,7 @@ from scipy.optimize import brentq, minimize_scalar
 from scipy.integrate import cumtrapz
 
 from commonse import gravity
-from floatingInstance import nodal2sectional, NSECTIONS
+from floatingInstance import nodal2sectional
 from commonse.WindWaveDrag import cylinderDrag
 import commonse.Frustum as frustum
 
@@ -556,7 +556,7 @@ class Cylinder(Component):
     OpenMDAO Component class for cylinder substructure elements in floating offshore wind turbines.
     """
 
-    def __init__(self):
+    def __init__(self, nSection):
         super(Cylinder,self).__init__()
 
         # Variables local to the class and not OpenMDAO
@@ -585,19 +585,19 @@ class Cylinder(Component):
         self.add_param('permanent_ballast_density', val=4492.0, units='kg/m**3', desc='density of permanent ballast')
 
         # Inputs from SparGeometry
-        self.add_param('z_nodes', val=np.zeros((NSECTIONS+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('z_section', val=np.zeros((NSECTIONS,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
+        self.add_param('z_nodes', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('z_section', val=np.zeros((nSection,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
 
         # Design variables
-        self.add_param('section_height', val=np.zeros((NSECTIONS,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
-        self.add_param('outer_radius', val=np.zeros((NSECTIONS+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('wall_thickness', val=np.zeros((NSECTIONS+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('stiffener_web_height', val=np.zeros((NSECTIONS,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_web_thickness', val=np.zeros((NSECTIONS,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_flange_width', val=np.zeros((NSECTIONS,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_flange_thickness', val=np.zeros((NSECTIONS,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_spacing', val=np.zeros((NSECTIONS,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top (length = nsection)')
-        self.add_param('bulkhead_nodes', val=[True]*(NSECTIONS+1), desc='Nodal locations where there is a bulkhead bottom to top (length = nsection + 1)', pass_by_obj=True)
+        self.add_param('section_height', val=np.zeros((nSection,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
+        self.add_param('outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('wall_thickness', val=np.zeros((nSection+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('stiffener_web_height', val=np.zeros((nSection,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_web_thickness', val=np.zeros((nSection,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_flange_width', val=np.zeros((nSection,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_flange_thickness', val=np.zeros((nSection,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_spacing', val=np.zeros((nSection,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top (length = nsection)')
+        self.add_param('bulkhead_nodes', val=[True]*(nSection+1), desc='Nodal locations where there is a bulkhead bottom to top (length = nsection + 1)', pass_by_obj=True)
         self.add_param('permanent_ballast_height', val=0.0, units='m', desc='height of permanent ballast')
         
         # Mass correction factors from simple rules here to real life
@@ -622,7 +622,7 @@ class Cylinder(Component):
         self.add_output('z_center_of_buoyancy', val=0.0, units='m', desc='z-position CofB of cylinder')
         self.add_output('Awater', val=0.0, units='m**2', desc='Area of waterplace cross section')
         self.add_output('Iwater', val=0.0, units='m**4', desc='Second moment of area of waterplace cross section')
-        self.add_output('displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='Volume of water displaced by cylinder by section')
+        self.add_output('displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='Volume of water displaced by cylinder by section')
  
         self.add_output('spar_cost', val=0.0, units='USD', desc='cost of spar structure')
         self.add_output('spar_mass', val=0.0, units='kg', desc='mass of spar structure')
@@ -636,18 +636,18 @@ class Cylinder(Component):
         self.add_output('outfitting_cost', val=0.0, units='USD', desc='cost of outfitting the spar')
         self.add_output('outfitting_mass', val=0.0, units='kg', desc='cost of outfitting the spar')
 
-        self.add_output('total_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='total mass of cylinder by section')
+        self.add_output('total_mass', val=np.zeros((nSection,)), units='kg', desc='total mass of cylinder by section')
         self.add_output('total_cost', val=0.0, units='USD', desc='total cost of cylinder')
         
         # Output constraints
-        self.add_output('flange_spacing_ratio', val=np.zeros((NSECTIONS,)), desc='ratio between flange and stiffener spacing')
-        self.add_output('web_radius_ratio', val=np.zeros((NSECTIONS,)), desc='ratio between web height and radius')
-        self.add_output('flange_compactness', val=np.zeros((NSECTIONS,)), desc='check for flange compactness')
-        self.add_output('web_compactness', val=np.zeros((NSECTIONS,)), desc='check for web compactness')
-        self.add_output('axial_local_unity', val=np.zeros((NSECTIONS,)), desc='unity check for axial load - local buckling')
-        self.add_output('axial_general_unity', val=np.zeros((NSECTIONS,)), desc='unity check for axial load - genenral instability')
-        self.add_output('external_local_unity', val=np.zeros((NSECTIONS,)), desc='unity check for external pressure - local buckling')
-        self.add_output('external_general_unity', val=np.zeros((NSECTIONS,)), desc='unity check for external pressure - general instability')
+        self.add_output('flange_spacing_ratio', val=np.zeros((nSection,)), desc='ratio between flange and stiffener spacing')
+        self.add_output('web_radius_ratio', val=np.zeros((nSection,)), desc='ratio between web height and radius')
+        self.add_output('flange_compactness', val=np.zeros((nSection,)), desc='check for flange compactness')
+        self.add_output('web_compactness', val=np.zeros((nSection,)), desc='check for web compactness')
+        self.add_output('axial_local_unity', val=np.zeros((nSection,)), desc='unity check for axial load - local buckling')
+        self.add_output('axial_general_unity', val=np.zeros((nSection,)), desc='unity check for axial load - genenral instability')
+        self.add_output('external_local_unity', val=np.zeros((nSection,)), desc='unity check for external pressure - local buckling')
+        self.add_output('external_general_unity', val=np.zeros((nSection,)), desc='unity check for external pressure - general instability')
 
         
         

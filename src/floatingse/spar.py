@@ -1,7 +1,6 @@
 from openmdao.api import Component
 import numpy as np
 
-from floatingInstance import NSECTIONS
 from commonse import gravity
 
 NPTS = 100
@@ -12,7 +11,7 @@ class Spar(Component):
     Should be tightly coupled with MAP Mooring class for full system representation.
     """
 
-    def __init__(self):
+    def __init__(self, nSection):
         super(Spar,self).__init__()
 
         # Environment
@@ -30,8 +29,8 @@ class Spar(Component):
         self.add_param('mooring_surge_restoring_force', val=0.0, units='N', desc='Restoring force in surge direction from mooring system')
         self.add_param('mooring_cost', val=0.0, units='USD', desc='Cost of mooring system')
 
-        self.add_param('base_cylinder_mass', val=np.zeros((NSECTIONS,)), units='kg', desc='mass of cylinder')
-        self.add_param('base_cylinder_displaced_volume', val=np.zeros((NSECTIONS,)), units='m**3', desc='cylinder volume of water displaced')
+        self.add_param('base_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of cylinder')
+        self.add_param('base_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced')
         self.add_param('base_cylinder_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of cylinder buoyancy force')
         self.add_param('base_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
         self.add_param('base_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')

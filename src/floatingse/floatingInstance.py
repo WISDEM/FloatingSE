@@ -79,6 +79,8 @@ class FloatingInstance(object):
         self.mooring_cost_rate = 1.1
         self.scope_ratio = 2.6
         self.anchor_radius = 420.0
+        self.drag_embedment_extra_length = 300.0
+        
         self.mooring_diameter = 0.14
 
         # Turbine parameters

@@ -22,7 +22,7 @@ class TestSpar(unittest.TestCase):
         self.params['fairlead_offset_from_shell'] = 1.0
         self.params['tower_base_radius'] = 7.0
 
-        self.mysparG = sparGeometry.SparGeometry()
+        self.mysparG = sparGeometry.SparGeometry(2)
         
         
     def testNodal2Sectional(self):

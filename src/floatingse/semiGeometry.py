@@ -1,7 +1,6 @@
 from openmdao.api import Component
 import numpy as np
 import commonse.Frustum as frustum
-from floatingInstance import NSECTIONS
 
 class SemiGeometry(Component):
     """
@@ -9,19 +8,19 @@ class SemiGeometry(Component):
     Should be tightly coupled with MAP Mooring class for full system representation.
     """
 
-    def __init__(self):
+    def __init__(self, nSection):
         super(SemiGeometry,self).__init__()
 
         # Design variables
         self.add_param('base_freeboard', val=25.0, units='m', desc='Length of spar above water line')
-        self.add_param('base_section_height', val=np.zeros((NSECTIONS,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
-        self.add_param('base_outer_radius', val=np.zeros((NSECTIONS+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('base_wall_thickness', val=np.zeros((NSECTIONS+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('base_section_height', val=np.zeros((nSection,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
+        self.add_param('base_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('base_wall_thickness', val=np.zeros((nSection+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
 
         self.add_param('ballast_freeboard', val=25.0, units='m', desc='Length of spar above water line')
-        self.add_param('ballast_section_height', val=np.zeros((NSECTIONS,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
-        self.add_param('ballast_outer_radius', val=np.zeros((NSECTIONS+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('ballast_wall_thickness', val=np.zeros((NSECTIONS+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('ballast_section_height', val=np.zeros((nSection,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
+        self.add_param('ballast_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('ballast_wall_thickness', val=np.zeros((nSection+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
 
         self.add_param('water_depth', val=0.0, units='m', desc='water depth')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
@@ -32,18 +31,18 @@ class SemiGeometry(Component):
         # Outputs
         self.add_output('base_draft', val=0.0, units='m', desc='Spar draft (length of body under water)')
         self.add_output('ballast_draft', val=0.0, units='m', desc='Spar draft (length of body under water)')
-        self.add_output('base_z_nodes', val=np.zeros((NSECTIONS+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_output('ballast_z_nodes', val=np.zeros((NSECTIONS+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_output('base_z_section', val=np.zeros((NSECTIONS,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
-        self.add_output('ballast_z_section', val=np.zeros((NSECTIONS,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
+        self.add_output('base_z_nodes', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_output('ballast_z_nodes', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_output('base_z_section', val=np.zeros((nSection,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
+        self.add_output('ballast_z_section', val=np.zeros((nSection,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
         self.add_output('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
 
         # Output constraints
         self.add_output('base_draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
         self.add_output('ballast_draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
         self.add_output('fairlead_draft_ratio', val=0.0, desc='Ratio of fairlead to draft')
-        self.add_output('base_taper_ratio', val=np.zeros((NSECTIONS,)), desc='Ratio of outer radius change in a section to its starting value')
-        self.add_output('ballast_taper_ratio', val=np.zeros((NSECTIONS,)), desc='Ratio of outer radius change in a section to its starting value')
+        self.add_output('base_taper_ratio', val=np.zeros((nSection,)), desc='Ratio of outer radius change in a section to its starting value')
+        self.add_output('ballast_taper_ratio', val=np.zeros((nSection,)), desc='Ratio of outer radius change in a section to its starting value')
         self.add_output('base_ballast_spacing', val=0.0, desc='Radius of base and ballast cylinders relative to spacing')
         self.add_output('transition_radius', val=0.0, units='m', desc='Buffer between spar top and tower base')
 

@@ -2,18 +2,18 @@ from openmdao.api import Group, IndepVarComp, DirectSolver, ScipyGMRES, Newton, 
 from cylinder import Cylinder
 from semi import Semi
 from semiPontoon import SemiPontoon
-from semiGeometry import SemiGeometry, NSECTIONS
+from semiGeometry import SemiGeometry
 from mapMooring import MapMooring, Anchor
 from turbine import Turbine
 import numpy as np
 
 class SemiAssembly(Group):
 
-    def __init__(self):
+    def __init__(self, nSection):
         super(SemiAssembly, self).__init__()
 
         # Run Spar Geometry component first
-        self.add('sg', SemiGeometry())
+        self.add('sg', SemiGeometry(nSection))
 
         # Run Turbine setup second
         self.add('turb', Turbine())
@@ -23,14 +23,14 @@ class SemiAssembly(Group):
 
         # Next do base and ballast cylinders
         # Ballast cylinders are replicated from same design in the components
-        self.add('base', Cylinder())
-        self.add('ball', Cylinder())
+        self.add('base', Cylinder(nSection))
+        self.add('ball', Cylinder(nSection))
 
         # Add in the connecting truss
-        self.add('pon', SemiPontoon())
+        self.add('pon', SemiPontoon(nSection))
         
         # Run main Semi analysis
-        self.add('sm', Semi())
+        self.add('sm', Semi(nSection))
 
         # Define all input variables from all models
         # SemiGeometry
@@ -42,14 +42,14 @@ class SemiAssembly(Group):
         self.add('tower_base_radius',          IndepVarComp('x', 0.0))
 
         self.add('freeboard_base',             IndepVarComp('x', 0.0))
-        self.add('section_height_base',        IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('outer_radius_base',          IndepVarComp('x', np.zeros((NSECTIONS+1,))))
-        self.add('wall_thickness_base',        IndepVarComp('x', np.zeros((NSECTIONS+1,))))
+        self.add('section_height_base',        IndepVarComp('x', np.zeros((nSection,))))
+        self.add('outer_radius_base',          IndepVarComp('x', np.zeros((nSection+1,))))
+        self.add('wall_thickness_base',        IndepVarComp('x', np.zeros((nSection+1,))))
 
         self.add('freeboard_ballast',          IndepVarComp('x', 0.0))
-        self.add('section_height_ballast',     IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('outer_radius_ballast',       IndepVarComp('x', np.zeros((NSECTIONS+1,))))
-        self.add('wall_thickness_ballast',     IndepVarComp('x', np.zeros((NSECTIONS+1,))))
+        self.add('section_height_ballast',     IndepVarComp('x', np.zeros((nSection,))))
+        self.add('outer_radius_ballast',       IndepVarComp('x', np.zeros((nSection+1,))))
+        self.add('wall_thickness_ballast',     IndepVarComp('x', np.zeros((nSection+1,))))
 
         # Turbine
         self.add('rna_mass',                   IndepVarComp('x', 0.0))
@@ -68,6 +68,7 @@ class SemiAssembly(Group):
         self.add('number_of_mooring_lines',    IndepVarComp('x', 0, pass_by_obj=True))
         self.add('mooring_type',               IndepVarComp('x', 'chain', pass_by_obj=True))
         self.add('anchor_type',                IndepVarComp('x', Anchor['SUCTIONPILE'], pass_by_obj=True))
+        self.add('drag_embedment_extra_length',IndepVarComp('x', 0.0))
         self.add('max_offset',                 IndepVarComp('x', 0.0))
         self.add('mooring_cost_rate',          IndepVarComp('x', 0.0))
 
@@ -87,20 +88,20 @@ class SemiAssembly(Group):
         self.add('yield_stress',               IndepVarComp('x', 0.0))
         self.add('permanent_ballast_density',  IndepVarComp('x', 0.0))
         
-        self.add('stiffener_web_height_base',       IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('stiffener_web_thickness_base',    IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('stiffener_flange_width_base',     IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('stiffener_flange_thickness_base', IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('stiffener_spacing_base',          IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('bulkhead_nodes_base',             IndepVarComp('x', [False]*(NSECTIONS+1), pass_by_obj=True ))
+        self.add('stiffener_web_height_base',       IndepVarComp('x', np.zeros((nSection,))))
+        self.add('stiffener_web_thickness_base',    IndepVarComp('x', np.zeros((nSection,))))
+        self.add('stiffener_flange_width_base',     IndepVarComp('x', np.zeros((nSection,))))
+        self.add('stiffener_flange_thickness_base', IndepVarComp('x', np.zeros((nSection,))))
+        self.add('stiffener_spacing_base',          IndepVarComp('x', np.zeros((nSection,))))
+        self.add('bulkhead_nodes_base',             IndepVarComp('x', [False]*(nSection+1), pass_by_obj=True ))
         self.add('permanent_ballast_height_base',   IndepVarComp('x', 0.0))
 
-        self.add('stiffener_web_height_ballast',       IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('stiffener_web_thickness_ballast',    IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('stiffener_flange_width_ballast',     IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('stiffener_flange_thickness_ballast', IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('stiffener_spacing_ballast',          IndepVarComp('x', np.zeros((NSECTIONS,))))
-        self.add('bulkhead_nodes_ballast',             IndepVarComp('x', [False]*(NSECTIONS+1), pass_by_obj=True ))
+        self.add('stiffener_web_height_ballast',       IndepVarComp('x', np.zeros((nSection,))))
+        self.add('stiffener_web_thickness_ballast',    IndepVarComp('x', np.zeros((nSection,))))
+        self.add('stiffener_flange_width_ballast',     IndepVarComp('x', np.zeros((nSection,))))
+        self.add('stiffener_flange_thickness_ballast', IndepVarComp('x', np.zeros((nSection,))))
+        self.add('stiffener_spacing_ballast',          IndepVarComp('x', np.zeros((nSection,))))
+        self.add('bulkhead_nodes_ballast',             IndepVarComp('x', [False]*(nSection+1), pass_by_obj=True ))
         self.add('permanent_ballast_height_ballast',   IndepVarComp('x', 0.0))
 
         self.add('bulkhead_mass_factor',       IndepVarComp('x', 0.0))
@@ -157,6 +158,7 @@ class SemiAssembly(Group):
         self.connect('number_of_mooring_lines.x', 'mm.number_of_mooring_lines')
         self.connect('mooring_type.x', 'mm.mooring_type')
         self.connect('anchor_type.x', 'mm.anchor_type')
+        self.connect('drag_embedment_extra_length.x', 'mm.drag_embedment_extra_length')
         self.connect('max_offset.x', 'mm.max_offset')
         self.connect('mooring_cost_rate.x', 'mm.mooring_cost_rate')
         

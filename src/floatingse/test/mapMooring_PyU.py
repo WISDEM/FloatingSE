@@ -72,6 +72,7 @@ class TestMapMooring(unittest.TestCase):
         self.params['number_of_mooring_lines'] = 3
         self.params['mooring_type'] = 'chain'
         self.params['anchor_type'] = 'suctionpile'
+        self.params['drag_embedment_extra_length'] = 300.0
         self.params['max_offset'] = 10.0
 
         self.params['mooring_cost_rate'] = 1.1
@@ -89,7 +90,7 @@ class TestMapMooring(unittest.TestCase):
         self.mymap.finput.close()
         
     def set_geometry(self):
-        sparGeom = sparGeometry.SparGeometry()
+        sparGeom = sparGeometry.SparGeometry(2)
         tempUnknowns = {}
         sparGeom.solve_nonlinear(self.params, tempUnknowns, None)
         for pairs in tempUnknowns.items():
