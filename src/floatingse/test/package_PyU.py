@@ -2,10 +2,8 @@ import unittest
 
 import cylinder_PyU
 import mapMooring_PyU
-import semiGeometry_PyU
 import semiPontoon_PyU
 import semi_PyU
-import sparGeometry_PyU
 import spar_PyU
 import turbine_PyU
 
@@ -18,10 +16,8 @@ import itertools
 def suiteAll():
     suite = unittest.TestSuite( (cylinder_PyU.suite(),
                                  mapMooring_PyU.suite(),
-                                 semiGeometry_PyU.suite(),
                                  semiPontoon_PyU.suite(),
                                  semi_PyU.suite(), 
-                                 sparGeometry_PyU.suite(),
                                  spar_PyU.suite(),
                                  turbine_PyU.suite()
     ) )

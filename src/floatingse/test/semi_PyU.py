@@ -59,7 +59,22 @@ class TestSemi(unittest.TestCase):
         self.params['water_density'] = 1e3
 
         self.mysemi = semi.Semi(NSECTIONS, NPTS)
+        self.mysemiG = semi.SemiGeometry(2)
 
+        
+    def testSetGeometry(self):
+        self.params['base_outer_radius'] = np.array([10.0, 10.0, 10.0])
+        self.params['ballast_outer_radius'] = np.array([10.0, 10.0, 10.0])
+        self.params['ballast_z_nodes'] = np.array([-35.0, -15.0, 15.0])
+        self.params['radius_to_ballast_cylinder'] = 25.0
+        self.params['fairlead'] = 10.0
+        self.params['fairlead_offset_from_shell'] = 1.0
+        self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
+        
+        self.assertEqual(self.unknowns['fairlead_radius'], 11.0+25.0)
+        self.assertEqual(self.unknowns['base_ballast_spacing'], 20.0/25.0)
+
+        
     def testBalance(self):
         self.mysemi.balance_semi(self.params, self.unknowns)
         m_expect = 1e4 + 15.0 + 50.0 + 5*2e4 + 3*1.5e4*5

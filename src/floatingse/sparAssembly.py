@@ -1,9 +1,9 @@
 from openmdao.api import Group, IndepVarComp
-from cylinder import Cylinder
+from cylinder import Cylinder, CylinderGeometry
 from spar import Spar
-from sparGeometry import SparGeometry
 from mapMooring import MapMooring, Anchor
 from turbine import Turbine
+from towerTransition import TowerTransition
 from commonse.UtilizationSupplement import GeometricConstraints
 import numpy as np
 
@@ -13,10 +13,13 @@ class SparAssembly(Group):
         super(SparAssembly, self).__init__()
 
         # Run Spar Geometry component first
-        self.add('sg', SparGeometry(nSection))
+        self.add('sg', CylinderGeometry(nSection))
 
         # Run Turbine setup second
         self.add('turb', Turbine())
+
+        # Add in transition to tower
+        self.add('tt', TowerTransition())
 
         # Next run MapMooring
         self.add('mm', MapMooring())
@@ -39,7 +42,7 @@ class SparAssembly(Group):
         self.add('outer_radius',               IndepVarComp('x', np.zeros((nSection+1,))))
         self.add('wall_thickness',             IndepVarComp('x', np.zeros((nSection+1,))))
         self.add('fairlead_offset_from_shell', IndepVarComp('x', 0.0))
-        self.add('tower_base_radius',          IndepVarComp('x', 0.0))
+        self.add('tower_radius',               IndepVarComp('x', np.zeros((nSection+1,))))
 
         # Turbine
         self.add('rna_mass',                   IndepVarComp('x', 0.0))
@@ -104,10 +107,10 @@ class SparAssembly(Group):
         self.connect('freeboard.x', ['sg.freeboard', 'turb.freeboard'])
         self.connect('fairlead.x', ['sg.fairlead', 'mm.fairlead','sp.fairlead'])
         self.connect('section_height.x', ['sg.section_height', 'cyl.section_height'])
-        self.connect('outer_radius.x', ['sg.outer_radius', 'cyl.outer_radius', 'gc.r'])
+        self.connect('outer_radius.x', ['sg.outer_radius', 'cyl.outer_radius', 'gc.r', 'tt.base_radius'])
         self.connect('wall_thickness.x', ['sg.wall_thickness', 'cyl.wall_thickness', 'gc.t'])
         self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
-        self.connect('tower_base_radius.x', 'sg.tower_base_radius')
+        self.connect('tower_radius.x', 'tt.tower_radius')
 
         self.connect('rna_mass.x', 'turb.rna_mass')
         self.connect('rna_center_of_gravity.x', 'turb.rna_center_of_gravity')
@@ -203,6 +206,16 @@ class SparAssembly(Group):
         self.sg.deriv_options['form'] = formStr
         self.sg.deriv_options['step_size'] = stepVal
         self.sg.deriv_options['step_calc'] = stepStr
+
+        self.tt.deriv_options['type'] = typeStr
+        self.tt.deriv_options['form'] = formStr
+        self.tt.deriv_options['step_size'] = stepVal
+        self.tt.deriv_options['step_calc'] = stepStr
+
+        self.gc.deriv_options['type'] = typeStr
+        self.gc.deriv_options['form'] = formStr
+        self.gc.deriv_options['step_size'] = stepVal
+        self.gc.deriv_options['step_calc'] = stepStr
 
         self.mm.deriv_options['type'] = typeStr
         self.mm.deriv_options['form'] = formStr

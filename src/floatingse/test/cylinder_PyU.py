@@ -2,8 +2,8 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import floatingse.cylinder as cylinder
-import floatingse.sparGeometry as sparGeometry
 import commonse.Frustum as frustum
+from floatingse.floatingInstance import nodal2sectional
 
 from commonse import gravity as g
 myones = np.ones((100,))
@@ -61,7 +61,8 @@ class TestCylinder(unittest.TestCase):
         self.params['air_density'] = 1.
         self.params['air_viscosity'] = 1e-5
         self.params['morison_mass_coefficient'] = 2.0
-
+        
+        self.geom = cylinder.CylinderGeometry(2)
         self.set_geometry()
 
         self.myspar = cylinder.Cylinder(2, NPTS)
@@ -69,12 +70,29 @@ class TestCylinder(unittest.TestCase):
 
         
     def set_geometry(self):
-        sparGeom = sparGeometry.SparGeometry(2)
         tempUnknowns = {}
-        sparGeom.solve_nonlinear(self.params, tempUnknowns, None)
+        self.geom.solve_nonlinear(self.params, tempUnknowns, None)
         for pairs in tempUnknowns.items():
             self.params[pairs[0]] = pairs[1]
+
             
+    def testNodal2Sectional(self):
+        npt.assert_equal(nodal2sectional(np.array([8.0, 10.0, 12.0])), np.array([9.0, 11.0]))
+
+    def testSetGeometry(self):
+        self.params['fairlead_offset_from_shell'] = 1.0
+        self.geom.solve_nonlinear(self.params, self.unknowns, None)
+        
+        npt.assert_equal(self.unknowns['z_nodes'], np.array([-35.0, -15.0, 15.0]))
+        self.assertEqual(self.params['freeboard'], self.unknowns['z_nodes'][-1])
+        self.assertEqual(self.unknowns['draft'], np.sum(self.params['section_height'])-self.params['freeboard'])
+        self.assertEqual(self.unknowns['draft'], 35.0)
+        self.assertEqual(self.unknowns['draft'], np.abs(self.unknowns['z_nodes'][0]))
+        self.assertEqual(self.unknowns['fairlead_radius'], 11.0)
+        self.assertEqual(self.unknowns['draft_depth_ratio'], 0.035)
+        self.assertEqual(self.unknowns['fairlead_draft_ratio'], 10./35.)
+        npt.assert_equal(self.unknowns['z_section'], np.array([-25.0, 0.0]))
+
         
     def testCylinderForces(self):
         U   = 2.0

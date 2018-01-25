@@ -80,7 +80,7 @@ class SemiPontoon(Component):
         self.add_param('tower_mass', val=0.0, units='kg', desc='mass of tower')
         self.add_param('turbine_surge_force', val=np.zeros((2,)), units='N', desc='Force in surge direction on turbine')
         self.add_param('turbine_force_points', val=np.zeros((2,)), units='m', desc='zpts for force vector')
-        self.add_param('tower_base_radius', val=3.25, units='m', desc='outer radius of tower at base')
+        self.add_param('tower_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius of tower at base')
         self.add_param('rna_mass', val=1e5, units='kg', desc='Mass of rotor nacelle assembly')
         self.add_param('rna_center_of_gravity_x', val=1.0, units='m', desc='Center of gravity along x-axis measured from tower centerline')
 
@@ -113,7 +113,7 @@ class SemiPontoon(Component):
         R_od_pontoon   = params['outer_pontoon_radius']
         R_id_pontoon   = params['inner_pontoon_radius']
         R_od_base      = params['base_outer_radius']
-        R_tower        = params['tower_base_radius']
+        R_tower        = params['tower_radius']
         R_od_ballast   = params['ballast_outer_radius']
 
         t_wall_base    = params['base_wall_thickness']
@@ -319,16 +319,16 @@ class SemiPontoon(Component):
         # Senu TODO: Currently assuming a 1m thick tower wall
         # Senu TODO: RNA should be even stiffer?
         c_Ax, c_As, c_I, c_Jx, c_S, c_C = TubeProperties(R_tower, R_tower-1.0)
-        Ax   = np.append(Ax  , c_Ax * np.ones((4,)))
-        As   = np.append(As  , c_As * np.ones((4,)) )
-        Jx   = np.append(Jx  , c_Jx * np.ones((4,)) )
-        I    = np.append(I   , c_I  * np.ones((4,)) )
-        S    = np.append(S   , c_S  * np.ones((4,)) )
-        C    = np.append(C   , c_C  * np.ones((4,)) )
-        modE = np.append(modE, E * np.ones((4,)) )
-        modG = np.append(modG, G * np.ones((4,)) )
-        roll = np.append(roll, 0.0 * np.ones((4,)) )
-        dens = np.append(dens, 1e-16 * np.ones((4,)) ) #rho
+        Ax   = np.append(Ax  , c_Ax)
+        As   = np.append(As  , c_As)
+        Jx   = np.append(Jx  , c_Jx)
+        I    = np.append(I   , c_I )
+        S    = np.append(S   , c_S )
+        C    = np.append(C   , c_C )
+        modE = np.append(modE, E)
+        modG = np.append(modG, G)
+        roll = np.append(roll, np.zeros((R_tower.size,)) )
+        dens = np.append(dens, 1e-16 * np.ones((R_tower.size,)) ) #rho
 
 
         # ---Get element object from frame3dd---

@@ -108,7 +108,7 @@ class SparInstance(FloatingInstance):
         self.prob.driver.add_constraint('gc.weldability',upper=0.0)
 
         # Ensure that the spar top matches the tower base
-        self.prob.driver.add_constraint('sg.transition_radius',lower=0.0, upper=5.0)
+        self.prob.driver.add_constraint('tt.transition_radius',lower=0.0, upper=5.0)
 
         # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
         self.prob.driver.add_constraint('mm.safety_factor',lower=0.0, upper=0.8)

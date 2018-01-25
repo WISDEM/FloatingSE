@@ -3,6 +3,58 @@ import numpy as np
 
 from commonse import gravity
 
+
+
+class SemiGeometry(Component):
+    """
+    OpenMDAO Component class for Semi substructure for floating offshore wind turbines.
+    Should be tightly coupled with MAP Mooring class for full system representation.
+    """
+
+    def __init__(self, nSection):
+        super(SemiGeometry,self).__init__()
+
+        # Design variables
+        self.add_param('base_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('ballast_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
+        self.add_param('fairlead_offset_from_shell', val=0.5, units='m',desc='fairlead offset from shell')
+        self.add_param('radius_to_ballast_cylinder', val=10.0, units='m',desc='Distance from base cylinder centerpoint to ballast cylinder centerpoint')
+
+        # Output constraints
+        self.add_output('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
+        self.add_output('base_ballast_spacing', val=0.0, desc='Radius of base and ballast cylinders relative to spacing')
+
+        
+    def solve_nonlinear(self, params, unknowns, resids):
+        """Sets nodal points and sectional centers of mass in z-coordinate system with z=0 at the waterline.
+        Nodal points are the beginning and end points of each section.
+        Nodes and sections start at bottom and move upwards.
+        
+        INPUTS:
+        ----------
+        params   : dictionary of input parameters
+        unknowns : dictionary of output parameters
+        
+        OUTPUTS  : none (all unknown dictionary values set)
+        """
+        # Unpack variables
+        R_od_base       = params['base_outer_radius']
+        R_od_ballast    = params['ballast_outer_radius']
+        R_semi          = params['radius_to_ballast_cylinder']
+        z_nodes_ballast = params['ballast_z_nodes']
+        fairlead        = params['fairlead'] # depth of mooring attachment point
+        fair_off        = params['fairlead_offset_from_shell']
+
+        # Set spacing constraint
+        unknowns['base_ballast_spacing'] = (R_od_base.max() + R_od_ballast.max()) / R_semi
+
+        # Determine radius at mooring connection point (fairlead)
+        unknowns['fairlead_radius'] = R_semi + fair_off + np.interp(-fairlead, z_nodes_ballast, R_od_ballast)
+
+
+
+
 class Semi(Component):
     """
     OpenMDAO Component class for Semisubmersible substructure for floating offshore wind turbines.

@@ -156,9 +156,9 @@ class SemiInstance(FloatingInstance):
 
         # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
         # Ensure that fairlead attaches to draft
-        self.prob.driver.add_constraint('sg.base_draft_depth_ratio',lower=0.0, upper=0.75)
-        self.prob.driver.add_constraint('sg.ballast_draft_depth_ratio',lower=0.0, upper=0.75)
-        self.prob.driver.add_constraint('sg.fairlead_draft_ratio',lower=0.0, upper=1.0)
+        self.prob.driver.add_constraint('geomBase.draft_depth_ratio',lower=0.0, upper=0.75)
+        self.prob.driver.add_constraint('geomBall.draft_depth_ratio',lower=0.0, upper=0.75)
+        self.prob.driver.add_constraint('geomBall.fairlead_draft_ratio',lower=0.0, upper=1.0)
         self.prob.driver.add_constraint('sg.base_ballast_spacing',lower=0.0, upper=1.0)
 
         # Ensure that the radius doesn't change dramatically over a section
@@ -168,7 +168,7 @@ class SemiInstance(FloatingInstance):
         self.prob.driver.add_constraint('gcBall.weldability',upper=0.0)
 
         # Ensure that the spar top matches the tower base
-        self.prob.driver.add_constraint('sg.transition_radius',lower=0.0, upper=5.0)
+        self.prob.driver.add_constraint('tt.transition_radius',lower=0.0, upper=5.0)
         
         # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
         self.prob.driver.add_constraint('mm.safety_factor',lower=0.0, upper=0.8)
