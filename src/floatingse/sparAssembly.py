@@ -8,7 +8,7 @@ import numpy as np
 
 class SparAssembly(Group):
 
-    def __init__(self, nSection):
+    def __init__(self, nSection, nIntPts):
         super(SparAssembly, self).__init__()
 
         # Run Spar Geometry component first
@@ -21,10 +21,10 @@ class SparAssembly(Group):
         self.add('mm', MapMooring())
 
         # Next do ballast cylind
-        self.add('cyl', Cylinder(nSection))
+        self.add('cyl', Cylinder(nSection, nIntPts))
 
         # Run main Spar analysis
-        self.add('sp', Spar(nSection))
+        self.add('sp', Spar(nSection, nIntPts))
 
         # Define all input variables from all models
         # SparGeometry

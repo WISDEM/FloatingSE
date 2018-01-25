@@ -7,6 +7,7 @@ from mayavi import mlab
 
 
 NSECTIONS = 5
+NPTS = 100
 
 def nodal2sectional(x):
     """Averages nodal data to be length-1 vector of sectional data

@@ -8,9 +8,6 @@ from floatingInstance import nodal2sectional
 from commonse.WindWaveDrag import cylinderDrag
 import commonse.Frustum as frustum
 
-# Integration points
-NPTS = 100
-
 def cylinder_drag_per_length(U, r, rho, mu):
     """This function gives the drag per unit height of a cylinder based on Reynolds number.
     NOTE: This is implemented in CommonSE as an OpenMDAO component, here it is just a function
@@ -556,12 +553,13 @@ class Cylinder(Component):
     OpenMDAO Component class for cylinder substructure elements in floating offshore wind turbines.
     """
 
-    def __init__(self, nSection):
+    def __init__(self, nSection, nIntPts):
         super(Cylinder,self).__init__()
 
         # Variables local to the class and not OpenMDAO
         self.section_mass   = None # Weight of spar by section
         self.z_permanent_ballast = None
+        self.npts = nIntPts
         
         # Environment
         self.add_param('air_density', val=1.198, units='kg/m**3', desc='density of air')
@@ -615,8 +613,8 @@ class Cylinder(Component):
         # Outputs
         self.add_output('ballast_cost', val=0.0, units='USD', desc='cost of permanent ballast')
         self.add_output('ballast_mass', val=0.0, units='kg', desc='mass of permanent ballast')
-        self.add_output('variable_ballast_interp_mass', val=np.zeros((NPTS,)), units='kg', desc='mass vector of potential ballast mass')
-        self.add_output('variable_ballast_interp_zpts', val=np.zeros((NPTS,)), units='m', desc='z-points of potential ballast mass')
+        self.add_output('variable_ballast_interp_mass', val=np.zeros((self.npts,)), units='kg', desc='mass vector of potential ballast mass')
+        self.add_output('variable_ballast_interp_zpts', val=np.zeros((self.npts,)), units='m', desc='z-points of potential ballast mass')
 
         self.add_output('z_center_of_gravity', val=0.0, units='m', desc='z-position CofG of cylinder')
         self.add_output('z_center_of_buoyancy', val=0.0, units='m', desc='z-position CofB of cylinder')
@@ -630,8 +628,8 @@ class Cylinder(Component):
         self.add_output('stiffener_mass', val=0.0, units='kg', desc='mass of spar stiffeners')
         self.add_output('bulkhead_mass', val=0.0, units='kg', desc='mass of spar bulkheads')
 
-        self.add_output('surge_force_vector', val=np.zeros((NPTS,)), units='N', desc='Force in surge direction')
-        self.add_output('surge_force_points', val=np.zeros((NPTS,)), units='m', desc='z-points for surge force vector')
+        self.add_output('surge_force_vector', val=np.zeros((self.npts,)), units='N', desc='Force in surge direction')
+        self.add_output('surge_force_points', val=np.zeros((self.npts,)), units='m', desc='z-points for surge force vector')
         
         self.add_output('outfitting_cost', val=0.0, units='USD', desc='cost of outfitting the spar')
         self.add_output('outfitting_mass', val=0.0, units='kg', desc='cost of outfitting the spar')
@@ -769,7 +767,7 @@ class Cylinder(Component):
 
         # Fixed and total ballast mass and cg
         # Assume they are bottled in cylinders a the keel of the spar- first the permanent then the fixed
-        zpts      = np.linspace(z_draft, z_draft+h_ballast, NPTS)
+        zpts      = np.linspace(z_draft, z_draft+h_ballast, self.npts)
         R_id      = np.interp(zpts, z_nodes, R_od-t_wall)
         V_perm    = np.pi * np.trapz(R_id**2, zpts)
         m_perm    = rho_ballast * V_perm
@@ -782,7 +780,7 @@ class Cylinder(Component):
         z_water_start = z_draft + h_ballast
 
         # Find height of water ballast numerically by finding the height that integrates to the mass we want
-        zpts    = np.linspace(z_water_start, z_nodes[-1], NPTS)
+        zpts    = np.linspace(z_water_start, z_nodes[-1], self.npts)
         R_id    = np.interp(zpts, z_nodes, R_od-t_wall)
         m_water = rho_water * cumtrapz(np.pi*R_id**2, zpts)
         unknowns['variable_ballast_interp_mass'] = np.r_[0.0, m_water] #cumtrapz has length-1
@@ -889,7 +887,7 @@ class Cylinder(Component):
         z_nodes   = params['z_nodes']
         
         # Spar contribution
-        zpts = np.linspace(z_nodes[0], z_nodes[-1], NPTS)
+        zpts = np.linspace(z_nodes[0], z_nodes[-1], self.npts)
         r    = np.interp(zpts, z_nodes, R_od)
         rho  = rhoWater * np.ones(zpts.shape)
         mu   = muWater  * np.ones(zpts.shape)

@@ -7,6 +7,7 @@ import commonse.Frustum as frustum
 
 from commonse import gravity as g
 myones = np.ones((100,))
+NPTS = 100
 
 class TestCylinder(unittest.TestCase):
     def setUp(self):
@@ -63,7 +64,7 @@ class TestCylinder(unittest.TestCase):
 
         self.set_geometry()
 
-        self.myspar = cylinder.Cylinder(2)
+        self.myspar = cylinder.Cylinder(2, NPTS)
         self.myspar.section_mass = np.zeros((2,))
 
         

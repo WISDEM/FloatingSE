@@ -5,6 +5,7 @@ import floatingse.spar as spar
 
 from commonse import gravity as g
 NSECTIONS = 5
+NPTS = 100
 
 class TestSpar(unittest.TestCase):
     def setUp(self):
@@ -34,7 +35,7 @@ class TestSpar(unittest.TestCase):
         self.params['mooring_cost'] = 2.0
         self.params['base_cylinder_cost'] = 2.5
 
-        self.myspar = spar.Spar(NSECTIONS)
+        self.myspar = spar.Spar(NSECTIONS, NPTS)
 
     def testBalance(self):
         self.myspar.balance_spar(self.params, self.unknowns)

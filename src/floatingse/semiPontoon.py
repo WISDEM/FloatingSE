@@ -5,7 +5,6 @@ import pyframe3dd.frame3dd as frame3dd
 from floatingInstance import nodal2sectional
 
 from commonse import gravity
-NPTS = 100
 
 def TubeProperties(R_od, R_id):
     # Cross sectional area, Ax (x is down length of tube)

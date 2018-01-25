@@ -9,7 +9,7 @@ import numpy as np
 
 class SemiAssembly(Group):
 
-    def __init__(self, nSection):
+    def __init__(self, nSection, nIntPts):
         super(SemiAssembly, self).__init__()
 
         # Run Spar Geometry component first
@@ -23,14 +23,14 @@ class SemiAssembly(Group):
 
         # Next do base and ballast cylinders
         # Ballast cylinders are replicated from same design in the components
-        self.add('base', Cylinder(nSection))
-        self.add('ball', Cylinder(nSection))
+        self.add('base', Cylinder(nSection, nIntPts))
+        self.add('ball', Cylinder(nSection, nIntPts))
 
         # Add in the connecting truss
         self.add('pon', SemiPontoon(nSection))
         
         # Run main Semi analysis
-        self.add('sm', Semi(nSection))
+        self.add('sm', Semi(nSection, nIntPts))
 
         # Define all input variables from all models
         # SemiGeometry

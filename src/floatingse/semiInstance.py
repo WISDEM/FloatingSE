@@ -1,4 +1,4 @@
-from floatingInstance import FloatingInstance, NSECTIONS, vecOption
+from floatingInstance import FloatingInstance, NSECTIONS, NPTS, vecOption
 from semiAssembly import SemiAssembly
 import numpy as np
 import time
@@ -103,7 +103,7 @@ class SemiInstance(FloatingInstance):
         self.bulkhead_nodes_ballast[0]          = True
         self.bulkhead_nodes_ballast[1]          = True
         
-    def get_assembly(self): return SemiAssembly(NSECTIONS)
+    def get_assembly(self): return SemiAssembly(NSECTIONS, NPTS)
     
     def get_design_variables(self):
         # Make a neat list of design variables, lower bound, upper bound, scalar

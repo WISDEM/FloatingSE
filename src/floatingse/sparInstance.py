@@ -1,4 +1,4 @@
-from floatingInstance import FloatingInstance, NSECTIONS, vecOption
+from floatingInstance import FloatingInstance, NSECTIONS, NPTS, vecOption
 from sparAssembly import SparAssembly
 import numpy as np
 import time
@@ -68,7 +68,7 @@ class SparInstance(FloatingInstance):
         self.bulkhead_nodes[0]          = True
         self.bulkhead_nodes[1]          = True
 
-    def get_assembly(self): return SparAssembly(NSECTION)
+    def get_assembly(self): return SparAssembly(NSECTIONS, NPTS)
     
     def get_design_variables(self):
         # Make a neat list of design variables, lower bound, upper bound, scalar

@@ -3,15 +3,13 @@ import numpy as np
 
 from commonse import gravity
 
-NPTS = 100
-
 class Semi(Component):
     """
     OpenMDAO Component class for Semisubmersible substructure for floating offshore wind turbines.
     Should be tightly coupled with MAP Mooring class for full system representation.
     """
 
-    def __init__(self, nSection):
+    def __init__(self, nSection, nIntPts):
         super(Semi,self).__init__()
 
         # Environment
@@ -40,8 +38,8 @@ class Semi(Component):
         self.add_param('base_cylinder_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of cylinder buoyancy force')
         self.add_param('base_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
         self.add_param('base_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
-        self.add_param('base_cylinder_surge_force', val=np.zeros((NPTS,)), units='N', desc='Force vector in surge direction on cylinder')
-        self.add_param('base_cylinder_force_points', val=np.zeros((NPTS,)), units='m', desc='zpts for force vector')
+        self.add_param('base_cylinder_surge_force', val=np.zeros((nIntPts,)), units='N', desc='Force vector in surge direction on cylinder')
+        self.add_param('base_cylinder_force_points', val=np.zeros((nIntPts,)), units='m', desc='zpts for force vector')
         self.add_param('base_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
         self.add_param('ballast_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of cylinder by section')
@@ -50,14 +48,14 @@ class Semi(Component):
         self.add_param('ballast_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
         self.add_param('ballast_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
         self.add_param('ballast_cylinder_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
-        self.add_param('ballast_cylinder_surge_force', val=np.zeros((NPTS,)), units='N', desc='Force vector in surge direction on cylinder')
-        self.add_param('ballast_cylinder_force_points', val=np.zeros((NPTS,)), units='m', desc='zpts for force vector')
+        self.add_param('ballast_cylinder_surge_force', val=np.zeros((nIntPts,)), units='N', desc='Force vector in surge direction on cylinder')
+        self.add_param('ballast_cylinder_force_points', val=np.zeros((nIntPts,)), units='m', desc='zpts for force vector')
         self.add_param('ballast_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
         self.add_param('number_of_ballast_cylinders', val=3, desc='Number of ballast cylinders evenly spaced around base cylinder', pass_by_obj=True)
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
-        self.add_param('water_ballast_mass_vector', val=np.zeros((NPTS,)), units='kg', desc='mass vector of potential ballast mass')
-        self.add_param('water_ballast_zpts_vector', val=np.zeros((NPTS,)), units='m', desc='z-points of potential ballast mass')
+        self.add_param('water_ballast_mass_vector', val=np.zeros((nIntPts,)), units='kg', desc='mass vector of potential ballast mass')
+        self.add_param('water_ballast_zpts_vector', val=np.zeros((nIntPts,)), units='m', desc='z-points of potential ballast mass')
         self.add_param('radius_to_ballast_cylinder', val=10.0, units='m',desc='Distance from base cylinder centerpoint to ballast cylinder centerpoint')
 
         # Outputs
@@ -113,7 +111,8 @@ class Semi(Component):
         m_water_data = params['water_ballast_mass_vector']
         z_water_data = params['water_ballast_zpts_vector']
         rhoWater     = params['water_density']
-
+        npts         = z_water_data.size
+        
         # SEMI TODO: Make water_ballast in base only?  cylinders too?  How to apportion?
 
         # Make sure total mass of system with variable water ballast balances against displaced volume
@@ -149,7 +148,7 @@ class Semi(Component):
         # 2nd-order accurate derivative of data
         dmdz    = np.gradient(m_water_data, z_water_data)
         # Put derivative on new data points for integration
-        zpts    = np.linspace(z_water_data[0], z_end, NPTS)
+        zpts    = np.linspace(z_water_data[0], z_end, npts)
         dmdz    = np.interp(zpts, z_water_data, dmdz)
         z_water = np.trapz(zpts * dmdz, zpts) / m_water
         z_cg = (m_turb*z_turb + ncylinder*m_cylinder.sum()*z_cylinder + m_base.sum()*z_base +

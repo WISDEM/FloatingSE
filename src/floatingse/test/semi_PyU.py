@@ -5,6 +5,7 @@ import floatingse.semi as semi
 
 from commonse import gravity as g
 NSECTIONS = 5
+NPTS = 100
 
 class TestSemi(unittest.TestCase):
     def setUp(self):
@@ -57,7 +58,7 @@ class TestSemi(unittest.TestCase):
 
         self.params['water_density'] = 1e3
 
-        self.mysemi = semi.Semi(NSECTIONS)
+        self.mysemi = semi.Semi(NSECTIONS, NPTS)
 
     def testBalance(self):
         self.mysemi.balance_semi(self.params, self.unknowns)
