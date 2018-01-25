@@ -594,7 +594,6 @@ class CylinderGeometry(Component):
         # Unpack variables
         D_water   = params['water_depth']
         R_od      = params['outer_radius']
-        R_tower   = params['tower_base_radius']
         t_wall    = params['wall_thickness']
         h_section = params['section_height']
         freeboard = params['freeboard'] # length of spar under water

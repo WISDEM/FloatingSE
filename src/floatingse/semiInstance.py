@@ -81,6 +81,7 @@ class SemiInstance(FloatingInstance):
         self.section_height_ballast =  vecOption(inval/NSECTIONS, NSECTIONS)
 
     def check_vectors(self):
+        self.tower_radius                    = vecOption(self.tower_radius, NSECTIONS+1)
         self.outer_radius_base               = vecOption(self.outer_radius_base, NSECTIONS+1)
         self.wall_thickness_base             = vecOption(self.wall_thickness_base, NSECTIONS+1)
         self.stiffener_web_height_base       = vecOption(self.stiffener_web_height_base, NSECTIONS)
@@ -168,7 +169,7 @@ class SemiInstance(FloatingInstance):
         self.prob.driver.add_constraint('gcBall.weldability',upper=0.0)
 
         # Ensure that the spar top matches the tower base
-        self.prob.driver.add_constraint('tt.transition_radius',lower=0.0, upper=5.0)
+        self.prob.driver.add_constraint('tt.transition_buffer',lower=0.0, upper=5.0)
         
         # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
         self.prob.driver.add_constraint('mm.safety_factor',lower=0.0, upper=0.8)
@@ -264,9 +265,9 @@ class SemiInstance(FloatingInstance):
         
 def example_semi():
     mysemi = SemiInstance()
-    #mysemi.evaluate('psqp')
+    mysemi.evaluate('psqp')
     #mysemi.visualize('semi-initial.jpg')
-    mysemi.run('psqp')
+    #mysemi.run('psqp')
     return mysemi
 
 def psqp_optimal():

@@ -2,7 +2,6 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import floatingse.semiPontoon as sP
-import floatingse.semiGeometry as semiGeometry
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -28,7 +27,7 @@ class TestCylinder(unittest.TestCase):
         self.params['outer_pontoon_radius'] = 1.0
         self.params['inner_pontoon_radius'] = 0.5
         self.params['base_outer_radius'] = 10.0 * np.ones((NSECTIONS+1,))
-        self.params['tower_base_radius'] = 7.0
+        self.params['tower_radius'] = 7.0 * np.ones((NSECTIONS+1,))
         self.params['ballast_outer_radius'] = 2.0 * np.ones((NSECTIONS+1,))
         self.params['base_wall_thickness'] = 0.1 * np.ones((NSECTIONS+1,))
         self.params['ballast_wall_thickness'] = 0.05 * np.ones((NSECTIONS+1,))

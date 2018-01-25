@@ -2,7 +2,7 @@ from openmdao.api import Group, IndepVarComp, DirectSolver, ScipyGMRES, Newton, 
 from cylinder import Cylinder, CylinderGeometry
 from semi import Semi, SemiGeometry
 from semiPontoon import SemiPontoon
-from mapMooring import MapMooring, Anchor
+from mapMooring import MapMooring
 from turbine import Turbine
 from towerTransition import TowerTransition
 from commonse.UtilizationSupplement import GeometricConstraints
@@ -24,7 +24,7 @@ class SemiAssembly(Group):
         self.add('turb', Turbine())
 
         # Add in transition to tower
-        self.add('tt', TowerTransition())
+        self.add('tt', TowerTransition(nSection+1, diamFlag=False))
 
         # Next run MapMooring
         self.add('mm', MapMooring())
@@ -41,8 +41,8 @@ class SemiAssembly(Group):
         self.add('sm', Semi(nSection, nIntPts))
 
         # Manufacturing and Welding constraints
-        self.add('gcBase', GeometricConstraints(nSection+1))
-        self.add('gcBall', GeometricConstraints(nSection+1))
+        self.add('gcBase', GeometricConstraints(nSection+1, diamFlag=False))
+        self.add('gcBall', GeometricConstraints(nSection+1, diamFlag=False))
 
         # Define all input variables from all models
         # SemiGeometry
@@ -51,7 +51,7 @@ class SemiAssembly(Group):
         self.add('water_depth',                IndepVarComp('x', 0.0))
         self.add('fairlead',                   IndepVarComp('x', 0.0))
         self.add('fairlead_offset_from_shell', IndepVarComp('x', 0.0))
-        self.add('tower_base_radius',          IndepVarComp('x', 0.0))
+        self.add('tower_radius',               IndepVarComp('x', np.zeros((nSection+1,))))
 
         self.add('freeboard_base',             IndepVarComp('x', 0.0))
         self.add('section_height_base',        IndepVarComp('x', np.zeros((nSection,))))
@@ -79,7 +79,7 @@ class SemiAssembly(Group):
         self.add('mooring_diameter',           IndepVarComp('x', 0.0))
         self.add('number_of_mooring_lines',    IndepVarComp('x', 0, pass_by_obj=True))
         self.add('mooring_type',               IndepVarComp('x', 'chain', pass_by_obj=True))
-        self.add('anchor_type',                IndepVarComp('x', Anchor['SUCTIONPILE'], pass_by_obj=True))
+        self.add('anchor_type',                IndepVarComp('x', 'SUCTIONPILE', pass_by_obj=True))
         self.add('drag_embedment_extra_length',IndepVarComp('x', 0.0))
         self.add('max_offset',                 IndepVarComp('x', 0.0))
         self.add('mooring_cost_rate',          IndepVarComp('x', 0.0))
@@ -147,17 +147,17 @@ class SemiAssembly(Group):
 
         self.connect('freeboard_base.x', ['geomBase.freeboard', 'turb.freeboard'])
         self.connect('section_height_base.x', ['geomBase.section_height', 'base.section_height'])
-        self.connect('outer_radius_base.x', ['geomBase.outer_radius', 'base.outer_radius', 'sg.base_outer_radius', 'pon.base_outer_radius', 'gcBase.r', 'tt.base_radius'])
+        self.connect('outer_radius_base.x', ['geomBase.outer_radius', 'base.outer_radius', 'sg.base_outer_radius', 'pon.base_outer_radius', 'gcBase.d', 'tt.base_metric'])
         self.connect('wall_thickness_base.x', ['geomBase.wall_thickness', 'base.wall_thickness', 'pon.base_wall_thickness', 'gcBase.t'])
 
-        self.connect('freeboard_ballast.x', 'geomBall.ballast_freeboard')
-        self.connect('section_height_ballast.x', ['geomBall.ballast_section_height', 'ball.section_height'])
-        self.connect('outer_radius_ballast.x', ['geomBall.ballast_outer_radius', 'ball.outer_radius', 'sg.ballast_outer_radius', 'pon.ballast_outer_radius', 'gcBall.r'])
-        self.connect('wall_thickness_ballast.x', ['geomBall.ballast_wall_thickness', 'ball.wall_thickness', 'pon.ballast_wall_thickness', 'gcBall.t'])
+        self.connect('freeboard_ballast.x', 'geomBall.freeboard')
+        self.connect('section_height_ballast.x', ['geomBall.section_height', 'ball.section_height'])
+        self.connect('outer_radius_ballast.x', ['geomBall.outer_radius', 'ball.outer_radius', 'sg.ballast_outer_radius', 'pon.ballast_outer_radius', 'gcBall.d'])
+        self.connect('wall_thickness_ballast.x', ['geomBall.wall_thickness', 'ball.wall_thickness', 'pon.ballast_wall_thickness', 'gcBall.t'])
 
         self.connect('fairlead.x', ['geomBase.fairlead', 'geomBall.fairlead', 'sg.fairlead', 'mm.fairlead','sm.fairlead'])
         self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
-        self.connect('tower_radius.x', ['tt.tower_radius', 'pon.tower_radius'])
+        self.connect('tower_radius.x', ['tt.tower_metric', 'pon.tower_radius'])
 
         self.connect('rna_mass.x', ['turb.rna_mass', 'pon.rna_mass'])
         self.connect('rna_center_of_gravity.x', 'turb.rna_center_of_gravity')
@@ -230,8 +230,8 @@ class SemiAssembly(Group):
 
         self.connect('number_of_ballast_columns.x', ['pon.number_of_ballast_cylinders', 'sm.number_of_ballast_cylinders'])
 
-        self.connect('min_taper_ratio', 'gc.min_taper')
-        self.connect('min_diameter_thickness_ratio', 'gc.min_d_to_t')
+        self.connect('min_taper_ratio.x', ['gcBase.min_taper', 'gcBall.min_taper'])
+        self.connect('min_diameter_thickness_ratio.x', ['gcBase.min_d_to_t', 'gcBall.min_d_to_t'])
         
         # Link outputs from one model to inputs to another
         self.connect('geomBase.fairlead_radius', 'mm.fairlead_radius')

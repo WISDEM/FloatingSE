@@ -92,7 +92,7 @@ class FloatingInstance(object):
         self.tower_center_of_gravity = 43.4
         self.rna_wind_force = 820818.0
         self.tower_wind_force = 33125.0
-        self.tower_base_radius = 3.25
+        self.tower_radius = 3.25
 
         # Steel properties
         self.material_density = 7850.0

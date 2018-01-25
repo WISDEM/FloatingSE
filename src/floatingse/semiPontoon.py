@@ -325,8 +325,8 @@ class SemiPontoon(Component):
         I    = np.append(I   , c_I )
         S    = np.append(S   , c_S )
         C    = np.append(C   , c_C )
-        modE = np.append(modE, E)
-        modG = np.append(modG, G)
+        modE = np.append(modE, E*np.ones((R_tower.size,)))
+        modG = np.append(modG, G*np.ones((R_tower.size,)))
         roll = np.append(roll, np.zeros((R_tower.size,)) )
         dens = np.append(dens, 1e-16 * np.ones((R_tower.size,)) ) #rho
 

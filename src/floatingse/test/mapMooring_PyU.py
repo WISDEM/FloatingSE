@@ -2,7 +2,7 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import floatingse.mapMooring as mapMooring
-import floatingse.sparGeometry as sparGeometry
+from floatingse.cylinder import CylinderGeometry
 
 from commonse import gravity as g
 
@@ -90,9 +90,9 @@ class TestMapMooring(unittest.TestCase):
         self.mymap.finput.close()
         
     def set_geometry(self):
-        sparGeom = sparGeometry.SparGeometry(2)
+        geom = CylinderGeometry(2)
         tempUnknowns = {}
-        sparGeom.solve_nonlinear(self.params, tempUnknowns, None)
+        geom.solve_nonlinear(self.params, tempUnknowns, None)
         for pairs in tempUnknowns.items():
             self.params[pairs[0]] = pairs[1]
 

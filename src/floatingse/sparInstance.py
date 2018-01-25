@@ -57,6 +57,7 @@ class SparInstance(FloatingInstance):
         self.section_height = vecOption(inval/NSECTIONS, NSECTIONS)
 
     def check_vectors(self):
+        self.tower_radius               = vecOption(self.tower_radius, NSECTIONS+1)
         self.outer_radius               = vecOption(self.outer_radius, NSECTIONS+1)
         self.wall_thickness             = vecOption(self.wall_thickness, NSECTIONS+1)
         self.stiffener_web_height       = vecOption(self.stiffener_web_height, NSECTIONS)
@@ -108,7 +109,7 @@ class SparInstance(FloatingInstance):
         self.prob.driver.add_constraint('gc.weldability',upper=0.0)
 
         # Ensure that the spar top matches the tower base
-        self.prob.driver.add_constraint('tt.transition_radius',lower=0.0, upper=5.0)
+        self.prob.driver.add_constraint('tt.transition_buffer',lower=0.0, upper=5.0)
 
         # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
         self.prob.driver.add_constraint('mm.safety_factor',lower=0.0, upper=0.8)
@@ -176,9 +177,9 @@ class SparInstance(FloatingInstance):
         
 def example_spar():
     myspar = SparInstance()
-    #myspar.evaluate('psqp')
+    myspar.evaluate('psqp')
     #myspar.visualize('spar-initial.jpg')
-    myspar.run('psqp')
+    #myspar.run('psqp')
     return myspar
     
 def psqp_optimal():

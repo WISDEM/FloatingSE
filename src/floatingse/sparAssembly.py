@@ -1,7 +1,7 @@
 from openmdao.api import Group, IndepVarComp
 from cylinder import Cylinder, CylinderGeometry
 from spar import Spar
-from mapMooring import MapMooring, Anchor
+from mapMooring import MapMooring
 from turbine import Turbine
 from towerTransition import TowerTransition
 from commonse.UtilizationSupplement import GeometricConstraints
@@ -19,7 +19,7 @@ class SparAssembly(Group):
         self.add('turb', Turbine())
 
         # Add in transition to tower
-        self.add('tt', TowerTransition())
+        self.add('tt', TowerTransition(nSection+1, diamFlag=False))
 
         # Next run MapMooring
         self.add('mm', MapMooring())
@@ -31,7 +31,7 @@ class SparAssembly(Group):
         self.add('sp', Spar(nSection, nIntPts))
 
         # Manufacturing and Welding constraints
-        self.add('gc', GeometricConstraints(nSection+1))
+        self.add('gc', GeometricConstraints(nSection+1, diamFlag=False))
 
         # Define all input variables from all models
         # SparGeometry
@@ -60,7 +60,7 @@ class SparAssembly(Group):
         self.add('mooring_diameter',           IndepVarComp('x', 0.0))
         self.add('number_of_mooring_lines',    IndepVarComp('x', 0, pass_by_obj=True))
         self.add('mooring_type',               IndepVarComp('x', 'chain', pass_by_obj=True))
-        self.add('anchor_type',                IndepVarComp('x', Anchor['SUCTIONPILE'], pass_by_obj=True))
+        self.add('anchor_type',                IndepVarComp('x', 'SUCTIONPILE', pass_by_obj=True))
         self.add('drag_embedment_extra_length',IndepVarComp('x', 0.0))
         self.add('max_offset',                 IndepVarComp('x', 0.0))
         self.add('mooring_cost_rate',          IndepVarComp('x', 0.0))
@@ -107,10 +107,10 @@ class SparAssembly(Group):
         self.connect('freeboard.x', ['sg.freeboard', 'turb.freeboard'])
         self.connect('fairlead.x', ['sg.fairlead', 'mm.fairlead','sp.fairlead'])
         self.connect('section_height.x', ['sg.section_height', 'cyl.section_height'])
-        self.connect('outer_radius.x', ['sg.outer_radius', 'cyl.outer_radius', 'gc.r', 'tt.base_radius'])
+        self.connect('outer_radius.x', ['sg.outer_radius', 'cyl.outer_radius', 'gc.d', 'tt.base_metric'])
         self.connect('wall_thickness.x', ['sg.wall_thickness', 'cyl.wall_thickness', 'gc.t'])
         self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
-        self.connect('tower_radius.x', 'tt.tower_radius')
+        self.connect('tower_radius.x', 'tt.tower_metric')
 
         self.connect('rna_mass.x', 'turb.rna_mass')
         self.connect('rna_center_of_gravity.x', 'turb.rna_center_of_gravity')
@@ -161,8 +161,8 @@ class SparAssembly(Group):
         self.connect('tapered_col_cost_rate.x', 'cyl.tapered_col_cost_rate')
         self.connect('outfitting_cost_rate.x', 'cyl.outfitting_cost_rate')
 
-        self.connect('min_taper_ratio', 'gc.min_taper')
-        self.connect('min_diameter_thickness_ratio', 'gc.min_d_to_t')
+        self.connect('min_taper_ratio.x', 'gc.min_taper')
+        self.connect('min_diameter_thickness_ratio.x', 'gc.min_d_to_t')
         
         # Link outputs from one model to inputs to another
         self.connect('sg.fairlead_radius', 'mm.fairlead_radius')
