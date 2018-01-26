@@ -63,8 +63,8 @@ class TestSemi(unittest.TestCase):
 
         
     def testSetGeometry(self):
-        self.params['base_outer_radius'] = np.array([10.0, 10.0, 10.0])
-        self.params['ballast_outer_radius'] = np.array([10.0, 10.0, 10.0])
+        self.params['base_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
+        self.params['ballast_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['ballast_z_nodes'] = np.array([-35.0, -15.0, 15.0])
         self.params['radius_to_ballast_cylinder'] = 25.0
         self.params['fairlead'] = 10.0

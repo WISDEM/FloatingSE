@@ -16,7 +16,7 @@ class TestCylinder(unittest.TestCase):
         self.resid = None
 
         self.params['wall_thickness'] = np.array([0.5, 0.5, 0.5])
-        self.params['outer_radius'] = np.array([10.0, 10.0, 10.0])
+        self.params['outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['section_height'] = np.array([20.0, 30.0])
         self.params['freeboard'] = 15.0
         self.params['fairlead'] = 10.0
@@ -154,7 +154,7 @@ class TestCylinder(unittest.TestCase):
         
     def testBulkheadMass(self):
         self.params['wall_thickness'] = np.array([0.5, 1.0])
-        self.params['outer_radius'] = np.array([10.0, 20.0])
+        self.params['outer_diameter'] = 2*np.array([10.0, 20.0])
         self.params['bulkhead_nodes'] = [False, True]
 
         expect = np.pi * 19.0*19.0 * 5.0 * 1.5
@@ -171,7 +171,7 @@ class TestCylinder(unittest.TestCase):
 
         # Frustum shell
         self.params['wall_thickness'] = np.array([0.5, 0.4, 0.3])
-        self.params['outer_radius'] = np.array([10.0, 8.0, 6.0])
+        self.params['outer_diameter'] = 2*np.array([10.0, 8.0, 6.0])
         expect = np.pi/3.0*5.0*1.5*np.array([20.0, 30.0])*np.array([9.75*1.4+7.8*1.3, 7.8*1.1+5.85*1.0])
         actual = cylinder.compute_shell_mass(self.params)
         self.assertAlmostEqual(actual.sum(), expect.sum())
@@ -179,7 +179,7 @@ class TestCylinder(unittest.TestCase):
         
     def testStiffenerMass(self):
         self.params['wall_thickness'] = np.array([0.5, 0.4, 0.5])
-        self.params['outer_radius'] = np.array([10.0, 8.0, 10.0])
+        self.params['outer_diameter'] = 2*np.array([10.0, 8.0, 10.0])
 
         Rwo = 9-0.45
         Rwi = Rwo - 1.
@@ -379,7 +379,7 @@ class TestCylinder(unittest.TestCase):
         in_to_si = ft_to_si / 12.0
         kip_to_si = 4.4482216 * 1e3
 
-        self.params['outer_radius'] = 0.5 * 600 * np.ones((4,)) * in_to_si
+        self.params['outer_diameter'] = 600 * np.ones((4,)) * in_to_si
         self.params['wall_thickness'] = 0.75 * np.ones((4,)) * in_to_si
         self.params['stiffener_web_thickness'] = 5./8. * np.ones((3,)) * in_to_si
         self.params['stiffener_web_height'] = 14.0 * np.ones((3,)) * in_to_si
@@ -398,7 +398,7 @@ class TestCylinder(unittest.TestCase):
         self.set_geometry()
         self.myspar.section_mass = np.zeros((3,))
 
-        expect = 9000 * kip_to_si / (2*np.pi*(self.params['outer_radius'][0]-0.5*self.params['wall_thickness'][0])*self.params['wall_thickness'][0])
+        expect = 9000 * kip_to_si / (2*np.pi*(0.5*self.params['outer_diameter'][0]-0.5*self.params['wall_thickness'][0])*self.params['wall_thickness'][0])
         npt.assert_almost_equal(cylinder.compute_applied_axial(self.params, self.myspar.section_mass), expect* np.ones((3,)), decimal=4)
         
     def testStiffenerFactors(self):
@@ -409,7 +409,7 @@ class TestCylinder(unittest.TestCase):
         in_to_si = ft_to_si / 12.0
         kip_to_si = 4.4482216 * 1e3
 
-        self.params['outer_radius'] = 0.5 * 600 * np.ones((4,)) * in_to_si
+        self.params['outer_diameter'] = 600 * np.ones((4,)) * in_to_si
         self.params['wall_thickness'] = 0.75 * np.ones((4,)) * in_to_si
         self.params['stiffener_web_thickness'] = 5./8. * np.ones((3,)) * in_to_si
         self.params['stiffener_web_height'] = 14.0 * np.ones((3,)) * in_to_si
@@ -421,7 +421,7 @@ class TestCylinder(unittest.TestCase):
         self.params['stack_mass_in'] = 9000 * kip_to_si / g
 
         pressure = 1e-3 * 64. * 60. / 144. * ksi_to_si
-        axial    = 9000 * kip_to_si / (2*np.pi*(self.params['outer_radius'][0]-0.5*self.params['wall_thickness'][0])*self.params['wall_thickness'][0])
+        axial    = 9000 * kip_to_si / (2*np.pi*(0.5*self.params['outer_diameter'][0]-0.5*self.params['wall_thickness'][0])*self.params['wall_thickness'][0])
         self.assertAlmostEqual(axial, 0.5*9000/299.625/0.75/np.pi*ksi_to_si, -4)
         KthL, KthG = cylinder.compute_stiffener_factors(self.params, pressure, axial)
         npt.assert_almost_equal(KthL, 1.0*np.ones((3,)), decimal=1)
@@ -435,7 +435,7 @@ class TestCylinder(unittest.TestCase):
         in_to_si = ft_to_si / 12.0
         kip_to_si = 4.4482216 * 1e3
 
-        self.params['outer_radius'] = 0.5 * 600 * np.ones((4,)) * in_to_si
+        self.params['outer_diameter'] = 600 * np.ones((4,)) * in_to_si
         self.params['wall_thickness'] = 0.75 * np.ones((4,)) * in_to_si
         self.params['stiffener_web_thickness'] = 5./8. * np.ones((3,)) * in_to_si
         self.params['stiffener_web_height'] = 14.0 * np.ones((3,)) * in_to_si
@@ -471,7 +471,7 @@ class TestCylinder(unittest.TestCase):
         in_to_si = ft_to_si / 12.0
         kip_to_si = 4.4482216 * 1e3
         
-        self.params['outer_radius'] = 0.5 * 600 * np.ones((4,)) * in_to_si
+        self.params['outer_diameter'] = 600 * np.ones((4,)) * in_to_si
         self.params['wall_thickness'] = 0.75 * np.ones((4,)) * in_to_si
         self.params['stiffener_web_thickness'] = 5./8. * np.ones((3,)) * in_to_si
         self.params['stiffener_web_height'] = 14.0 * np.ones((3,)) * in_to_si

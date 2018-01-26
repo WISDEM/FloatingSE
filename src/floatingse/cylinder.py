@@ -135,7 +135,7 @@ def compute_bulkhead_mass(params):
     """
     # Unpack variables
     twall        = params['wall_thickness'] # at section nodes
-    R_od         = params['outer_radius'] # at section nodes
+    R_od         = 0.5*params['outer_diameter'] # at section nodes
     bulkheadTF   = params['bulkhead_nodes'] # at section nodes
     rho          = params['material_density']
     coeff        = params['bulkhead_mass_factor']
@@ -165,7 +165,7 @@ def compute_shell_mass(params):
     """
     # Unpack variables
     twall        = params['wall_thickness'] # at section nodes
-    R_od         = params['outer_radius'] # at section nodes
+    R_od         = 0.5*params['outer_diameter'] # at section nodes
     h_section    = params['section_height']
     rho          = params['material_density']
     coeff        = params['shell_mass_factor']
@@ -207,7 +207,7 @@ def compute_stiffener_mass(params):
     m_stiffener : float vector, mass of stiffeners by section
     """
     # Unpack variables
-    R_od         = params['outer_radius'] # at section nodes
+    R_od         = 0.5*params['outer_diameter'] # at section nodes
     twall        = params['wall_thickness'] # at section nodes
     t_web        = params['stiffener_web_thickness'] # by section
     t_flange     = params['stiffener_flange_thickness'] # by section
@@ -317,7 +317,7 @@ def compute_applied_axial(params, section_mass):
     stress   : float (scalar/vector),  axial stress
     """
     # Unpack variables
-    R_od    = nodal2sectional(params['outer_radius'])
+    R_od    = 0.5*nodal2sectional(params['outer_diameter'])
     t_wall  = nodal2sectional(params['wall_thickness'])
     m_stack = params['stack_mass_in']
     R       = R_od - 0.5*t_wall
@@ -359,7 +359,7 @@ def compute_stiffener_factors(params, pressure, axial_stress):
     stiffener_factor_KthG : float (scalar/vector),  Stress modifier from stiffeners for general buckling from external pressure
     """
     # Unpack variables
-    R_od         = nodal2sectional(params['outer_radius'])
+    R_od         = 0.5*nodal2sectional(params['outer_diameter'])
     t_wall       = nodal2sectional(params['wall_thickness'])
     t_web        = params['stiffener_web_thickness']
     t_flange     = params['stiffener_flange_thickness']
@@ -414,7 +414,7 @@ def compute_elastic_stress_limits(params, KthG, loading='hydrostatic'):
     elastic_extern_general_FreG : float (scalar/vector),  Elastic stress limit for general instability from external pressure loads
     """
     # Unpack variables
-    R_od         = nodal2sectional(params['outer_radius'])
+    R_od         = 0.5*nodal2sectional(params['outer_diameter'])
     t_wall       = nodal2sectional(params['wall_thickness'])
     t_web        = params['stiffener_web_thickness']
     t_flange     = params['stiffener_flange_thickness']
@@ -563,7 +563,7 @@ class CylinderGeometry(Component):
         self.add_param('freeboard', val=0.0, units='m', desc='Length of spar above water line')
         self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('section_height', val=np.zeros((nSection,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
-        self.add_param('outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('outer_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer diameter at each section node bottom to top (length = nsection + 1)')
         self.add_param('wall_thickness', val=np.zeros((nSection+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
         self.add_param('fairlead_offset_from_shell', val=0.5, units='m',desc='fairlead offset from shell')
 
@@ -592,7 +592,7 @@ class CylinderGeometry(Component):
         """
         # Unpack variables
         D_water   = params['water_depth']
-        R_od      = params['outer_radius']
+        R_od      = 0.5*params['outer_diameter']
         t_wall    = params['wall_thickness']
         h_section = params['section_height']
         freeboard = params['freeboard']
@@ -661,7 +661,7 @@ class Cylinder(Component):
 
         # Design variables
         self.add_param('section_height', val=np.zeros((nSection,)), units='m', desc='length (height) or each section in the spar bottom to top (length = nsection)')
-        self.add_param('outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('outer_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer diameter at each section node bottom to top (length = nsection + 1)')
         self.add_param('wall_thickness', val=np.zeros((nSection+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
         self.add_param('stiffener_web_height', val=np.zeros((nSection,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top (length = nsection)')
         self.add_param('stiffener_web_thickness', val=np.zeros((nSection,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top (length = nsection)')
@@ -828,7 +828,7 @@ class Cylinder(Component):
 
         """
         # Unpack variables
-        R_od        = params['outer_radius']
+        R_od        = 0.5*params['outer_diameter']
         t_wall      = params['wall_thickness']
         h_ballast   = params['permanent_ballast_height']
         rho_ballast = params['permanent_ballast_density']
@@ -884,7 +884,7 @@ class Cylinder(Component):
         metacentric_height      in 'unknowns' dictionary set
         """
         # Unpack variables
-        R_od              = params['outer_radius']
+        R_od              = 0.5*params['outer_diameter']
         t_wall            = params['wall_thickness']
         z_nodes           = params['z_nodes']
         self.section_mass = np.zeros((z_nodes.size-1,))
@@ -945,7 +945,7 @@ class Cylinder(Component):
         offset_force_ratio in 'unknowns' dictionary set
         """
         # Unpack variables
-        R_od      = params['outer_radius']
+        R_od      = 0.5*params['outer_diameter']
         rhoWater  = params['water_density']
         rhoAir    = params['air_density']
         muWater   = params['water_viscosity']
@@ -1002,7 +1002,7 @@ class Cylinder(Component):
         extern_general_unity   in 'unknowns' dictionary set
         '''
         # Unpack variables
-        R_od         = nodal2sectional(params['outer_radius'])
+        R_od         = 0.5*nodal2sectional(params['outer_diameter'])
         t_wall       = nodal2sectional(params['wall_thickness'])
         t_web        = params['stiffener_web_thickness']
         t_flange     = params['stiffener_flange_thickness']

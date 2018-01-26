@@ -3,7 +3,6 @@ from cylinder import Cylinder, CylinderGeometry
 from semi import Semi, SemiGeometry
 from semiPontoon import SemiPontoon
 from mapMooring import MapMooring
-from turbine import Turbine
 from towerTransition import TowerTransition
 from commonse.UtilizationSupplement import GeometricConstraints
 import numpy as np
@@ -21,7 +20,7 @@ class SemiAssembly(Group):
         self.add('sg', SemiGeometry(nSection))
         
         # Add in transition to tower
-        self.add('tt', TowerTransition(nSection+1, diamFlag=False))
+        self.add('tt', TowerTransition(nSection+1, diamFlag=True))
 
         # Next run MapMooring
         self.add('mm', MapMooring())
@@ -38,8 +37,8 @@ class SemiAssembly(Group):
         self.add('sm', Semi(nSection, nIntPts))
 
         # Manufacturing and Welding constraints
-        self.add('gcBase', GeometricConstraints(nSection+1, diamFlag=False))
-        self.add('gcBall', GeometricConstraints(nSection+1, diamFlag=False))
+        self.add('gcBase', GeometricConstraints(nSection+1, diamFlag=True))
+        self.add('gcBall', GeometricConstraints(nSection+1, diamFlag=True))
 
         # Define all input variables from all models
         # SemiGeometry
@@ -48,16 +47,16 @@ class SemiAssembly(Group):
         self.add('water_depth',                IndepVarComp('x', 0.0))
         self.add('fairlead',                   IndepVarComp('x', 0.0))
         self.add('fairlead_offset_from_shell', IndepVarComp('x', 0.0))
-        self.add('tower_radius',               IndepVarComp('x', np.zeros((nSection+1,))))
+        self.add('tower_diameter',               IndepVarComp('x', np.zeros((nSection+1,))))
 
         self.add('freeboard_base',             IndepVarComp('x', 0.0))
         self.add('section_height_base',        IndepVarComp('x', np.zeros((nSection,))))
-        self.add('outer_radius_base',          IndepVarComp('x', np.zeros((nSection+1,))))
+        self.add('outer_diameter_base',          IndepVarComp('x', np.zeros((nSection+1,))))
         self.add('wall_thickness_base',        IndepVarComp('x', np.zeros((nSection+1,))))
 
         self.add('freeboard_ballast',          IndepVarComp('x', 0.0))
         self.add('section_height_ballast',     IndepVarComp('x', np.zeros((nSection,))))
-        self.add('outer_radius_ballast',       IndepVarComp('x', np.zeros((nSection+1,))))
+        self.add('outer_diameter_ballast',       IndepVarComp('x', np.zeros((nSection+1,))))
         self.add('wall_thickness_ballast',     IndepVarComp('x', np.zeros((nSection+1,))))
 
         # Turbine
@@ -123,8 +122,8 @@ class SemiAssembly(Group):
         # Pontoons
         self.add('G',                          IndepVarComp('x', 0.0))
         self.add('number_of_ballast_columns',  IndepVarComp('x', 0, pass_by_obj=True))
-        self.add('outer_pontoon_radius',       IndepVarComp('x', 0.0))
-        self.add('inner_pontoon_radius',       IndepVarComp('x', 0.0))
+        self.add('pontoon_outer_diameter',       IndepVarComp('x', 0.0))
+        self.add('pontoon_inner_diameter',       IndepVarComp('x', 0.0))
         self.add('cross_attachment_pontoons',  IndepVarComp('x', True, pass_by_obj=True))
         self.add('lower_attachment_pontoons',  IndepVarComp('x', True, pass_by_obj=True))
         self.add('upper_attachment_pontoons',  IndepVarComp('x', True, pass_by_obj=True))
@@ -142,7 +141,7 @@ class SemiAssembly(Group):
 
         self.connect('freeboard_base.x', ['geomBase.freeboard', 'sm.base_freeboard'])
         self.connect('section_height_base.x', ['geomBase.section_height', 'base.section_height'])
-        self.connect('outer_radius_base.x', ['geomBase.outer_radius', 'base.outer_radius', 'sg.base_outer_radius', 'pon.base_outer_radius', 'gcBase.d', 'tt.base_metric'])
+        self.connect('outer_diameter_base.x', ['geomBase.outer_diameter', 'base.outer_diameter', 'sg.base_outer_diameter', 'pon.base_outer_diameter', 'gcBase.d', 'tt.base_metric'])
         self.connect('wall_thickness_base.x', ['geomBase.wall_thickness', 'base.wall_thickness', 'pon.base_wall_thickness', 'gcBase.t'])
 
         self.connect('turbine_mass.x', ['base.stack_mass_in', 'sm.turbine_mass', 'pon.turbine_mass'])
@@ -153,12 +152,12 @@ class SemiAssembly(Group):
 
         self.connect('freeboard_ballast.x', 'geomBall.freeboard')
         self.connect('section_height_ballast.x', ['geomBall.section_height', 'ball.section_height'])
-        self.connect('outer_radius_ballast.x', ['geomBall.outer_radius', 'ball.outer_radius', 'sg.ballast_outer_radius', 'pon.ballast_outer_radius', 'gcBall.d'])
+        self.connect('outer_diameter_ballast.x', ['geomBall.outer_diameter', 'ball.outer_diameter', 'sg.ballast_outer_diameter', 'pon.ballast_outer_diameter', 'gcBall.d'])
         self.connect('wall_thickness_ballast.x', ['geomBall.wall_thickness', 'ball.wall_thickness', 'pon.ballast_wall_thickness', 'gcBall.t'])
 
         self.connect('fairlead.x', ['geomBase.fairlead', 'geomBall.fairlead', 'sg.fairlead', 'mm.fairlead','sm.fairlead'])
         self.connect('fairlead_offset_from_shell.x', ['geomBase.fairlead_offset_from_shell', 'geomBall.fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell'])
-        self.connect('tower_radius.x', ['tt.tower_metric', 'pon.tower_radius'])
+        self.connect('tower_diameter.x', ['tt.tower_metric', 'pon.tower_diameter'])
 
         self.connect('water_density.x', ['mm.water_density', 'base.water_density', 'ball.water_density', 'pon.water_density', 'sm.water_density'])
         self.connect('scope_ratio.x', 'mm.scope_ratio')
@@ -212,8 +211,8 @@ class SemiAssembly(Group):
         self.connect('tapered_col_cost_rate.x', ['base.tapered_col_cost_rate', 'ball.tapered_col_cost_rate'])
         self.connect('outfitting_cost_rate.x', ['base.outfitting_cost_rate', 'ball.outfitting_cost_rate'])
 
-        self.connect('outer_pontoon_radius.x', 'pon.outer_pontoon_radius')
-        self.connect('inner_pontoon_radius.x', 'pon.inner_pontoon_radius')
+        self.connect('pontoon_outer_diameter.x', 'pon.pontoon_outer_diameter')
+        self.connect('pontoon_inner_diameter.x', 'pon.pontoon_inner_diameter')
         self.connect('cross_attachment_pontoons.x', 'pon.cross_attachment_pontoons')
         self.connect('lower_attachment_pontoons.x', 'pon.lower_attachment_pontoons')
         self.connect('upper_attachment_pontoons.x', 'pon.upper_attachment_pontoons')

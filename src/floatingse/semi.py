@@ -15,8 +15,8 @@ class SemiGeometry(Component):
         super(SemiGeometry,self).__init__()
 
         # Design variables
-        self.add_param('base_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('ballast_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('base_outer_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('ballast_outer_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('ballast_z_nodes', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_offset_from_shell', val=0.5, units='m',desc='fairlead offset from shell')
@@ -40,8 +40,8 @@ class SemiGeometry(Component):
         OUTPUTS  : none (all unknown dictionary values set)
         """
         # Unpack variables
-        R_od_base       = params['base_outer_radius']
-        R_od_ballast    = params['ballast_outer_radius']
+        R_od_base       = 0.5*params['base_outer_diameter']
+        R_od_ballast    = 0.5*params['ballast_outer_diameter']
         R_semi          = params['radius_to_ballast_cylinder']
         z_nodes_ballast = params['ballast_z_nodes']
         fairlead        = params['fairlead'] # depth of mooring attachment point

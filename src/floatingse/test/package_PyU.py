@@ -5,7 +5,6 @@ import mapMooring_PyU
 import semiPontoon_PyU
 import semi_PyU
 import spar_PyU
-import turbine_PyU
 
 import numpy as np
 import numpy.testing as npt
@@ -18,8 +17,7 @@ def suiteAll():
                                  mapMooring_PyU.suite(),
                                  semiPontoon_PyU.suite(),
                                  semi_PyU.suite(), 
-                                 spar_PyU.suite(),
-                                 turbine_PyU.suite()
+                                 spar_PyU.suite()
     ) )
     return suite
 

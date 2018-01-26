@@ -57,7 +57,7 @@ class TestMapMooring(unittest.TestCase):
         self.resid = None
 
         self.params['wall_thickness'] = np.array([0.5, 0.5, 0.5])
-        self.params['outer_radius'] = np.array([10.0, 10.0, 10.0])
+        self.params['outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['section_height'] = np.array([20.0, 30.0])
         self.params['freeboard'] = 15.0
         self.params['fairlead'] = 10.0

@@ -89,7 +89,7 @@ class FloatingInstance(object):
         self.turbine_center_of_gravity = np.array([0.0, 0.0, 43.4])
         self.turbine_surge_force = 1.3e6
         self.turbine_pitch_moment = 107850803.0
-        self.tower_radius = 3.25
+        self.tower_diameter = 6.5
 
         # Steel properties
         self.material_density = 7850.0

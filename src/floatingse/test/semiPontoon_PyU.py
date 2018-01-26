@@ -24,11 +24,11 @@ class TestCylinder(unittest.TestCase):
         self.params['pontoon_cost_rate'] = 6.250
 
         self.params['radius_to_ballast_cylinder'] = 10.0
-        self.params['outer_pontoon_radius'] = 1.0
-        self.params['inner_pontoon_radius'] = 0.5
-        self.params['base_outer_radius'] = 10.0 * np.ones((NSECTIONS+1,))
-        self.params['tower_radius'] = 7.0 * np.ones((NSECTIONS+1,))
-        self.params['ballast_outer_radius'] = 2.0 * np.ones((NSECTIONS+1,))
+        self.params['pontoon_outer_diameter'] = 2.0
+        self.params['pontoon_inner_diameter'] = 1.0
+        self.params['base_outer_diameter'] = 2*10.0 * np.ones((NSECTIONS+1,))
+        self.params['tower_diameter'] = 2*7.0 * np.ones((NSECTIONS+1,))
+        self.params['ballast_outer_diameter'] = 2*2.0 * np.ones((NSECTIONS+1,))
         self.params['base_wall_thickness'] = 0.1 * np.ones((NSECTIONS+1,))
         self.params['ballast_wall_thickness'] = 0.05 * np.ones((NSECTIONS+1,))
         self.params['base_cylinder_mass'] = 1e2 * np.ones((NSECTIONS+1,))
@@ -73,8 +73,8 @@ class TestCylinder(unittest.TestCase):
     def testOutputsIncremental(self):
         ncyl   = self.params['number_of_ballast_cylinders']
         R_semi = self.params['radius_to_ballast_cylinder']
-        Ro     = self.params['outer_pontoon_radius']
-        Ri     = self.params['inner_pontoon_radius']
+        Ro     = 0.5*self.params['pontoon_outer_diameter']
+        Ri     = 0.5*self.params['pontoon_inner_diameter']
         rho    = self.params['material_density']
         rhoW   = self.params['water_density']
 

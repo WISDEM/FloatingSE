@@ -2,7 +2,6 @@ from openmdao.api import Group, IndepVarComp
 from cylinder import Cylinder, CylinderGeometry
 from spar import Spar
 from mapMooring import MapMooring
-from turbine import Turbine
 from towerTransition import TowerTransition
 from commonse.UtilizationSupplement import GeometricConstraints
 import numpy as np
@@ -16,7 +15,7 @@ class SparAssembly(Group):
         self.add('sg', CylinderGeometry(nSection))
 
         # Add in transition to tower
-        self.add('tt', TowerTransition(nSection+1, diamFlag=False))
+        self.add('tt', TowerTransition(nSection+1, diamFlag=True))
 
         # Next run MapMooring
         self.add('mm', MapMooring())
@@ -28,7 +27,7 @@ class SparAssembly(Group):
         self.add('sp', Spar(nSection, nIntPts))
 
         # Manufacturing and Welding constraints
-        self.add('gc', GeometricConstraints(nSection+1, diamFlag=False))
+        self.add('gc', GeometricConstraints(nSection+1, diamFlag=True))
 
         # Define all input variables from all models
         # SparGeometry
@@ -36,10 +35,10 @@ class SparAssembly(Group):
         self.add('freeboard',                  IndepVarComp('x', 0.0))
         self.add('fairlead',                   IndepVarComp('x', 0.0))
         self.add('section_height',             IndepVarComp('x', np.zeros((nSection,))))
-        self.add('outer_radius',               IndepVarComp('x', np.zeros((nSection+1,))))
+        self.add('outer_diameter',               IndepVarComp('x', np.zeros((nSection+1,))))
         self.add('wall_thickness',             IndepVarComp('x', np.zeros((nSection+1,))))
         self.add('fairlead_offset_from_shell', IndepVarComp('x', 0.0))
-        self.add('tower_radius',               IndepVarComp('x', np.zeros((nSection+1,))))
+        self.add('tower_diameter',               IndepVarComp('x', np.zeros((nSection+1,))))
 
         # Turbine
         self.add('turbine_mass',               IndepVarComp('x', 0.0))
@@ -101,10 +100,10 @@ class SparAssembly(Group):
         self.connect('freeboard.x', ['sg.freeboard', 'sp.base_freeboard'])
         self.connect('fairlead.x', ['sg.fairlead', 'mm.fairlead','sp.fairlead'])
         self.connect('section_height.x', ['sg.section_height', 'cyl.section_height'])
-        self.connect('outer_radius.x', ['sg.outer_radius', 'cyl.outer_radius', 'gc.d', 'tt.base_metric'])
+        self.connect('outer_diameter.x', ['sg.outer_diameter', 'cyl.outer_diameter', 'gc.d', 'tt.base_metric'])
         self.connect('wall_thickness.x', ['sg.wall_thickness', 'cyl.wall_thickness', 'gc.t'])
         self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
-        self.connect('tower_radius.x', 'tt.tower_metric')
+        self.connect('tower_diameter.x', 'tt.tower_metric')
         
         self.connect('turbine_mass.x', ['cyl.stack_mass_in', 'sp.turbine_mass'])
         self.connect('turbine_center_of_gravity.x', 'sp.turbine_center_of_gravity')

@@ -47,7 +47,7 @@ class SemiPontoon(Component):
 
         # Base cylinder
         self.add_param('base_z_nodes', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('base_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('base_outer_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('base_wall_thickness', val=np.zeros((nSection+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
         self.add_param('base_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of base cylinder by section')
         self.add_param('base_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced by section')
@@ -56,7 +56,7 @@ class SemiPontoon(Component):
 
         # Ballast cylinders
         self.add_param('ballast_z_nodes', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('ballast_outer_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('ballast_outer_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('ballast_wall_thickness', val=np.zeros((nSection+1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
         self.add_param('ballast_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of ballast cylinder by section')
         self.add_param('ballast_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced by section')
@@ -68,8 +68,8 @@ class SemiPontoon(Component):
         self.add_param('number_of_ballast_cylinders', val=3, desc='Number of ballast cylinders evenly spaced around base cylinder', pass_by_obj=True)
 
         # Pontoon properties
-        self.add_param('outer_pontoon_radius', val=0.5, units='m',desc='Outer radius of tubular pontoon that connects ballast or base cylinders')
-        self.add_param('inner_pontoon_radius', val=0.45, units='m',desc='Inner radius of tubular pontoon that connects ballast or base cylinders')
+        self.add_param('pontoon_outer_diameter', val=0.5, units='m',desc='Outer radius of tubular pontoon that connects ballast or base cylinders')
+        self.add_param('pontoon_inner_diameter', val=0.45, units='m',desc='Inner radius of tubular pontoon that connects ballast or base cylinders')
         self.add_param('cross_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the bottom of the central base to the tops of the outer ballast columns', pass_by_obj=True)
         self.add_param('lower_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central base to the outer ballast columns at their bottoms', pass_by_obj=True)
         self.add_param('upper_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central base to the outer ballast columns at their tops', pass_by_obj=True)
@@ -80,7 +80,7 @@ class SemiPontoon(Component):
         self.add_param('turbine_mass', val=0.0, units='kg', desc='mass of tower')
         self.add_param('turbine_surge_force', val=0.0, units='N', desc='Force in surge direction on turbine')
         self.add_param('turbine_pitch_moment', val=0.0, units='m', desc='zpts for force vector')
-        self.add_param('tower_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius of tower at base')
+        self.add_param('tower_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer radius of tower at base')
 
         # Costing
         self.add_param('pontoon_cost_rate', val=6.250, units='USD/kg', desc='Finished cost rate of truss components')
@@ -108,11 +108,11 @@ class SemiPontoon(Component):
         upperRingFlag   = params['upper_ring_pontoons']
         
         R_semi         = params['radius_to_ballast_cylinder']
-        R_od_pontoon   = params['outer_pontoon_radius']
-        R_id_pontoon   = params['inner_pontoon_radius']
-        R_od_base      = params['base_outer_radius']
-        R_tower        = params['tower_radius']
-        R_od_ballast   = params['ballast_outer_radius']
+        R_od_pontoon   = 0.5*params['pontoon_outer_diameter']
+        R_id_pontoon   = 0.5*params['pontoon_inner_diameter']
+        R_od_base      = 0.5*params['base_outer_diameter']
+        R_tower        = 0.5*params['tower_diameter']
+        R_od_ballast   = 0.5*params['ballast_outer_diameter']
 
         t_wall_base    = params['base_wall_thickness']
         t_wall_ballast = params['ballast_wall_thickness']
