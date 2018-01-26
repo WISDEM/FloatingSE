@@ -179,8 +179,7 @@ def compute_shell_mass(params):
     Rtop = R_od[1:] - 0.5*Ttop
 
     # Shell volume for each section determined by allowing for linear variation in R & T in each section.
-    # Integrate 2*pi*r*t*dz from 0 to H
-    V_shell = (np.pi*h_section/3.0)*( Rbot*(2*Tbot + Ttop) + Rtop*(Tbot + 2*Ttop) )
+    V_shell = frustum.frustumShellVolume(Rbot, Rtop, Tbot, Ttop, h_section)
 
     # Ring mass by volume with fudge factor for design features not captured in this simple approach
     return (coeff * rho * V_shell)
@@ -596,7 +595,7 @@ class CylinderGeometry(Component):
         R_od      = params['outer_radius']
         t_wall    = params['wall_thickness']
         h_section = params['section_height']
-        freeboard = params['freeboard'] # length of spar under water
+        freeboard = params['freeboard']
         fairlead  = params['fairlead'] # depth of mooring attachment point
         fair_off  = params['fairlead_offset_from_shell']
 
@@ -611,7 +610,7 @@ class CylinderGeometry(Component):
         
         # With waterline at z=0, set the z-position of section centroids
         R          = R_od - 0.5*t_wall
-        cm_section = frustum.frustumShellCG_radius(R[:-1], R[1:], h_section)
+        cm_section = frustum.frustumShellCG(R[:-1], R[1:], h_section)
         unknowns['z_section'] = z_nodes[:-1] + cm_section
 
         # Create constraint output that draft is less than water depth and fairlead is less than draft
@@ -910,7 +909,7 @@ class Cylinder(Component):
             r_under     = R_od
             z_under     = z_nodes
             
-        V_under     = frustum.frustumVol_radius(r_under[:-1], r_under[1:], np.diff(z_under))
+        V_under     = frustum.frustumVol(r_under[:-1], r_under[1:], np.diff(z_under))
         # 0-pad so that it has the length of sections
         add0        = np.maximum(0, self.section_mass.size-V_under.size)
         V_under     = np.r_[V_under, np.zeros((add0,))]
@@ -918,7 +917,7 @@ class Cylinder(Component):
 
         # Compute Center of Buoyancy in z-coordinates (0=waterline)
         # First get z-coordinates of CG of all frustums
-        z_cg_under  = frustum.frustumCG_radius(r_under[:-1], r_under[1:], np.diff(z_under))
+        z_cg_under  = frustum.frustumCG(r_under[:-1], r_under[1:], np.diff(z_under))
         z_cg_under += z_under[:-1]
         z_cg_under  = np.r_[z_cg_under, np.zeros((add0,))]
         # Now take weighted average of these CG points with volume

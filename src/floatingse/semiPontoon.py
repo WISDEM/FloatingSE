@@ -77,12 +77,10 @@ class SemiPontoon(Component):
         self.add_param('upper_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their tops', pass_by_obj=True)
         
         # Turbine parameters
-        self.add_param('tower_mass', val=0.0, units='kg', desc='mass of tower')
-        self.add_param('turbine_surge_force', val=np.zeros((2,)), units='N', desc='Force in surge direction on turbine')
-        self.add_param('turbine_force_points', val=np.zeros((2,)), units='m', desc='zpts for force vector')
+        self.add_param('turbine_mass', val=0.0, units='kg', desc='mass of tower')
+        self.add_param('turbine_surge_force', val=0.0, units='N', desc='Force in surge direction on turbine')
+        self.add_param('turbine_pitch_moment', val=0.0, units='m', desc='zpts for force vector')
         self.add_param('tower_radius', val=np.zeros((nSection+1,)), units='m', desc='outer radius of tower at base')
-        self.add_param('rna_mass', val=1e5, units='kg', desc='Mass of rotor nacelle assembly')
-        self.add_param('rna_center_of_gravity_x', val=1.0, units='m', desc='Center of gravity along x-axis measured from tower centerline')
 
         # Costing
         self.add_param('pontoon_cost_rate', val=6.250, units='USD/kg', desc='Finished cost rate of truss components')
@@ -130,11 +128,9 @@ class SemiPontoon(Component):
         m_base         = params['base_cylinder_mass']
         m_ballast      = params['ballast_cylinder_mass']
         
-        m_tower        = params['tower_mass']
+        m_turbine      = params['turbine_mass']
         F_turbine      = params['turbine_surge_force']
-        z_Fturbine     = params['turbine_force_points']
-        m_rna          = params['rna_mass']
-        rna_cg_x       = params['rna_center_of_gravity_x']
+        M_turbine      = params['turbine_pitch_moment']
         
         rhoWater       = params['water_density']
         V_base         = params['base_cylinder_displaced_volume']
@@ -145,8 +141,6 @@ class SemiPontoon(Component):
         # Derived geometry variables
         nsect          = z_base.size - 1
         freeboard      = z_base[-1] + 1e-2
-        cg_turbine     = z_Fturbine[0]
-        h_tower        = z_Fturbine[1]
         R_od_base      = nodal2sectional( R_od_base )
         R_od_ballast   = nodal2sectional( R_od_ballast )
         t_wall_base    = nodal2sectional( t_wall_base )
@@ -181,9 +175,9 @@ class SemiPontoon(Component):
 
         # Add tower base, tower CG, tower top nodes (skipping RNA CG for now)
         turbineID = xnode.size + 1
-        xnode = np.r_[xnode, 0.0, 0.0, 0.0, rna_cg_x]
-        ynode = np.r_[ynode, 0.0, 0.0, 0.0, 0.0]
-        znode = np.r_[znode, freeboard, freeboard+cg_turbine, freeboard+h_tower, freeboard+h_tower]
+        xnode = np.r_[xnode, 0.0]
+        ynode = np.r_[ynode, 0.0]
+        znode = np.r_[znode, freeboard]
 
         # Create Node ID object
         nnode = 1 + np.arange(xnode.size)
@@ -306,29 +300,18 @@ class SemiPontoon(Component):
         # Add in tower contributions: truss to freeboard
         N1 = np.append(N1, baseUpperID )
         N2 = np.append(N2, turbineID )
-        # Add in tower contributions: freeboard to towerCG
-        N1 = np.append(N1, turbineID )
-        N2 = np.append(N2, turbineID + 1)
-        # Add in tower contributions: towerCG to tower top
-        N1 = np.append(N1, turbineID + 1)
-        N2 = np.append(N2, turbineID + 2)
-        # Add in tower contributions: tower top to rna
-        N1 = np.append(N1, turbineID + 2)
-        N2 = np.append(N2, turbineID + 3)
         # Special tower (rigid) properties
-        # Senu TODO: Currently assuming a 1m thick tower wall
-        # Senu TODO: RNA should be even stiffer?
-        c_Ax, c_As, c_I, c_Jx, c_S, c_C = TubeProperties(R_tower, R_tower-1.0)
+        c_Ax, c_As, c_I, c_Jx, c_S, c_C = TubeProperties(R_tower[0], R_tower[0]-1.0)
         Ax   = np.append(Ax  , c_Ax)
         As   = np.append(As  , c_As)
         Jx   = np.append(Jx  , c_Jx)
         I    = np.append(I   , c_I )
         S    = np.append(S   , c_S )
         C    = np.append(C   , c_C )
-        modE = np.append(modE, E*np.ones((R_tower.size,)))
-        modG = np.append(modG, G*np.ones((R_tower.size,)))
-        roll = np.append(roll, np.zeros((R_tower.size,)) )
-        dens = np.append(dens, 1e-16 * np.ones((R_tower.size,)) ) #rho
+        modE = np.append(modE, E)
+        modG = np.append(modG, G)
+        roll = np.append(roll, 0.0)
+        dens = np.append(dens, 1e-16) # Don't count in mass
 
 
         # ---Get element object from frame3dd---
@@ -419,14 +402,15 @@ class SemiPontoon(Component):
 
         # Point loading for rotor thrust and wind loads at CG
         # Note: extra momemt from mass accounted for below
-        nF  = turbineID + np.array([1,3], dtype=np.int32)
-        Fx  = F_turbine
-        Fy = Fz = Mxx = Myy = Mzz = np.zeros(Fx.shape)
+        nF  = np.array([ turbineID ], dtype=np.int32)
+        Fx  = np.array([ F_turbine ])
+        Myy = np.array([ M_turbine ])
+        Fy = Fz = Mxx = Mzz = np.zeros(Fx.shape)
         load.changePointLoads(nF, Fx, Fy, Fz, Mxx, Myy, Mzz)
 
-        # Add in extra mass of RNA and tower
-        inode   = np.array([turbineID+1, turbineID+3], dtype=np.int32) # rna
-        m_extra = np.array([m_tower, m_rna])
+        # Add in extra mass of turbine
+        inode   = np.array([turbineID], dtype=np.int32) # rna
+        m_extra = np.array([m_turbine])
         Ixx = Iyy = Izz = Ixy = Ixz = Iyz = rhox = rhoy = rhoz = np.zeros(m_extra.shape)
         self.frame.changeExtraNodeMass(inode, m_extra, Ixx, Iyy, Izz, Ixy, Ixz, Iyz, rhox, rhoy, rhoz, False)
         

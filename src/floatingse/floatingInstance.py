@@ -85,13 +85,10 @@ class FloatingInstance(object):
         self.mooring_diameter = 0.14
 
         # Turbine parameters
-        self.rna_mass= 180e3
-        self.rna_center_of_gravity = 3.5 + 80.0
-        self.rna_center_of_gravity_x = 5.75
-        self.tower_mass = 249718.0
-        self.tower_center_of_gravity = 43.4
-        self.rna_wind_force = 820818.0
-        self.tower_wind_force = 33125.0
+        self.turbine_mass = 371690.0 + 285599.0
+        self.turbine_center_of_gravity = np.array([0.0, 0.0, 43.4])
+        self.turbine_surge_force = 1.3e6
+        self.turbine_pitch_moment = 107850803.0
         self.tower_radius = 3.25
 
         # Steel properties

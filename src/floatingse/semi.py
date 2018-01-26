@@ -70,9 +70,8 @@ class Semi(Component):
 
         # From other components
         self.add_param('turbine_mass', val=0.0, units='kg', desc='mass of tower and rna')
-        self.add_param('turbine_center_of_gravity', val=0.0, units='m', desc='z-position of center of turbine mass')
-        self.add_param('turbine_surge_force', val=np.zeros((2,)), units='N', desc='Force in surge direction on turbine')
-        self.add_param('turbine_force_points', val=np.zeros((2,)), units='m', desc='zpts for force vector')
+        self.add_param('turbine_center_of_gravity', val=np.zeros((3,)), units='m', desc='xyz-position of center of turbine mass')
+        self.add_param('turbine_surge_force', val=0.0, units='N', desc='Force in surge direction on turbine')
         self.add_param('turbine_pitch_moment', val=0.0, units='N*m', desc='Pitching moment from turbine that does not depend on sytem z-center of gravity')
         
         self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
@@ -94,6 +93,7 @@ class Semi(Component):
         self.add_param('base_cylinder_surge_force', val=np.zeros((nIntPts,)), units='N', desc='Force vector in surge direction on cylinder')
         self.add_param('base_cylinder_force_points', val=np.zeros((nIntPts,)), units='m', desc='zpts for force vector')
         self.add_param('base_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('base_freeboard', val=0.0, units='m', desc='Length of spar above water line')
         
         self.add_param('ballast_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of cylinder by section')
         self.add_param('ballast_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced by section')
@@ -154,7 +154,7 @@ class Semi(Component):
         z_base       = params['base_cylinder_center_of_gravity']
         z_cylinder   = params['ballast_cylinder_center_of_gravity']
         z_pontoon    = params['pontoon_center_of_gravity']
-        z_turb       = params['turbine_center_of_gravity']
+        z_turb       = params['turbine_center_of_gravity'][-1]
         z_fairlead   = params['fairlead']*(-1)
 
         z_cb_base     = params['base_cylinder_center_of_buoyancy']
@@ -214,6 +214,7 @@ class Semi(Component):
         ncylinder         = params['number_of_ballast_cylinders']
         z_cb              = unknowns['z_center_of_buoyancy']
         z_cg              = unknowns['z_center_of_gravity']
+        freeboard         = params['base_freeboard']
         
         Iwater_base       = params['base_cylinder_Iwaterplane']
         Iwater_cylinder   = params['ballast_cylinder_Iwaterplane']
@@ -229,8 +230,7 @@ class Semi(Component):
         F_cylinder_vector = params['ballast_cylinder_surge_force']
         zpts_cylinder     = params['ballast_cylinder_force_points']
         
-        F_turb_vector     = params['turbine_surge_force']
-        turb_zpts         = params['turbine_force_points']
+        F_turb            = params['turbine_surge_force']
         M_turb            = params['turbine_pitch_moment']
         
         F_restore         = params['mooring_surge_restoring_force']
@@ -272,9 +272,8 @@ class Semi(Component):
         for k in xrange(ncylinder):
             M_buoy_weight += radii[k]*(F_buoy_cylinder - W_cylinder)
         
-        F_turb     = F_turb_vector.sum()
-        for f,z in zip(F_turb_vector, turb_zpts):
-            M_turb += f*(z-z_cg) 
+        # Correct moment from base of turbine to cg of spar M' = F(x+dx) = m+Fdx
+        M_turb    += F_turb * (freeboard-z_cg) 
 
         F_surge    = F_base + ncylinder*F_cylinder + F_turb
         M_pitch    = M_base + ncylinder*M_cylinder + M_buoy_weight + M_turb

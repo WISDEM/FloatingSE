@@ -41,11 +41,9 @@ class TestCylinder(unittest.TestCase):
         self.params['number_of_ballast_cylinders'] = 3
         self.params['base_z_nodes'] = np.array([-15.0, -12.5, -10.0, 0.0, 5.0, 10.0])
         self.params['ballast_z_nodes'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
-        self.params['tower_mass'] = 1e1
-        self.params['turbine_surge_force'] = np.array([1e1, 5e1])
-        self.params['turbine_force_points'] = np.array([2.0, 40.0])
-        self.params['rna_mass'] = 5e1
-        self.params['rna_center_of_gravity_x'] = 2.0
+        self.params['turbine_surge_force'] = 6e1
+        self.params['turbine_pitch_moment'] = 7e2
+        self.params['turbine_mass'] = 6e1
         self.params['water_density'] = 1025.0
         self.params['base_cylinder_displaced_volume'] = 1e2
         self.params['ballast_cylinder_displaced_volume'] = 1e1
@@ -146,6 +144,7 @@ class TestCylinder(unittest.TestCase):
         
         
     def testDrawTruss(self):
+        self.params['ballast_z_nodes'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 3.0])
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
         self.assertEqual(self.unknowns['pontoon_radii_ratio'], 0.5)
 

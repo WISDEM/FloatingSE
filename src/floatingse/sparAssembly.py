@@ -15,9 +15,6 @@ class SparAssembly(Group):
         # Run Spar Geometry component first
         self.add('sg', CylinderGeometry(nSection))
 
-        # Run Turbine setup second
-        self.add('turb', Turbine())
-
         # Add in transition to tower
         self.add('tt', TowerTransition(nSection+1, diamFlag=False))
 
@@ -45,13 +42,10 @@ class SparAssembly(Group):
         self.add('tower_radius',               IndepVarComp('x', np.zeros((nSection+1,))))
 
         # Turbine
-        self.add('rna_mass',                   IndepVarComp('x', 0.0))
-        self.add('rna_center_of_gravity',      IndepVarComp('x', 0.0))
-        self.add('rna_center_of_gravity_x',    IndepVarComp('x', 0.0))
-        self.add('rna_wind_force',             IndepVarComp('x', 0.0))
-        self.add('tower_mass',                 IndepVarComp('x', 0.0))
-        self.add('tower_center_of_gravity',    IndepVarComp('x', 0.0))
-        self.add('tower_wind_force',           IndepVarComp('x', 0.0))
+        self.add('turbine_mass',               IndepVarComp('x', 0.0))
+        self.add('turbine_center_of_gravity',  IndepVarComp('x', np.zeros((3,))))
+        self.add('turbine_surge_force',        IndepVarComp('x', 0.0))
+        self.add('turbine_pitch_moment',       IndepVarComp('x', 0.0))
 
         # Mooring
         self.add('water_density',              IndepVarComp('x', 0.0))
@@ -104,21 +98,18 @@ class SparAssembly(Group):
 
         # Connect all input variables from all models
         self.connect('water_depth.x', ['sg.water_depth', 'mm.water_depth', 'cyl.water_depth'])
-        self.connect('freeboard.x', ['sg.freeboard', 'turb.freeboard'])
+        self.connect('freeboard.x', ['sg.freeboard', 'sp.base_freeboard'])
         self.connect('fairlead.x', ['sg.fairlead', 'mm.fairlead','sp.fairlead'])
         self.connect('section_height.x', ['sg.section_height', 'cyl.section_height'])
         self.connect('outer_radius.x', ['sg.outer_radius', 'cyl.outer_radius', 'gc.d', 'tt.base_metric'])
         self.connect('wall_thickness.x', ['sg.wall_thickness', 'cyl.wall_thickness', 'gc.t'])
         self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
         self.connect('tower_radius.x', 'tt.tower_metric')
-
-        self.connect('rna_mass.x', 'turb.rna_mass')
-        self.connect('rna_center_of_gravity.x', 'turb.rna_center_of_gravity')
-        self.connect('rna_center_of_gravity_x.x', 'turb.rna_center_of_gravity_x')
-        self.connect('rna_wind_force.x', 'turb.rna_wind_force')
-        self.connect('tower_mass.x', 'turb.tower_mass')
-        self.connect('tower_center_of_gravity.x', 'turb.tower_center_of_gravity')
-        self.connect('tower_wind_force.x', 'turb.tower_wind_force')
+        
+        self.connect('turbine_mass.x', ['cyl.stack_mass_in', 'sp.turbine_mass'])
+        self.connect('turbine_center_of_gravity.x', 'sp.turbine_center_of_gravity')
+        self.connect('turbine_surge_force.x', 'sp.turbine_surge_force')
+        self.connect('turbine_pitch_moment.x', 'sp.turbine_pitch_moment')
 
         self.connect('water_density.x', ['mm.water_density', 'cyl.water_density', 'sp.water_density'])
         self.connect('scope_ratio.x', 'mm.scope_ratio')
@@ -168,12 +159,6 @@ class SparAssembly(Group):
         self.connect('sg.fairlead_radius', 'mm.fairlead_radius')
         self.connect('sg.z_nodes', 'cyl.z_nodes')
         self.connect('sg.z_section', 'cyl.z_section')
-        
-        self.connect('turb.total_mass', ['cyl.stack_mass_in', 'sp.turbine_mass'])
-        self.connect('turb.z_center_of_gravity', 'sp.turbine_center_of_gravity')
-        self.connect('turb.surge_force', 'sp.turbine_surge_force')
-        self.connect('turb.force_points', 'sp.turbine_force_points')
-        self.connect('turb.pitch_moment', 'sp.turbine_pitch_moment')
         
         self.connect('mm.mooring_mass', 'sp.mooring_mass')
         self.connect('mm.mooring_effective_mass', 'sp.mooring_effective_mass')
@@ -226,11 +211,6 @@ class SparAssembly(Group):
         self.cyl.deriv_options['form'] = formStr
         self.cyl.deriv_options['step_size'] = stepVal
         self.cyl.deriv_options['step_calc'] = stepStr
-
-        self.turb.deriv_options['type'] = typeStr
-        self.turb.deriv_options['form'] = formStr
-        self.turb.deriv_options['step_size'] = stepVal
-        self.turb.deriv_options['step_calc'] = stepStr
 
         self.sp.deriv_options['type'] = typeStr
         self.sp.deriv_options['form'] = formStr

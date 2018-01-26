@@ -21,15 +21,15 @@ class TestSpar(unittest.TestCase):
         self.params['base_cylinder_displaced_volume'] = 2e2/NSECTIONS  * np.ones((NSECTIONS,))
         self.params['base_cylinder_center_of_buoyancy'] = -10.0
         self.params['base_cylinder_center_of_gravity'] = -8.0
+        self.params['base_freeboard'] = 10.0
         self.params['water_ballast_mass_vector'] = 1e5*np.arange(5)
         self.params['water_ballast_zpts_vector'] = np.array([-10, -9, -8, -7, -6])
-        self.params['turbine_center_of_gravity'] = 2.0
+        self.params['turbine_center_of_gravity'] = 2.0*np.ones(3)
         self.params['fairlead'] = 1.0
         self.params['base_cylinder_Iwaterplane'] = 150.0
         self.params['base_cylinder_surge_force'] = np.array([11.0, 15.0]) 
         self.params['base_cylinder_force_points'] = np.array([-7.0, -4.0]) 
-        self.params['turbine_surge_force'] = np.array([6.0, 7.0]) 
-        self.params['turbine_force_points'] = np.array([2.0, -2.0])
+        self.params['turbine_surge_force'] = 13.0
         self.params['turbine_pitch_moment'] = 5.0
         self.params['mooring_surge_restoring_force'] = 200.0
         self.params['mooring_cost'] = 2.0
@@ -62,7 +62,7 @@ class TestSpar(unittest.TestCase):
         self.assertEqual(self.unknowns['static_stability'], static_expect)
         self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
         self.assertEqual(self.unknowns['offset_force_ratio'], (Fc+13)/200.0)
-        self.assertAlmostEqual(self.unknowns['heel_angle'], (180/np.pi)*(16+Mc)/(2e2*g*1e3*meta_expect))
+        self.assertAlmostEqual(self.unknowns['heel_angle'], (180/np.pi)*(5+13*11+Mc)/(2e2*g*1e3*meta_expect))
 
 
     def testCost(self):

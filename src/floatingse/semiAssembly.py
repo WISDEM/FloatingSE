@@ -20,9 +20,6 @@ class SemiAssembly(Group):
         # Run Semi Geometry for interfaces
         self.add('sg', SemiGeometry(nSection))
         
-        # Run Turbine setup second
-        self.add('turb', Turbine())
-
         # Add in transition to tower
         self.add('tt', TowerTransition(nSection+1, diamFlag=False))
 
@@ -64,13 +61,11 @@ class SemiAssembly(Group):
         self.add('wall_thickness_ballast',     IndepVarComp('x', np.zeros((nSection+1,))))
 
         # Turbine
-        self.add('rna_mass',                   IndepVarComp('x', 0.0))
-        self.add('rna_center_of_gravity',      IndepVarComp('x', 0.0))
-        self.add('rna_center_of_gravity_x',    IndepVarComp('x', 0.0))
-        self.add('rna_wind_force',             IndepVarComp('x', 0.0))
-        self.add('tower_mass',                 IndepVarComp('x', 0.0))
-        self.add('tower_center_of_gravity',    IndepVarComp('x', 0.0))
-        self.add('tower_wind_force',           IndepVarComp('x', 0.0))
+        self.add('turbine_mass',               IndepVarComp('x', 0.0))
+        self.add('dummy_mass',                 IndepVarComp('x', 0.0))
+        self.add('turbine_center_of_gravity',  IndepVarComp('x', np.zeros((3,))))
+        self.add('turbine_surge_force',        IndepVarComp('x', 0.0))
+        self.add('turbine_pitch_moment',       IndepVarComp('x', 0.0))
 
         # Mooring
         self.add('water_density',              IndepVarComp('x', 0.0))
@@ -145,10 +140,16 @@ class SemiAssembly(Group):
         self.connect('water_depth.x', ['geomBase.water_depth', 'geomBall.water_depth', 'mm.water_depth', 'base.water_depth', 'ball.water_depth'])
         self.connect('radius_to_ballast_cylinder.x', ['sg.radius_to_ballast_cylinder', 'pon.radius_to_ballast_cylinder', 'sm.radius_to_ballast_cylinder'])
 
-        self.connect('freeboard_base.x', ['geomBase.freeboard', 'turb.freeboard'])
+        self.connect('freeboard_base.x', ['geomBase.freeboard', 'sm.base_freeboard'])
         self.connect('section_height_base.x', ['geomBase.section_height', 'base.section_height'])
         self.connect('outer_radius_base.x', ['geomBase.outer_radius', 'base.outer_radius', 'sg.base_outer_radius', 'pon.base_outer_radius', 'gcBase.d', 'tt.base_metric'])
         self.connect('wall_thickness_base.x', ['geomBase.wall_thickness', 'base.wall_thickness', 'pon.base_wall_thickness', 'gcBase.t'])
+
+        self.connect('turbine_mass.x', ['base.stack_mass_in', 'sm.turbine_mass', 'pon.turbine_mass'])
+        self.connect('dummy_mass.x', 'ball.stack_mass_in')
+        self.connect('turbine_center_of_gravity.x', 'sm.turbine_center_of_gravity')
+        self.connect('turbine_surge_force.x', ['pon.turbine_surge_force', 'sm.turbine_surge_force'])
+        self.connect('turbine_pitch_moment.x', ['pon.turbine_pitch_moment', 'sm.turbine_pitch_moment'])
 
         self.connect('freeboard_ballast.x', 'geomBall.freeboard')
         self.connect('section_height_ballast.x', ['geomBall.section_height', 'ball.section_height'])
@@ -156,16 +157,8 @@ class SemiAssembly(Group):
         self.connect('wall_thickness_ballast.x', ['geomBall.wall_thickness', 'ball.wall_thickness', 'pon.ballast_wall_thickness', 'gcBall.t'])
 
         self.connect('fairlead.x', ['geomBase.fairlead', 'geomBall.fairlead', 'sg.fairlead', 'mm.fairlead','sm.fairlead'])
-        self.connect('fairlead_offset_from_shell.x', 'sg.fairlead_offset_from_shell')
+        self.connect('fairlead_offset_from_shell.x', ['geomBase.fairlead_offset_from_shell', 'geomBall.fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell'])
         self.connect('tower_radius.x', ['tt.tower_metric', 'pon.tower_radius'])
-
-        self.connect('rna_mass.x', ['turb.rna_mass', 'pon.rna_mass'])
-        self.connect('rna_center_of_gravity.x', 'turb.rna_center_of_gravity')
-        self.connect('rna_center_of_gravity_x.x', ['turb.rna_center_of_gravity_x', 'pon.rna_center_of_gravity_x'])
-        self.connect('rna_wind_force.x', 'turb.rna_wind_force')
-        self.connect('tower_mass.x', ['turb.tower_mass', 'pon.tower_mass'])
-        self.connect('tower_center_of_gravity.x', 'turb.tower_center_of_gravity')
-        self.connect('tower_wind_force.x', 'turb.tower_wind_force')
 
         self.connect('water_density.x', ['mm.water_density', 'base.water_density', 'ball.water_density', 'pon.water_density', 'sm.water_density'])
         self.connect('scope_ratio.x', 'mm.scope_ratio')
@@ -239,12 +232,6 @@ class SemiAssembly(Group):
         self.connect('geomBase.z_section', 'base.z_section')
         self.connect('geomBall.z_nodes', ['ball.z_nodes', 'sg.ballast_z_nodes', 'pon.ballast_z_nodes'])
         self.connect('geomBall.z_section', 'ball.z_section')
-        
-        self.connect('turb.total_mass', ['base.stack_mass_in', 'sm.turbine_mass'])
-        self.connect('turb.z_center_of_gravity', 'sm.turbine_center_of_gravity')
-        self.connect('turb.surge_force', ['pon.turbine_surge_force', 'sm.turbine_surge_force'])
-        self.connect('turb.force_points', ['pon.turbine_force_points', 'sm.turbine_force_points'])
-        self.connect('turb.pitch_moment', 'sm.turbine_pitch_moment')
         
         self.connect('mm.mooring_mass', 'sm.mooring_mass')
         self.connect('mm.mooring_effective_mass', 'sm.mooring_effective_mass')
@@ -333,11 +320,6 @@ class SemiAssembly(Group):
         self.ball.deriv_options['form'] = formStr
         self.ball.deriv_options['step_size'] = stepVal
         self.ball.deriv_options['step_calc'] = stepStr
-
-        self.turb.deriv_options['type'] = typeStr
-        self.turb.deriv_options['form'] = formStr
-        self.turb.deriv_options['step_size'] = stepVal
-        self.turb.deriv_options['step_calc'] = stepStr
 
         self.pon.deriv_options['type'] = typeStr
         self.pon.deriv_options['form'] = formStr

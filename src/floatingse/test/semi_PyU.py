@@ -15,9 +15,8 @@ class TestSemi(unittest.TestCase):
 
         # From other components
         self.params['turbine_mass'] = 1e4
-        self.params['turbine_center_of_gravity'] = 40.0
-        self.params['turbine_surge_force'] = np.array([11.0, 15.0]) 
-        self.params['turbine_force_points'] = np.array([40.0, 80.0])
+        self.params['turbine_center_of_gravity'] = 40.0*np.ones(3)
+        self.params['turbine_surge_force'] = 26.0
         self.params['turbine_pitch_moment'] = 5e4
         
         self.params['mooring_mass'] = 20.0
@@ -39,6 +38,7 @@ class TestSemi(unittest.TestCase):
         self.params['base_cylinder_surge_force'] = np.array([11.0, 15.0]) 
         self.params['base_cylinder_force_points'] = np.array([-7.0, -4.0]) 
         self.params['base_cylinder_cost'] = 32.0
+        self.params['base_freeboard'] = 10.0
         
         self.params['ballast_cylinder_mass'] = 1.5e4 * np.ones((NSECTIONS,))
         self.params['ballast_cylinder_displaced_volume'] = 5e3 * np.ones((NSECTIONS,))

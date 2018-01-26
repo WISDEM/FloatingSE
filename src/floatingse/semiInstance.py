@@ -71,6 +71,8 @@ class SemiInstance(FloatingInstance):
 
         self.section_height_ballast = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
         self.outer_radius_ballast = np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
+
+        self.dummy_mass = 1e-16
         
         # Change scalars to vectors where needed
         self.check_vectors()

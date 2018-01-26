@@ -17,9 +17,8 @@ class Spar(Component):
 
         # From other components
         self.add_param('turbine_mass', val=0.0, units='kg', desc='mass of tower and rna')
-        self.add_param('turbine_center_of_gravity', val=0.0, units='m', desc='z-position of center of turbine mass')
-        self.add_param('turbine_surge_force', val=np.zeros((2,)), units='N', desc='Force in surge direction on turbine')
-        self.add_param('turbine_force_points', val=np.zeros((2,)), units='m', desc='zpts for force vector')
+        self.add_param('turbine_center_of_gravity', val=np.zeros((3,)), units='m', desc='xyz-position of center of turbine mass')
+        self.add_param('turbine_surge_force', val=0.0, units='N', desc='Force in surge direction on turbine')
         self.add_param('turbine_pitch_moment', val=0.0, units='N*m', desc='Pitching moment from turbine that does not depend on sytem z-center of gravity')
 
         self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
@@ -35,6 +34,7 @@ class Spar(Component):
         self.add_param('base_cylinder_surge_force', val=np.zeros((nIntPts,)), units='N', desc='Force vector in surge direction on cylinder')
         self.add_param('base_cylinder_force_points', val=np.zeros((nIntPts,)), units='m', desc='zpts for force vector')
         self.add_param('base_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('base_freeboard', val=0.0, units='m', desc='Length of spar above water line')
 
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('water_ballast_mass_vector', val=np.zeros((nIntPts,)), units='kg', desc='mass vector of potential ballast mass')
@@ -74,7 +74,7 @@ class Spar(Component):
         m_water_data = params['water_ballast_mass_vector']
         V_cylinder   = params['base_cylinder_displaced_volume']
         z_cylinder   = params['base_cylinder_center_of_gravity']
-        z_turb       = params['turbine_center_of_gravity']
+        z_turb       = params['turbine_center_of_gravity'][-1]
         z_fairlead   = params['fairlead']*(-1)
         z_water_data = params['water_ballast_zpts_vector']
         rhoWater     = params['water_density']
@@ -126,11 +126,11 @@ class Spar(Component):
         Iwater_system     = params['base_cylinder_Iwaterplane']
         F_cylinder_vector = params['base_cylinder_surge_force']
         cylinder_zpts     = params['base_cylinder_force_points']
-        F_turb_vector     = params['turbine_surge_force']
-        turb_zpts         = params['turbine_force_points']
+        F_turb            = params['turbine_surge_force']
         M_turb            = params['turbine_pitch_moment']
         F_restore         = params['mooring_surge_restoring_force']
         rhoWater          = params['water_density']
+        freeboard         = params['base_freeboard']
         
         # Compute the distance from the center of buoyancy to the metacentre (BM is naval architecture)
         # BM = Iw / V where V is the displacement volume (just computed)
@@ -156,9 +156,9 @@ class Spar(Component):
         # Metacentric height computed during spar balancing calculation
         F_cylinder = np.trapz(F_cylinder_vector, cylinder_zpts)
         M_cylinder = np.trapz((cylinder_zpts-z_cg)*F_cylinder_vector, cylinder_zpts)
-        F_turb     = F_turb_vector.sum()
-        for f,z in zip(F_turb_vector, turb_zpts):
-            M_turb += f*(z-z_cg) 
+
+        # Correct moment from base of turbine to cg of spar M' = F(x+dx) = m+Fdx
+        M_turb    += F_turb * (freeboard-z_cg) 
             
         F_surge    = F_cylinder + F_turb
         F_buoy     = V_system * rhoWater * gravity
