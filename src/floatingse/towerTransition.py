@@ -18,6 +18,12 @@ class TowerTransition(Component):
         # Output constraints
         self.add_output('transition_buffer', val=0.0, units='m', desc='Buffer between substructure base and tower base')
         
+        # Derivatives
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['step_size'] = 1e-5
+        
     def solve_nonlinear(self, params, unknowns, resids):
         r_tower = params['tower_metric']
         r_base  = params['base_metric']

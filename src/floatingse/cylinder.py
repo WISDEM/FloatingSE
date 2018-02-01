@@ -3,7 +3,7 @@ import numpy as np
 from scipy.optimize import brentq, minimize_scalar
 from scipy.integrate import cumtrapz
 
-from commonse import gravity
+from commonse import gravity, eps
 from floatingInstance import nodal2sectional
 from commonse.WindWaveDrag import cylinderDrag
 import commonse.Frustum as frustum
@@ -577,6 +577,11 @@ class CylinderGeometry(Component):
         self.add_output('draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
         self.add_output('fairlead_draft_ratio', val=0.0, desc='Ratio of fairlead to draft')
 
+        # Derivatives
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['step_size'] = 1e-5
 
     def solve_nonlinear(self, params, unknowns, resids):
         """Sets nodal points and sectional centers of mass in z-coordinate system with z=0 at the waterline.
@@ -646,7 +651,7 @@ class Cylinder(Component):
         self.add_param('wind_reference_height', val=0.0, units='m', desc='reference height')
         self.add_param('alpha', val=0.0, desc='power law exponent')
         self.add_param('morison_mass_coefficient', val=2.0, desc='One plus the added mass coefficient')
-        self.add_param('stack_mass_in', val=1e-12, units='kg', desc='Weight above the cylinder column')
+        self.add_param('stack_mass_in', val=eps, units='kg', desc='Weight above the cylinder column')
         
         # Material properties
         self.add_param('material_density', val=7850., units='kg/m**3', desc='density of material')
@@ -719,7 +724,12 @@ class Cylinder(Component):
         self.add_output('axial_general_unity', val=np.zeros((nSection,)), desc='unity check for axial load - genenral instability')
         self.add_output('external_local_unity', val=np.zeros((nSection,)), desc='unity check for external pressure - local buckling')
         self.add_output('external_general_unity', val=np.zeros((nSection,)), desc='unity check for external pressure - general instability')
-
+        
+        # Derivatives
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['step_size'] = 1e-5
         
         
     def solve_nonlinear(self, params, unknowns, resids):
@@ -921,6 +931,7 @@ class Cylinder(Component):
         z_cg_under += z_under[:-1]
         z_cg_under  = np.r_[z_cg_under, np.zeros((add0,))]
         # Now take weighted average of these CG points with volume
+        V_under += eps
         unknowns['z_center_of_buoyancy'] = np.dot(V_under, z_cg_under) / V_under.sum()
 
         # 2nd moment of area for circular cross section

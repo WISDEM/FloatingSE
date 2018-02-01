@@ -4,9 +4,10 @@ import numpy as np
 import pyframe3dd.frame3dd as frame3dd
 from floatingInstance import nodal2sectional
 
-from commonse import gravity
+from commonse import gravity, eps
 
 def TubeProperties(R_od, R_id):
+    R_od += eps
     # Cross sectional area, Ax (x is down length of tube)
     Ax = np.pi*(R_od**2.0 - R_id**2.0)
     # Shear area (see section 7.4.5 of Frame3dd documentation)
@@ -15,9 +16,9 @@ def TubeProperties(R_od, R_id):
     # Moment of inertia
     I = 0.25 * np.pi * (R_od**4.0 - R_id**4.0)
     # 0-checks
-    Ax = np.maximum(1e-16, Ax)
-    As = np.maximum(1e-16, As)
-    I  = np.maximum(1e-16, I)
+    Ax = np.maximum(eps, Ax)
+    As = np.maximum(eps, As)
+    I  = np.maximum(eps, I)
     # Other properties for tubular sections
     J = 2.0 * I
     S = I / R_od
@@ -77,11 +78,15 @@ class SemiPontoon(Component):
         self.add_param('upper_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their tops', pass_by_obj=True)
         
         # Turbine parameters
-        self.add_param('turbine_mass', val=0.0, units='kg', desc='mass of tower')
+        self.add_param('turbine_mass', val=eps, units='kg', desc='mass of tower')
         self.add_param('turbine_surge_force', val=0.0, units='N', desc='Force in surge direction on turbine')
-        self.add_param('turbine_pitch_moment', val=0.0, units='m', desc='zpts for force vector')
+        self.add_param('turbine_pitch_moment', val=0.0, units='N*m', desc='Pitching moment (Myy) about turbine base')
         self.add_param('tower_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer radius of tower at base')
 
+        # Manufacturing
+        self.add_param('base_connection_ratio_min', val=0.0, desc='Minimum Ratio of pontoon outer diameter to base outer diameter')
+        self.add_param('ballast_connection_ratio_min', val=0.0, desc='Minimum Ratio of pontoon outer diameter to base outer diameter')
+        
         # Costing
         self.add_param('pontoon_cost_rate', val=6.250, units='USD/kg', desc='Finished cost rate of truss components')
 
@@ -97,7 +102,15 @@ class SemiPontoon(Component):
         self.add_output('axial_stress_factor', val=0.0, desc='Ratio of axial stress to yield stress for all pontoon elements')
         self.add_output('shear_stress_factor', val=0.0, desc='Ratio of shear stress to yield stress for all pontoon elements')
         self.add_output('plot_matrix', val=np.array([]), desc='Ratio of shear stress to yield stress for all pontoon elements', pass_by_obj=True)
+        self.add_output('base_connection_ratio', val=np.zeros((nSection+1,)), desc='Ratio of pontoon outer diameter to base outer diameter')
+        self.add_output('ballast_connection_ratio', val=np.zeros((nSection+1,)), desc='Ratio of pontoon outer diameter to base outer diameter')
         
+        
+        # Derivatives
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['step_size'] = 1e-5
          
     def solve_nonlinear(self, params, unknowns, resids):
         # Unpack variables
@@ -137,6 +150,10 @@ class SemiPontoon(Component):
         V_ballast      = params['ballast_cylinder_displaced_volume']
 
         coeff          = params['pontoon_cost_rate']
+
+        # Quick ratio for unknowns
+        unknowns['base_connection_ratio'] = (params['base_connection_ratio_min'] - R_od_base/R_od_pontoon) / params['base_connection_ratio_min']
+        unknowns['ballast_connection_ratio'] = (params['ballast_connection_ratio_min'] - R_od_ballast/R_od_pontoon) / params['ballast_connection_ratio_min']
 
         # Derived geometry variables
         nsect          = z_base.size - 1
@@ -275,7 +292,7 @@ class SemiPontoon(Component):
             modE = np.append(modE, E )
             modG = np.append(modG, G )
             roll = np.append(roll, 0.0 )
-            dens = np.append(dens, 1e-16 ) #rho
+            dens = np.append(dens, eps ) #rho
 
         ballastEID = []
         for k in xrange(ncylinder):
@@ -295,7 +312,7 @@ class SemiPontoon(Component):
                 modE = np.append(modE, E )
                 modG = np.append(modG, G )
                 roll = np.append(roll, 0.0 )
-                dens = np.append(dens, 1e-16 ) #rho
+                dens = np.append(dens, eps ) #rho
 
         # Add in tower contributions: truss to freeboard
         N1 = np.append(N1, baseUpperID )
@@ -311,7 +328,7 @@ class SemiPontoon(Component):
         modE = np.append(modE, E)
         modG = np.append(modG, G)
         roll = np.append(roll, 0.0)
-        dens = np.append(dens, 1e-16) # Don't count in mass
+        dens = np.append(dens, eps) # Don't count in mass
 
 
         # ---Get element object from frame3dd---
@@ -439,7 +456,6 @@ class SemiPontoon(Component):
             internalForces = []
             for k in xrange(nelem.size):
                 internalForces.append( errData(errVal, errVal, errVal, errVal, errVal, errVal) )
-
         
         # --OUTPUTS--
         unknowns['plot_matrix'] = plotMat

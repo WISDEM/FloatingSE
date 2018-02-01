@@ -67,6 +67,12 @@ class MapMooring(Component):
         self.add_output('mooring_length_min', val=0.0, desc='mooring line length ratio to nodal distance')
         self.add_output('mooring_length_max', val=0.0, desc='mooring line length ratio to nodal distance')
         
+        # Derivatives
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['step_size'] = 1e-5
+        
     def solve_nonlinear(self, params, unknowns, resids):
         """Sets mooring line properties then writes MAP input file and executes MAP.
         

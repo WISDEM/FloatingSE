@@ -58,49 +58,51 @@ def set_axes_equal(ax):
 class FloatingInstance(object):
     def __init__(self):
         self.prob = Problem()
+        self.params = {}
 
         # Environmental parameters
-        self.water_depth = 218.0
-        self.air_density = 1.198
-        self.air_viscosity = 1.81e-5
-        self.water_density = 1025.0
-        self.water_viscosity = 8.9e-4
-        self.wave_height = 10.8
-        self.wave_period = 9.8
-        self.wind_reference_speed = 11.0
-        self.wind_reference_height = 119.0
-        self.alpha = 0.11
-        self.morison_mass_coefficient = 2.0
+        self.params['water_depth'] = 218.0
+        self.params['air_density'] = 1.198
+        self.params['air_viscosity'] = 1.81e-5
+        self.params['water_density'] = 1025.0
+        self.params['water_viscosity'] = 8.9e-4
+        self.params['wave_height'] = 10.8
+        self.params['wave_period'] = 9.8
+        self.params['wind_reference_speed'] = 11.73732
+        self.params['wind_reference_height'] = 90.0
+        self.params['alpha'] = 0.11
+        self.params['morison_mass_coefficient'] = 2.0
 
         # Mooring parameters
-        self.max_offset  = 0.1*self.water_depth # Assumption        
-        self.number_of_mooring_lines = 3
-        self.mooring_type = 'chain'
-        self.anchor_type = 'suctionpile'
-        self.mooring_cost_rate = 1.1
-        self.scope_ratio = 2.6
-        self.anchor_radius = 420.0
-        self.drag_embedment_extra_length = 300.0
+        self.params['mooring_max_offset'] = 0.1*self.params['water_depth'] # Assumption        
+        self.params['number_of_mooring_lines'] = 3
+        self.params['mooring_type'] = 'chain'
+        self.params['anchor_type'] = 'suctionpile'
+        self.params['mooring_cost_rate'] = 1.1
+        self.params['scope_ratio'] = 2.6
+        self.params['anchor_radius'] = 420.0
+        self.params['drag_embedment_extra_length'] = 300.0
         
-        self.mooring_diameter = 0.14
+        self.params['mooring_diameter'] = 0.14
 
         # Turbine parameters
-        self.turbine_mass = 371690.0 + 285599.0
-        self.turbine_center_of_gravity = np.array([0.0, 0.0, 43.4])
-        self.turbine_surge_force = 1.3e6
-        self.turbine_pitch_moment = 107850803.0
-        self.tower_diameter = 6.5
+        self.params['turbine_mass'] = 371690.0 + 285599.0
+        self.params['turbine_center_of_gravity'] = np.array([0.0, 0.0, 43.4])
+        self.params['turbine_surge_force'] = 1.3e6
+        self.params['turbine_pitch_moment'] = 107850803.0
 
         # Steel properties
-        self.material_density = 7850.0
-        self.E = 200e9
-        self.G = 79.3e9
-        self.nu = 0.26
-        self.yield_stress = 3.45e8
+        self.params['material_density'] = 7850.0
+        self.params['E'] = 200e9
+        self.params['G'] = 79.3e9
+        self.params['nu'] = 0.26
+        self.params['yield_stress'] = 3.45e8
 
         # Design parameters
-        self.min_taper_ratio = 0.4
-        self.min_diameter_thickness_ratio = 120.0
+        self.params['min_taper'] = 0.4
+        self.params['min_d_to_t'] = 120.0
+        self.params['min_taper_ratio'] = 0.4
+        self.params['min_diameter_thickness_ratio'] = 120.0
         
     def get_assembly(self):
         raise NotImplementedError("Subclasses should implement this!")
@@ -128,13 +130,19 @@ class FloatingInstance(object):
         if optimizer.upper() == 'CONMIN':
             self.prob.driver.opt_settings['ITMAX'] = 1000
         elif optimizer.upper() in ['PSQP']:
-            self.prob.driver.opt_settings['MIT'] = 10000
+            self.prob.driver.opt_settings['MIT'] = 2000
         elif optimizer.upper() in ['NSGA2']:
             self.prob.driver.opt_settings['PopSize'] = 200
             self.prob.driver.opt_settings['maxGen'] = 2000
         elif optimizer.upper() in ['SNOPT']:
             self.prob.driver.opt_settings['Major iterations limit'] = 10000
             self.prob.driver.opt_settings['Minor iterations limit'] = 1000
+            #self.prob.driver.opt_settings['Major optimality tolerance'] = 1e-5
+            #self.prob.driver.opt_settings['Major feasibility tolerance'] = 1e-6
+            #self.prob.driver.opt_settings['Minor feasibility tolerance'] = 1e-6
+            #self.prob.driver.opt_settings['Function precision'] = 1e-12
+            #self.prob.driver.opt_settings['Linesearch tolerance'] = 0.4
+            #self.prob.driver.opt_settings['LU singularity tolerance'] = 1e30
         elif optimizer.upper() in ['COBYLA','SLSQP']:
             self.prob.driver.options['tol'] = 1e-6
             self.prob.driver.options['maxiter'] = 100000
@@ -153,26 +161,62 @@ class FloatingInstance(object):
         raise NotImplementedError("Subclasses should implement this!")
 
     def set_inputs(self):
+        # Load all variables from local params dictionary
+        localnames = self.params.keys()
+        for ivar in localnames:
+            try:
+                self.prob[ivar] = self.params[ivar]
+            except KeyError:
+                print 'Cannot set: ', ivar
+                continue
+            except ValueError as e:
+                print 'Badding setting of: ', ivar
+                print e
+                raise e
+
+        # Check that everything got set correctly
         namesAssembly = self.prob.root._unknowns_dict.keys()
         for ivar in namesAssembly:
             if self.prob.root._unknowns_dict[ivar].has_key('_canset_') and self.prob.root._unknowns_dict[ivar]['_canset_']:
-                selfvar = ivar.split('.')[0]
+                selfvar = ivar.split('.')[-1]
+                if not selfvar in localnames:
+                    print 'WARNING:', selfvar, 'has not been set!'
+                    
+
+        '''
+        namesAssembly = self.prob.root._unknowns_dict.keys()
+        for ivar in namesAssembly:
+            if self.prob.root._unknowns_dict[ivar].has_key('_canset_') and self.prob.root._unknowns_dict[ivar]['_canset_']:
+                selfvar = ivar.split('.')[-1]
+
+                selfval = self.prob[selfvar]
+                if ( (type(selfval) == type(0.0)) or (type(selfval) == np.float64) or (type(selfval) == np.float32) ) and selfval == 0.0:
+                    print selfvar, 'is zero! Did you set it?'
+                if ( (type(selfval) == type(0)) or (type(selfval) == np.int64) or (type(selfval) == np.int32) ) and selfval == 0:
+                    print selfvar, 'is zero! Did you set it?'
+                elif type(selfval) == type(np.array([])) and not np.any(selfval):
+                    print selfvar, 'is zero! Did you set it?'
+
                 selfval = getattr(self, selfvar, None)
                 if selfval is None:
                     print 'Variable not found:', ivar, selfvar, self.prob[ivar]
                 else:
                     self.prob[ivar] = selfval
         #raise NotImplementedError("Subclasses should implement this!")
+        '''
 
     def store_results(self):
+        localnames = self.params.keys()
         optDict = self.prob.driver.get_desvars()
         for ivar in optDict.keys():
             ival = optDict[ivar]
             if type(ival) == type(np.array([])) and len(ival) == 1: ival=ival[0]
-            selfvar = ivar.split('.')[0]
-            setattr(self, selfvar, ival)
+            selfvar = ivar.split('.')[-1]
             self.prob[ivar] = ival
-
+            if selfvar in localnames:
+                self.params[ivar] = ival
+                print ivar, '=', ival
+                
     def init_problem(self, optimizer=None):
         self.prob = Problem()
         self.prob.root = self.get_assembly()
@@ -199,7 +243,7 @@ class FloatingInstance(object):
         if not optimizer is None:
             self.store_results()
             print self.prob.driver.get_constraints()
-            print self.prob.driver.get_desvars()
+            #print self.prob.driver.get_desvars()
             print self.prob.driver.get_objectives()
         
     def evaluate(self, optimizer=None):
@@ -242,13 +286,13 @@ class FloatingInstance(object):
         mlab.mesh(X, Y, Z, opacity=alpha, color=mywater, figure=fig)
         
         # Sea floor
-        Z = -self.water_depth * np.ones(X.shape)
+        Z = -self.params['water_depth'] * np.ones(X.shape)
         #ax.plot_surface(10*X, 10*Y, Z, alpha=1.0, color=mybrown)
         #mlab.mesh(10*X,10*Y,Z, opacity=1.0, color=mybrown, figure=fig)
 
         # Sides
         #x = 500 * np.linspace(-1, 1, npts)
-        #z = self.water_depth * np.linspace(-1, 0, npts)
+        #z = self.params['water_depth'] * np.linspace(-1, 0, npts)
         #X,Z = np.meshgrid(x,z)
         #Y = x.max()*np.ones(Z.shape)
         ##ax.plot_surface(X, Y, Z, alpha=alpha, color=mywater)
@@ -263,19 +307,19 @@ class FloatingInstance(object):
         npts    = 100
         
         # Sea floor
-        r  = np.linspace(0, self.anchor_radius, npts)
+        r  = np.linspace(0, self.params['anchor_radius'], npts)
         th = np.linspace(0, 2*np.pi, npts)
         R, TH = np.meshgrid(r, th)
         X = R*np.cos(TH)
         Y = R*np.sin(TH)
-        Z = -self.water_depth * np.ones(X.shape)
+        Z = -self.params['water_depth'] * np.ones(X.shape)
         #ax.plot_surface(X, Y, Z, alpha=1.0, color=mybrown)
         mlab.mesh(X,Y,Z, opacity=1.0, color=mybrown, figure=fig)
 
         cmoor = (0,1,0)
-        for k in xrange(self.number_of_mooring_lines):
+        for k in xrange(self.params['number_of_mooring_lines']):
             #ax.plot(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], 'k', lw=2)
-            mlab.plot3d(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], color=cmoor, tube_radius=0.5*self.mooring_diameter, figure=fig)
+            mlab.plot3d(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], color=cmoor, tube_radius=0.5*self.params['mooring_diameter'], figure=fig)
 
             
     def draw_pontoons(self, fig, truss, R, freeboard):
@@ -317,7 +361,7 @@ class FloatingInstance(object):
                 
                 '''
                 # Web
-                r   = np.linspace(rk - self.stiffener_web_height[k], rk, npts)
+                r   = np.linspace(rk - self.params['stiffener_web_height'][k], rk, npts)
                 R, TH = np.meshgrid(r, th)
                 Z, _  = np.meshgrid(z, th)
                 X = R*np.cos(TH)
@@ -326,8 +370,8 @@ class FloatingInstance(object):
 
                 # Flange
                 r = r[0]
-                h = np.linspace(0, self.stiffener_flange_width[k], npts)
-                zflange = z + h - 0.5*self.stiffener_flange_width[k]
+                h = np.linspace(0, self.params['stiffener_flange_width'][k], npts)
+                zflange = z + h - 0.5*self.params['stiffener_flange_width'][k]
                 R, TH = np.meshgrid(r, th)
                 Z, _  = np.meshgrid(zflange, th)
                 X = R*np.cos(TH)

@@ -1,5 +1,6 @@
 from floatingInstance import FloatingInstance, NSECTIONS, NPTS, vecOption
 from semiAssembly import SemiAssembly
+from commonse import eps
 import numpy as np
 import time
         
@@ -9,146 +10,147 @@ class SemiInstance(FloatingInstance):
 
         # Parameters beyond those in superclass
         # Typically static- set defaults
-        self.permanent_ballast_density = 4492.0
-        self.bulkhead_mass_factor = 1.0
-        self.ring_mass_factor = 1.0
-        self.shell_mass_factor = 1.0
-        self.spar_mass_factor = 1.05
-        self.outfitting_mass_fraction = 0.06
-        self.ballast_cost_rate = 100.0
-        self.tapered_col_cost_rate = 4720.0
-        self.outfitting_cost_rate = 6980.0
-        self.cross_attachment_pontoons = True
-        self.lower_attachment_pontoons = True
-        self.upper_attachment_pontoons = True
-        self.lower_ring_pontoons = True
-        self.upper_ring_pontoons = True
-        self.pontoon_cost_rate = 6.250
+        self.params['permanent_ballast_density'] = 4492.0
+        self.params['bulkhead_mass_factor'] = 1.0
+        self.params['ring_mass_factor'] = 1.0
+        self.params['shell_mass_factor'] = 1.0
+        self.params['spar_mass_factor'] = 1.05
+        self.params['outfitting_mass_fraction'] = 0.06
+        self.params['ballast_cost_rate'] = 100.0
+        self.params['tapered_col_cost_rate'] = 4720.0
+        self.params['outfitting_cost_rate'] = 6980.0
+        self.params['cross_attachment_pontoons'] = True
+        self.params['lower_attachment_pontoons'] = True
+        self.params['upper_attachment_pontoons'] = True
+        self.params['lower_ring_pontoons'] = True
+        self.params['upper_ring_pontoons'] = True
+        self.params['pontoon_cost_rate'] = 6.250
 
         # Typically design (start at OC4 semi)
-        self.radius_to_ballast_cylinder = 28.867513459481287
-        self.number_of_ballast_columns = 3
-        self.freeboard_base = 10.0
-        self.freeboard_ballast = 12.0
-        self.fairlead = 14.0
-        self.fairlead_offset_from_shell = 40.868-28.867513459481287-6.0
-        self.outer_diameter_base = 6.5
-        self.wall_thickness_base = 0.03
-        self.wall_thickness_ballast = 0.06
-        self.permanent_ballast_height_base = 10.0
-        self.stiffener_web_height_base= 0.1
-        self.stiffener_web_thickness_base = 0.04
-        self.stiffener_flange_width_base = 0.1
-        self.stiffener_flange_thickness_base = 0.02
-        self.stiffener_spacing_base = 0.4
-        self.permanent_ballast_height_ballast = 0.1
-        self.stiffener_web_height_ballast= 0.1
-        self.stiffener_web_thickness_ballast = 0.04
-        self.stiffener_flange_width_ballast = 0.1
-        self.stiffener_flange_thickness_ballast = 0.02
-        self.stiffener_spacing_ballast = 0.4
-        self.pontoon_outer_diameter = 2*1.6
-        self.pontoon_inner_diameter = 2*(1.6-0.0175)
+        self.params['radius_to_ballast_cylinder'] = 28.867513459481287
+        self.params['number_of_ballast_columns'] = 3
+        self.params['freeboard_base'] = 10.0
+        self.params['freeboard_ballast'] = 12.0
+        self.params['fairlead'] = 14.0
+        self.params['fairlead_offset_from_shell'] = 40.868-28.867513459481287-6.0
+        self.params['outer_diameter_base'] = 6.5
+        self.params['wall_thickness_base'] = 0.03
+        self.params['wall_thickness_ballast'] = 0.06
+        self.params['permanent_ballast_height_base'] = 10.0
+        self.params['stiffener_web_height_base'] = 0.1
+        self.params['stiffener_web_thickness_base'] = 0.04
+        self.params['stiffener_flange_width_base'] = 0.1
+        self.params['stiffener_flange_thickness_base'] = 0.02
+        self.params['stiffener_spacing_base'] = 0.4
+        self.params['permanent_ballast_height_ballast'] = 0.1
+        self.params['stiffener_web_height_ballast'] = 0.1
+        self.params['stiffener_web_thickness_ballast'] = 0.04
+        self.params['stiffener_flange_width_ballast'] = 0.1
+        self.params['stiffener_flange_thickness_ballast'] = 0.02
+        self.params['stiffener_spacing_ballast'] = 0.4
+        self.params['pontoon_outer_diameter'] = 2*1.6
+        self.params['pontoon_inner_diameter'] = 2*(1.6-0.0175)
+        self.params['base_connection_ratio_min'] = 2.0
+        self.params['ballast_connection_ratio_min'] = 2.0
 
         # OC4
-        self.water_depth = 200.0
-        self.wave_height = 10.8
-        self.wave_period = 9.8
-        self.wind_reference_speed = 11.0
-        self.wind_reference_height = 119.0
-        self.alpha = 0.11
-        self.morison_mass_coefficient = 2.0
+        self.params['water_depth'] = 200.0
+        self.params['wave_height'] = 10.8
+        self.params['wave_period'] = 9.8
+        self.params['wind_reference_speed'] = 11.0
+        self.params['wind_reference_height'] = 119.0
+        self.params['alpha'] = 0.11
+        self.params['morison_mass_coefficient'] = 2.0
 
-        self.max_offset  = 0.1*self.water_depth # Assumption        
-        self.number_of_mooring_lines = 3
-        self.scope_ratio = 835.5 / (self.water_depth-self.fairlead) 
-        self.anchor_radius = 837.6
-        self.mooring_diameter = 0.0766
+        self.params['number_of_mooring_lines'] = 3
+        self.params['scope_ratio'] = 835.5 / (self.params['water_depth']-self.params['fairlead']) 
+        self.params['anchor_radius'] = 837.6
+        self.params['mooring_diameter'] = 0.0766
 
+        self.params['tower_metric'] = 6.5
+        
         self.set_length_base( 30.0 )
         self.set_length_ballast( 32.0 )
 
-        self.section_height_ballast = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
-        self.outer_diameter_ballast = 2*np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
+        self.params['section_height_ballast'] = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
+        self.params['outer_diameter_ballast'] = 2*np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
 
-        self.dummy_mass = 1e-16
-        
         # Change scalars to vectors where needed
         self.check_vectors()
 
     def set_length_base(self, inval):
-        self.section_height_base =  vecOption(inval/NSECTIONS, NSECTIONS)
+        self.params['section_height_base'] =  vecOption(inval/NSECTIONS, NSECTIONS)
     def set_length_ballast(self, inval):
-        self.section_height_ballast =  vecOption(inval/NSECTIONS, NSECTIONS)
+        self.params['section_height_ballast'] =  vecOption(inval/NSECTIONS, NSECTIONS)
 
     def check_vectors(self):
-        self.tower_diameter                    = vecOption(self.tower_diameter, NSECTIONS+1)
-        self.outer_diameter_base               = vecOption(self.outer_diameter_base, NSECTIONS+1)
-        self.wall_thickness_base             = vecOption(self.wall_thickness_base, NSECTIONS+1)
-        self.stiffener_web_height_base       = vecOption(self.stiffener_web_height_base, NSECTIONS)
-        self.stiffener_web_thickness_base    = vecOption(self.stiffener_web_thickness_base, NSECTIONS)
-        self.stiffener_flange_width_base     = vecOption(self.stiffener_flange_width_base, NSECTIONS)
-        self.stiffener_flange_thickness_base = vecOption(self.stiffener_flange_thickness_base, NSECTIONS)
-        self.stiffener_spacing_base          = vecOption(self.stiffener_spacing_base, NSECTIONS)
-        self.bulkhead_nodes_base             = [False] * (NSECTIONS+1)
-        self.bulkhead_nodes_base[0]          = True
-        self.bulkhead_nodes_base[1]          = True
+        self.params['tower_metric']                    = vecOption(self.params['tower_metric'], NSECTIONS+1)
+        self.params['outer_diameter_base']             = vecOption(self.params['outer_diameter_base'], NSECTIONS+1)
+        self.params['wall_thickness_base']             = vecOption(self.params['wall_thickness_base'], NSECTIONS+1)
+        self.params['stiffener_web_height_base']       = vecOption(self.params['stiffener_web_height_base'], NSECTIONS)
+        self.params['stiffener_web_thickness_base']    = vecOption(self.params['stiffener_web_thickness_base'], NSECTIONS)
+        self.params['stiffener_flange_width_base']     = vecOption(self.params['stiffener_flange_width_base'], NSECTIONS)
+        self.params['stiffener_flange_thickness_base'] = vecOption(self.params['stiffener_flange_thickness_base'], NSECTIONS)
+        self.params['stiffener_spacing_base']          = vecOption(self.params['stiffener_spacing_base'], NSECTIONS)
+        self.params['bulkhead_nodes_base']             = [False] * (NSECTIONS+1)
+        self.params['bulkhead_nodes_base'][0]          = True
+        self.params['bulkhead_nodes_base'][1]          = True
         
-        self.outer_diameter_ballast               = vecOption(self.outer_diameter_ballast, NSECTIONS+1)
-        self.wall_thickness_ballast             = vecOption(self.wall_thickness_ballast, NSECTIONS+1)
-        self.stiffener_web_height_ballast       = vecOption(self.stiffener_web_height_ballast, NSECTIONS)
-        self.stiffener_web_thickness_ballast    = vecOption(self.stiffener_web_thickness_ballast, NSECTIONS)
-        self.stiffener_flange_width_ballast     = vecOption(self.stiffener_flange_width_ballast, NSECTIONS)
-        self.stiffener_flange_thickness_ballast = vecOption(self.stiffener_flange_thickness_ballast, NSECTIONS)
-        self.stiffener_spacing_ballast          = vecOption(self.stiffener_spacing_ballast, NSECTIONS)
-        self.bulkhead_nodes_ballast             = [False] * (NSECTIONS+1)
-        self.bulkhead_nodes_ballast[0]          = True
-        self.bulkhead_nodes_ballast[1]          = True
+        self.params['outer_diameter_ballast']             = vecOption(self.params['outer_diameter_ballast'], NSECTIONS+1)
+        self.params['wall_thickness_ballast']             = vecOption(self.params['wall_thickness_ballast'], NSECTIONS+1)
+        self.params['stiffener_web_height_ballast']       = vecOption(self.params['stiffener_web_height_ballast'], NSECTIONS)
+        self.params['stiffener_web_thickness_ballast']    = vecOption(self.params['stiffener_web_thickness_ballast'], NSECTIONS)
+        self.params['stiffener_flange_width_ballast']     = vecOption(self.params['stiffener_flange_width_ballast'], NSECTIONS)
+        self.params['stiffener_flange_thickness_ballast'] = vecOption(self.params['stiffener_flange_thickness_ballast'], NSECTIONS)
+        self.params['stiffener_spacing_ballast']          = vecOption(self.params['stiffener_spacing_ballast'], NSECTIONS)
+        self.params['bulkhead_nodes_ballast']             = [False] * (NSECTIONS+1)
+        self.params['bulkhead_nodes_ballast'][0]          = True
+        self.params['bulkhead_nodes_ballast'][1]          = True
         
     def get_assembly(self): return SemiAssembly(NSECTIONS, NPTS)
     
     def get_design_variables(self):
         # Make a neat list of design variables, lower bound, upper bound, scalar
-        desvarList = [('fairlead.x',0.0, 100.0, 1.0),
-                      ('fairlead_offset_from_shell.x',0.0, 5.0, 1e2),
-                      ('radius_to_ballast_cylinder.x',0.0, 40.0, 1.0),
-                      ('freeboard_base.x',0.0, 50.0, 1.0),
-                      ('section_height_base.x',1e-1, 100.0, 1e1),
-                      ('outer_diameter_base.x',1.1, 40.0, 10.0),
-                      ('wall_thickness_base.x',5e-3, 1.0, 1e3),
-                      ('freeboard_ballast.x',0.0, 50.0, 1.0),
-                      ('section_height_ballast.x',1e-1, 100.0, 1e1),
-                      ('outer_diameter_ballast.x',1.1, 40.0, 10.0),
-                      ('wall_thickness_ballast.x',5e-3, 1.0, 1e3),
-                      ('pontoon_outer_diameter.x', 0.1, 10.0, 1.0),
-                      ('pontoon_inner_diameter.x', 0.02, 9.9, 1.0),
-                      ('scope_ratio.x', 1.0, 5.0, 1.0),
-                      ('anchor_radius.x', 1.0, 1e3, 1e-2),
-                      ('mooring_diameter.x', 0.05, 1.0, 1e1),
-                      ('stiffener_web_height_base.x', 1e-2, 1.0, 1e2),
-                      ('stiffener_web_thickness_base.x', 1e-3, 5e-1, 1e2),
-                      ('stiffener_flange_width_base.x', 1e-2, 5.0, 1e2),
-                      ('stiffener_flange_thickness_base.x', 1e-3, 5e-1, 1e2),
-                      ('stiffener_spacing_base.x', 1e-1, 1e2, 1e1),
-                      ('permanent_ballast_height_base.x', 1e-1, 50.0, 1.0),
-                      ('stiffener_web_height_ballast.x', 1e-2, 1.0, 1e2),
-                      ('stiffener_web_thickness_ballast.x', 1e-3, 5e-1, 1e2),
-                      ('stiffener_flange_width_ballast.x', 1e-2, 5.0, 1e2),
-                      ('stiffener_flange_thickness_ballast.x', 1e-3, 5e-1, 1e2),
-                      ('stiffener_spacing_ballast.x', 1e-1, 1e2, 1e1),
-                      ('permanent_ballast_height_ballast.x', 1e-1, 50.0, 1.0)]
+        desvarList = [('fairlead',0.0, 100.0, 1.0),
+                      ('fairlead_offset_from_shell',0.0, 5.0, 1e2),
+                      ('radius_to_ballast_cylinder',0.0, 40.0, 1.0),
+                      ('freeboard_base',0.0, 50.0, 1.0),
+                      ('section_height_base',1e-1, 100.0, 1e1),
+                      ('outer_diameter_base',1.1, 40.0, 10.0),
+                      ('wall_thickness_base',5e-3, 1.0, 1e3),
+                      ('freeboard_ballast',0.0, 50.0, 1.0),
+                      ('section_height_ballast',1e-1, 100.0, 1e1),
+                      ('outer_diameter_ballast',1.1, 40.0, 10.0),
+                      ('wall_thickness_ballast',5e-3, 1.0, 1e3),
+                      ('pontoon_outer_diameter', 0.05, 3.0, 10.0),
+                      ('pontoon_inner_diameter', 0.02, 2.9, 10.0),
+                      ('scope_ratio', 1.0, 5.0, 1.0),
+                      ('anchor_radius', 1.0, 1e3, 1e-2),
+                      ('mooring_diameter', 0.05, 1.0, 1e1),
+                      ('stiffener_web_height_base', 1e-2, 1.0, 1e2),
+                      ('stiffener_web_thickness_base', 1e-3, 5e-1, 1e2),
+                      ('stiffener_flange_width_base', 1e-2, 5.0, 1e2),
+                      ('stiffener_flange_thickness_base', 1e-3, 5e-1, 1e2),
+                      ('stiffener_spacing_base', 1e-1, 1e2, 1e1),
+                      ('permanent_ballast_height_base', 1e-1, 50.0, 1.0),
+                      ('stiffener_web_height_ballast', 1e-2, 1.0, 1e2),
+                      ('stiffener_web_thickness_ballast', 1e-3, 5e-1, 1e2),
+                      ('stiffener_flange_width_ballast', 1e-2, 5.0, 1e2),
+                      ('stiffener_flange_thickness_ballast', 1e-3, 5e-1, 1e2),
+                      ('stiffener_spacing_ballast', 1e-1, 1e2, 1e1),
+                      ('permanent_ballast_height_ballast', 1e-1, 50.0, 1.0)]
 
         # TODO: Integer and Boolean design variables
-        #prob.driver.add_desvar('number_of_ballast_columns.x', lower=1)
-        #prob.driver.add_desvar('number_of_mooring_lines.x', lower=1)
-        #prob.driver.add_desvar('mooring_type.x')
-        #prob.driver.add_desvar('anchor_type.x')
-        #prob.driver.add_desvar('bulkhead_nodes.x')
-        #prob.driver.add_desvar('cross_attachment_pontoons.x')
-        #prob.driver.add_desvar('lower_attachment_pontoons.x')
-        #prob.driver.add_desvar('upper_attachment_pontoons.x')
-        #prob.driver.add_desvar('lower_ring_pontoons.x')
-        #prob.driver.add_desvar('upper_ring_pontoons.x')
+        #prob.driver.add_desvar('number_of_ballast_columns', lower=1)
+        #prob.driver.add_desvar('number_of_mooring_lines', lower=1)
+        #prob.driver.add_desvar('mooring_type')
+        #prob.driver.add_desvar('anchor_type')
+        #prob.driver.add_desvar('bulkhead_nodes')
+        #prob.driver.add_desvar('cross_attachment_pontoons')
+        #prob.driver.add_desvar('lower_attachment_pontoons')
+        #prob.driver.add_desvar('upper_attachment_pontoons')
+        #prob.driver.add_desvar('lower_ring_pontoons')
+        #prob.driver.add_desvar('upper_ring_pontoons')
         return desvarList
 
     def add_constraints_objective(self):
@@ -200,6 +202,8 @@ class SemiInstance(FloatingInstance):
 
         # Pontoon tube radii
         self.prob.driver.add_constraint('pon.pontoon_radii_ratio', upper=1.0)
+        self.prob.driver.add_constraint('pon.base_connection_ratio',upper=0.0)
+        self.prob.driver.add_constraint('pon.ballast_connection_ratio',upper=0.0)
 
         # Pontoon stress safety factor
         self.prob.driver.add_constraint('pon.axial_stress_factor', upper=0.8)
@@ -223,7 +227,7 @@ class SemiInstance(FloatingInstance):
 
 
         # OBJECTIVE FUNCTION: Minimize total cost!
-        self.prob.driver.add_objective('sm.total_cost', scaler=1e-9)
+        self.prob.driver.add_objective('total_cost', scaler=1e-9)
 
 
         
@@ -236,27 +240,22 @@ class SemiInstance(FloatingInstance):
         self.draw_mooring(fig, mooringMat)
 
         pontoonMat = self.prob['pon.plot_matrix']
-        zcut = 1.0 + np.maximum( self.freeboard_base, self.freeboard_ballast )
-        self.draw_pontoons(fig, pontoonMat, 0.5*self.pontoon_outer_diameter, zcut)
+        zcut = 1.0 + np.maximum( self.params['freeboard_base'], self.params['freeboard_ballast'] )
+        self.draw_pontoons(fig, pontoonMat, 0.5*self.params['pontoon_outer_diameter'], zcut)
 
-        self.draw_cylinder(fig, [0.0, 0.0], self.freeboard_base, self.section_height_base,
-                           0.5*self.outer_diameter_base, self.stiffener_spacing_base)
+        self.draw_cylinder(fig, [0.0, 0.0], self.params['freeboard_base'], self.params['section_height_base'],
+                           0.5*self.params['outer_diameter_base'], self.params['stiffener_spacing_base'])
 
-        R_semi    = self.radius_to_ballast_cylinder
-        ncylinder = self.number_of_ballast_columns
+        R_semi    = self.params['radius_to_ballast_cylinder']
+        ncylinder = self.params['number_of_ballast_columns']
         angles = np.linspace(0, 2*np.pi, ncylinder+1)
         x = R_semi * np.cos( angles )
         y = R_semi * np.sin( angles )
         for k in xrange(ncylinder):
-            self.draw_cylinder(fig, [x[k], y[k]], self.freeboard_ballast, self.section_height_ballast,
-                               0.5*self.outer_diameter_ballast, self.stiffener_spacing_ballast)
+            self.draw_cylinder(fig, [x[k], y[k]], self.params['freeboard_ballast'], self.params['section_height_ballast'],
+                               0.5*self.params['outer_diameter_ballast'], self.params['stiffener_spacing_ballast'])
             
         self.set_figure(fig, fname)
-
-
-
-
-
 
 
 
@@ -266,9 +265,9 @@ class SemiInstance(FloatingInstance):
         
 def example_semi():
     mysemi = SemiInstance()
-    mysemi.evaluate('psqp')
+    #mysemi.evaluate('psqp')
     #mysemi.visualize('semi-initial.jpg')
-    #mysemi.run('psqp')
+    mysemi.run('slsqp')
     return mysemi
 
 def psqp_optimal():
@@ -309,6 +308,11 @@ def psqp_optimal():
     return mysemi
     
     '''
+OrderedDict([('fairlead', array([13.48595326])), ('fairlead_offset_from_shell', array([4.99157996])), ('radius_to_ballast_cylinder', array([30.18481219])), ('freeboard_base', array([9.26170226])), ('section_height_base', array([3.7604404 , 5.01424445, 4.33725659, 3.33214966, 3.2105037 ])), ('outer_diameter_base', array([1.10000012, 1.20837321, 2.89237172, 4.53026726, 3.63197871,
+       6.4586864 ])), ('wall_thickness_base', array([0.00649224, 0.00676997, 0.005     , 0.005     , 0.00625276,
+       0.00912208])), ('freeboard_ballast', array([5.21222562])), ('section_height_ballast', array([0.46854124, 0.26703874, 6.17196415, 6.07947859, 5.44340214])), ('outer_diameter_ballast', array([ 9.98087107, 11.65105409,  9.93591842, 11.24439331,  9.02905809,
+        7.08313227])), ('wall_thickness_ballast', array([0.005, 0.005, 0.005, 0.005, 0.005, 0.005])), ('pontoon_outer_diameter', array([4.43693504])), ('pontoon_inner_diameter', array([4.4333937])), ('scope_ratio', array([4.70199041])), ('anchor_radius', array([837.57485028])), ('mooring_diameter', array([0.66993187])), ('stiffener_web_height_base', array([0.01518644, 0.01      , 0.01452209, 0.05063256, 0.02239869])), ('stiffener_web_thickness_base', array([0.001     , 0.001     , 0.001     , 0.00965457, 0.00119531])), ('stiffener_flange_width_base', array([0.01      , 0.01      , 0.01      , 0.06754642, 0.01      ])), ('stiffener_flange_thickness_base', array([0.00109441, 0.001     , 0.001     , 0.04809957, 0.001     ])), ('stiffener_spacing_base', array([0.62138686, 0.55886008, 0.17846304, 0.21853178, 0.33977136])), ('permanent_ballast_height_base', array([5.46194272])), ('stiffener_web_height_ballast', array([0.01      , 0.01000003, 0.01      , 0.01299782, 0.01      ])), ('stiffener_web_thickness_ballast', array([0.001, 0.001, 0.001, 0.001, 0.001])), ('stiffener_flange_width_ballast', array([0.01      , 0.06168182, 0.01      , 0.01      , 0.01      ])), ('stiffener_flange_thickness_ballast', array([0.001     , 0.00494582, 0.001     , 0.001     , 0.001     ])), ('stiffener_spacing_ballast', array([2.07754793, 0.14845455, 0.71661921, 0.32008663, 1.9621595 ])), ('permanent_ballast_height_ballast', array([0.1]))])
+OrderedDict([('total_cost', array([0.61991178]))])
     '''
     
 if __name__ == '__main__':

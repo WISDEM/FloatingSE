@@ -1,7 +1,7 @@
 from openmdao.api import Component
 import numpy as np
 
-from commonse import gravity
+from commonse import gravity, eps
 
 class Spar(Component):
     """
@@ -16,10 +16,10 @@ class Spar(Component):
         self.add_param('water_density', val=1025.0, units='kg/m**3', desc='density of water')
 
         # From other components
-        self.add_param('turbine_mass', val=0.0, units='kg', desc='mass of tower and rna')
+        self.add_param('turbine_mass', val=eps, units='kg', desc='mass of tower and rna')
         self.add_param('turbine_center_of_gravity', val=np.zeros((3,)), units='m', desc='xyz-position of center of turbine mass')
         self.add_param('turbine_surge_force', val=0.0, units='N', desc='Force in surge direction on turbine')
-        self.add_param('turbine_pitch_moment', val=0.0, units='N*m', desc='Pitching moment from turbine that does not depend on sytem z-center of gravity')
+        self.add_param('turbine_pitch_moment', val=0.0, units='N*m', desc='Pitching moment (Myy) about turbine base')
 
         self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
         self.add_param('mooring_effective_mass', val=0.0, units='kg', desc='Mass of mooring lines that weigh on structure, ignoring mass of mooring lines on sea floor')
@@ -51,6 +51,12 @@ class Spar(Component):
         self.add_output('variable_ballast_height', val=0.0, units='m', desc='height of water ballast to balance spar')
         self.add_output('z_center_of_gravity', val=0.0, units='m', desc='Z-position of center of gravity (x,y = 0,0)')
 
+        
+        # Derivatives
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['step_size'] = 1e-5
         
     def solve_nonlinear(self, params, unknowns, resids):
         # TODO: Get centerlines right- in sparGeometry?

@@ -9,90 +9,91 @@ class SparInstance(FloatingInstance):
 
         # Parameters beyond those in superclass
         # Typically static- set defaults
-        self.permanent_ballast_density = 4492.0
-        self.bulkhead_mass_factor = 1.0
-        self.ring_mass_factor = 1.0
-        self.shell_mass_factor = 1.0
-        self.spar_mass_factor = 1.05
-        self.outfitting_mass_fraction = 0.06
-        self.ballast_cost_rate = 100.0
-        self.tapered_col_cost_rate = 4720.0
-        self.outfitting_cost_rate = 6980.0
-        self.morison_mass_coefficient = 1.969954
+        self.params['permanent_ballast_density'] = 4492.0
+        self.params['bulkhead_mass_factor'] = 1.0
+        self.params['ring_mass_factor'] = 1.0
+        self.params['shell_mass_factor'] = 1.0
+        self.params['spar_mass_factor'] = 1.05
+        self.params['outfitting_mass_fraction'] = 0.06
+        self.params['ballast_cost_rate'] = 100.0
+        self.params['tapered_col_cost_rate'] = 4720.0
+        self.params['outfitting_cost_rate'] = 6980.0
+        self.params['morison_mass_coefficient'] = 1.969954
         
         # Typically design (OC3)
-        self.freeboard = 10.0
-        self.fairlead = 70.0
+        self.params['freeboard'] = 10.0
+        self.params['fairlead'] = 70.0
         self.set_length(130.0)
-        self.section_height = np.array([36.0, 36.0, 36.0, 8.0, 14.0])
-        self.outer_diameter = 2*np.array([4.7, 4.7, 4.7, 4.7, 3.25, 3.25])
-        self.wall_thickness = 0.05
-        self.fairlead_offset_from_shell = 5.2-4.7
-        self.permanent_ballast_height = 10.0
-        self.stiffener_web_height= 0.1
-        self.stiffener_web_thickness = 0.04
-        self.stiffener_flange_width = 0.1
-        self.stiffener_flange_thickness = 0.02
-        self.stiffener_spacing = 0.4
+        self.params['spar_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])
+        self.params['spar_outer_diameter'] = 2*np.array([4.7, 4.7, 4.7, 4.7, 3.25, 3.25])
+        self.params['spar_wall_thickness'] = 0.05
+        self.params['fairlead_offset_from_shell'] = 5.2-4.7
+        self.params['permanent_ballast_height'] = 10.0
+        self.params['stiffener_web_height'] = 0.1
+        self.params['stiffener_web_thickness'] = 0.04
+        self.params['stiffener_flange_width'] = 0.1
+        self.params['stiffener_flange_thickness'] = 0.02
+        self.params['stiffener_spacing'] = 0.4
 
         # OC3
-        self.water_depth = 320.0
-        self.wave_height = 10.8
-        self.wave_period = 9.8
-        self.wind_reference_speed = 11.0
-        self.wind_reference_height = 119.0
-        self.alpha = 0.11
-        self.morison_mass_coefficient = 2.0
+        self.params['water_depth'] = 320.0
+        self.params['wave_height'] = 10.8
+        self.params['wave_period'] = 9.8
+        self.params['wind_reference_speed'] = 11.0
+        self.params['wind_reference_height'] = 119.0
+        self.params['alpha'] = 0.11
+        self.params['morison_mass_coefficient'] = 2.0
 
-        self.max_offset  = 0.1*self.water_depth # Assumption        
-        self.number_of_mooring_lines = 3
-        self.scope_ratio = 902.2 / (self.water_depth-self.fairlead) 
-        self.anchor_radius = 853.87
-        self.mooring_diameter = 0.09
+        self.params['number_of_mooring_lines'] = 3
+        self.params['scope_ratio'] = 902.2 / (self.params['water_depth']-self.params['fairlead']) 
+        self.params['anchor_radius'] = 853.87
+        self.params['mooring_diameter'] = 0.09
+
+        self.params['tower_metric'] = 6.5
 
         # Change scalars to vectors where needed
         self.check_vectors()
 
     def set_length(self, inval):
-        self.section_height = vecOption(inval/NSECTIONS, NSECTIONS)
+        self.params['spar_section_height'] = vecOption(inval/NSECTIONS, NSECTIONS)
 
     def check_vectors(self):
-        self.tower_diameter             = vecOption(self.tower_diameter, NSECTIONS+1)
-        self.outer_diameter             = vecOption(self.outer_diameter, NSECTIONS+1)
-        self.wall_thickness             = vecOption(self.wall_thickness, NSECTIONS+1)
-        self.stiffener_web_height       = vecOption(self.stiffener_web_height, NSECTIONS)
-        self.stiffener_web_thickness    = vecOption(self.stiffener_web_thickness, NSECTIONS)
-        self.stiffener_flange_width     = vecOption(self.stiffener_flange_width, NSECTIONS)
-        self.stiffener_flange_thickness = vecOption(self.stiffener_flange_thickness, NSECTIONS)
-        self.stiffener_spacing          = vecOption(self.stiffener_spacing, NSECTIONS)
-        self.bulkhead_nodes             = [False] * (NSECTIONS+1)
-        self.bulkhead_nodes[0]          = True
-        self.bulkhead_nodes[1]          = True
+        self.params['tower_metric']               = vecOption(self.params['tower_metric'], NSECTIONS+1)
+        self.params['spar_outer_diameter']        = vecOption(self.params['spar_outer_diameter'], NSECTIONS+1)
+        self.params['spar_wall_thickness']        = vecOption(self.params['spar_wall_thickness'], NSECTIONS+1)
+        self.params['stiffener_web_height']       = vecOption(self.params['stiffener_web_height'], NSECTIONS)
+        self.params['stiffener_web_thickness']    = vecOption(self.params['stiffener_web_thickness'], NSECTIONS)
+        self.params['stiffener_flange_width']     = vecOption(self.params['stiffener_flange_width'], NSECTIONS)
+        self.params['stiffener_flange_thickness'] = vecOption(self.params['stiffener_flange_thickness'], NSECTIONS)
+        self.params['stiffener_spacing']          = vecOption(self.params['stiffener_spacing'], NSECTIONS)
+        self.params['bulkhead_nodes']             = [False] * (NSECTIONS+1)
+        self.params['bulkhead_nodes'][0]          = True
+        self.params['bulkhead_nodes'][1]          = True
 
     def get_assembly(self): return SparAssembly(NSECTIONS, NPTS)
     
     def get_design_variables(self):
         # Make a neat list of design variables, lower bound, upper bound, scalar
-        desvarList = [('freeboard.x',0.0, 50.0, 1.0),
-                      ('fairlead.x',0.0, 100.0, 1.0),
-                      ('fairlead_offset_from_shell.x',0.0, 5.0, 1e2),
-                      ('section_height.x',1e-1, 100.0, 1e1),
-                      ('outer_diameter.x',1.1, 40.0, 10.0),
-                      ('wall_thickness.x',5e-3, 1.0, 1e3),
-                      ('scope_ratio.x', 1.0, 5.0, 1.0),
-                      ('anchor_radius.x', 1.0, 1e3, 1e-2),
-                      ('mooring_diameter.x', 0.05, 1.0, 1e1),
-                      ('stiffener_web_height.x', 1e-2, 1.0, 1e2),
-                      ('stiffener_web_thickness.x', 1e-3, 5e-1, 1e2),
-                      ('stiffener_flange_width.x', 1e-2, 5.0, 1e2),
-                      ('stiffener_flange_thickness.x', 1e-3, 5e-1, 1e2),
-                      ('stiffener_spacing.x', 1e-1, 1e2, 1e1),
-                      ('permanent_ballast_height.x', 1e-1, 50.0, 1.0)]
+        desvarList = [('freeboard',0.0, 50.0, 1.0),
+                      ('fairlead',0.0, 100.0, 1.0),
+                      ('fairlead_offset_from_shell',0.0, 5.0, 1e2),
+                      ('spar_section_height',1e-1, 100.0, 1e1),
+                      ('spar_outer_diameter',1.1, 40.0, 10.0),
+                      ('spar_wall_thickness',5e-3, 1.0, 1e3),
+                      ('scope_ratio', 1.0, 5.0, 1.0),
+                      ('anchor_radius', 1.0, 1e3, 1e-2),
+                      ('mooring_diameter', 0.05, 1.0, 1e1),
+                      ('stiffener_web_height', 1e-2, 1.0, 1e2),
+                      ('stiffener_web_thickness', 1e-3, 5e-1, 1e2),
+                      ('stiffener_flange_width', 1e-2, 5.0, 1e2),
+                      ('stiffener_flange_thickness', 1e-3, 5e-1, 1e2),
+                      ('stiffener_spacing', 1e-1, 1e2, 1e1),
+                      ('permanent_ballast_height', 1e-1, 50.0, 1.0)]
         # TODO: Integer and Boolean design variables
-        #prob.driver.add_desvar('number_of_mooring_lines.x', lower=1)
-        #prob.driver.add_desvar('mooring_type.x')
-        #prob.driver.add_desvar('anchor_type.x')
-        #prob.driver.add_desvar('bulkhead_nodes.x')
+        #prob.driver.add_desvar('number_of_mooring_lines', lower=1)
+        #prob.driver.add_desvar('mooring_type')
+        #prob.driver.add_desvar('anchor_type')
+        #prob.driver.add_desvar('bulkhead_nodes')
         return desvarList
 
     def add_constraints_objective(self):
