@@ -2,6 +2,7 @@ from floatingse.floatingInstance import NSECTIONS, NPTS, vecOption
 from floatingse.semiInstance import SemiInstance
 from floating_turbine_assembly import FloatingTurbine
 from commonse import eps
+from rotorse import TURBULENCE_CLASS, TURBINE_CLASS, DRIVETRAIN_TYPE, r_aero
 import numpy as np
 import offshorebos.wind_obos as wind_obos
 import time
@@ -11,7 +12,6 @@ NDEL = 0
 class FloatingTurbineInstance(SemiInstance):
     def __init__(self):
         super(FloatingTurbineInstance, self).__init__()
-
         
         # Remove what we don't need from Semi
         self.params.pop('tower_metric', None)
@@ -21,8 +21,58 @@ class FloatingTurbineInstance(SemiInstance):
         self.params.pop('turbine_pitch_moment', None)
         self.params.pop('turbine_center_of_gravity', None)
         self.params.pop('turbine_mass', None)
+
+        # For RotorSE
+        self.params['hubFraction'] = 0.025
+        self.params['bladeLength'] =  61.5
+        self.params['r_max_chord'] = 0.23577
+        self.params['chord_sub'] = np.array([3.2612, 4.5709, 3.3178, 1.4621])
+        self.params['theta_sub'] = np.array([13.2783, 7.46036, 2.89317, -0.0878099])
+        self.params['precone'] = 2.5
+        self.params['tilt'] = 5.0
+        self.params['control:Vin'] = 3.0
+        self.params['control:Vout'] = 25.0
+        self.params['control:ratedPower'] = 5e6
+        self.params['control:minOmega'] = 0.0
+        self.params['control:maxOmega'] = 12.0
+        self.params['control:tsr'] = 7.55
+        self.params['sparT'] = np.array([0.05, 0.047754, 0.045376, 0.031085, 0.0061398])
+        self.params['teT'] = np.array([0.1, 0.09569, 0.06569, 0.02569, 0.00569])
+
+        self.params['idx_cylinder_aero'] = 3
+        self.params['idx_cylinder_str'] = 14
+        self.params['precurve_sub'] = np.array([0.0, 0.0, 0.0])
+        self.params['yaw'] = 0.0
+        self.params['nBlades'] = 3
+        self.params['turbine_class'] = TURBINE_CLASS['I']
+        self.params['turbulence_class'] = TURBULENCE_CLASS['B']
+        self.params['drivetrainType'] = DRIVETRAIN_TYPE['GEARED']
+        self.params['gust_stddev'] = 3
+        #self.params['cdf_reference_height_wind_speed'] = 90.0 
+        self.params['control:pitch'] = 0.0
+        self.params['VfactorPC'] = 0.7
+        self.params['pitch_extreme'] =  0.0
+        self.params['azimuth_extreme'] = 0.0
+        self.params['rstar_damage'] = np.zeros(len(r_aero)+1)
+        self.params['Mxb_damage'] = np.zeros(len(r_aero)+1)
+        self.params['Myb_damage'] = np.zeros(len(r_aero)+1)
+        self.params['strain_ult_spar'] = 1e-2
+        self.params['strain_ult_te'] = 2*2500*1e-6
+        self.params['m_damage'] = 10.0
+        self.params['nSector'] = 4
+        self.params['tiploss'] = True
+        self.params['hubloss'] = True
+        self.params['wakerotation'] = True 
+        self.params['usecd'] = True
+        self.params['AEP_loss_factor'] = 1.0
+        self.params['dynamic_amplication_tip_deflection'] = 1.35
+        self.params['shape_parameter'] = 0.0
+        # TODO
+        self.params['rotor.wind.z'] = np.array([90.0])
+
         
         # For TowerSE
+        self.params['hub_height']           = 90.0
         self.params['cd_usr']               = np.inf
         self.params['wind_bottom_height']   = 0.0
         self.params['wind_beta']            = 0.0
@@ -51,7 +101,6 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['tower_diameter']          = vecOption(6.5, NSECTIONS+1)
         self.params['tower_section_height']    = vecOption(87.6/NSECTIONS, NSECTIONS)
         self.params['tower_wall_thickness']    = vecOption(0.05, NSECTIONS+1)
-        self.params['yaw_angle']               = 0.0
         self.params['tower_buckling_length']   = 30.0
         self.params['tower_outfitting_factor'] = 1.07
         self.params['tower_force_discretization'] = 5.0
@@ -62,7 +111,7 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['frame3dd_matrix_method']         = 1
         self.params['compute_stiffnes']               = False
         self.params['slope_SN']                       = 4
-        self.params['number_of_modes']                = 2
+        self.params['number_of_modes']                = 5
         self.params['compute_shear']                  = True
         self.params['frame3dd_convergence_tolerance'] = 1e-9
         self.params['lumped_mass_matrix']             = 0
@@ -72,18 +121,12 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['project_lifetime']   = 20.0
         self.params['number_of_turbines'] = 20
         self.params['annual_opex']        = 7e5
-        self.params['net_aep']            = 1.6e7
         self.params['fixed_charge_rate']  = 0.12
         self.params['discount_rate']      = 0.07
         
         # Offshore BOS
         # Turbine / Plant parameters
         self.params['turbCapEx'] =                    1605.0
-        self.params['turbR'] =                        5.0
-        self.params['rotorD'] =                       120.0
-        self.params['hubD'] =                         -np.inf
-        self.params['bladeL'] =                       -np.inf
-        self.params['chord'] =                        -np.inf
         self.params['nacelleL'] =                     -np.inf
         self.params['nacelleW'] =                     -np.inf
         self.params['distShore'] =                    90.0
@@ -304,7 +347,7 @@ class FloatingTurbineInstance(SemiInstance):
                       ('pontoon_inner_diameter', 0.02, 9.9, 10.0),
                       ('tower_diameter', 3.0, 30.0, 1.0),
                       ('tower_wall_thickness', 0.002, 1.0, 100.0),
-                      ('tower_section_height', 0.1, 40.0, 10.0),
+                      ('hub_height', 50.0, 300.0, 1.0),
                       ('scope_ratio', 1.0, 5.0, 1.0),
                       ('anchor_radius', 1.0, 1e3, 1e-2),
                       ('mooring_diameter', 0.05, 1.0, 1e1),
@@ -355,10 +398,10 @@ class FloatingTurbineInstance(SemiInstance):
         # Tower related constraints
         self.prob.driver.add_constraint('tow.manufacturability',upper=0.0)
         self.prob.driver.add_constraint('tow.weldability',upper=0.0)
-        self.prob.driver.add_constraint('tow.stress',upper=1.0)
-        self.prob.driver.add_constraint('tow.global_buckling',upper=1.0)
-        self.prob.driver.add_constraint('tow.shell_buckling',upper=1.0)
-        #self.prob.driver.add_constraint('tow.damage',upper=1.0)
+        self.prob.driver.add_constraint('tow.tower.stress',upper=1.0)
+        self.prob.driver.add_constraint('tow.tower.global_buckling',upper=1.0)
+        self.prob.driver.add_constraint('tow.tower.shell_buckling',upper=1.0)
+        #self.prob.driver.add_constraint('tow.tower.damage',upper=1.0)
         
         # Ensure that the spar top matches the tower base
         self.prob.driver.add_constraint('sm.tt.transition_buffer',lower=0.0, upper=5.0)
@@ -450,9 +493,9 @@ class FloatingTurbineInstance(SemiInstance):
 
 def example():
     mysemi = FloatingTurbineInstance()
-    #mysemi.evaluate('psqp')
+    mysemi.evaluate('psqp')
     #mysemi.visualize('semi-initial.jpg')
-    mysemi.run('slsqp')
+    #mysemi.run('slsqp')
     return mysemi
 
 def slsqp_optimal():
@@ -496,5 +539,5 @@ def slsqp_optimal():
     return mysemi
     
 if __name__ == '__main__':
-    slsqp_optimal()
-    #example()
+    #slsqp_optimal()
+    example()
