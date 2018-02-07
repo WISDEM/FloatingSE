@@ -4,6 +4,7 @@ from offshorebos.wind_obos_component import WindOBOS
 from towerse.tower import TowerSE
 from plant_financese.plant_finance import PlantFinance
 from rotorse.rotor import RotorSE
+from commonse.rna import RNA
 
 import numpy as np
 
@@ -29,7 +30,8 @@ class FloatingTurbine(Group):
                                                'rstar_damage','Mxb_damage','Myb_damage','strain_ult_spar','strain_ult_te','m_damage',
                                                'nSector','tiploss','hubloss','wakerotation','usecd','AEP_loss_factor','dynamic_amplication_tip_deflection'])
 
-
+        # RNA
+        self.add('rna', RNA(1))
         
         # Tower
         # TODO: Use fatigue
@@ -95,6 +97,7 @@ class FloatingTurbine(Group):
         self.add('wave_acceleration_z0',       IndepVarComp('wave_acceleration_z0', 0.0), promotes=['*'])
 
         # Design standards
+        self.add('safety_factor_frequency',    IndepVarComp('safety_factor_frequency', 0.0), promotes=['*'])
         self.add('safety_factor_stress',       IndepVarComp('safety_factor_stress', 0.0), promotes=['*'])
         self.add('safety_factor_materials',    IndepVarComp('safety_factor_materials', 0.0), promotes=['*'])
         self.add('safety_factor_buckling',     IndepVarComp('safety_factor_buckling', 0.0), promotes=['*'])
@@ -105,16 +108,14 @@ class FloatingTurbine(Group):
 
         # RNA
         self.add('dummy_mass',                 IndepVarComp('dummy_mass', 0.0), promotes=['*'])
-        self.add('rna_mass',                   IndepVarComp('rna_mass', 0.0), promotes=['*'])
-        self.add('rna_F',                      IndepVarComp('rna_F', np.zeros((3,)) ), promotes=['*'])
-        self.add('rna_M',                      IndepVarComp('rna_M', np.zeros((3,)) ), promotes=['*'])
-        self.add('rna_Ixx',                    IndepVarComp('rna_Ixx', 0.0), promotes=['*'])
-        self.add('rna_Iyy',                    IndepVarComp('rna_Iyy', 0.0), promotes=['*'])
-        self.add('rna_Izz',                    IndepVarComp('rna_Izz', 0.0), promotes=['*'])
-        self.add('rna_Ixy',                    IndepVarComp('rna_Ixy', 0.0), promotes=['*'])
-        self.add('rna_Iyz',                    IndepVarComp('rna_Iyz', 0.0), promotes=['*'])
-        self.add('rna_Ixz',                    IndepVarComp('rna_Ixz', 0.0), promotes=['*'])
-        self.add('rna_offset',                 IndepVarComp('rna_offset', np.zeros((3,))), promotes=['*'])
+        self.add('hub_mass',                   IndepVarComp('hub_mass', 0.0), promotes=['*'])
+        self.add('nac_mass',                   IndepVarComp('nac_mass', 0.0), promotes=['*'])
+        self.add('hub_cm',                     IndepVarComp('hub_cm', np.zeros((3,))), promotes=['*'])
+        self.add('nac_cm',                     IndepVarComp('nac_cm', np.zeros((3,))), promotes=['*'])
+        self.add('hub_I',                      IndepVarComp('hub_I', np.zeros(6)), promotes=['*'])
+        self.add('nac_I',                      IndepVarComp('nac_I', np.zeros(6)), promotes=['*'])
+        self.add('downwind',                   IndepVarComp('downwind', False, pass_by_obj=True), promotes=['*'])
+        self.add('rna_weightM',                IndepVarComp('rna_weightM', True, pass_by_obj=True), promotes=['*'])
         
         # SemiGeometry
         self.add('z_depth',                    IndepVarComp('z_depth', 0.0), promotes=['*'])
@@ -362,23 +363,32 @@ class FloatingTurbine(Group):
         self.connect('stress_standard_value', 'tow.DC')
         
         self.connect('yaw', 'tow.distLoads.yaw')
+        self.connect('safety_factor_frequency', 'rotor.eta_freq')
         self.connect('safety_factor_stress', 'tow.gamma_f')
         self.connect('safety_factor_materials', 'tow.gamma_m')
         self.connect('safety_factor_buckling', 'tow.gamma_b')
-        self.connect('safety_factor_fatigue', ['rotor.struc.eta_damage','tow.gamma_fatigue'])
+        self.connect('safety_factor_fatigue', ['rotor.eta_damage','tow.gamma_fatigue'])
         self.connect('safety_factor_consequence', 'tow.gamma_n')
         self.connect('min_taper_ratio', ['tow.min_taper', 'sm.min_taper'])
         self.connect('min_diameter_thickness_ratio', ['tow.min_d_to_t', 'sm.min_d_to_t'])
-        self.connect('rna_F', 'tow.tower.rna_F')
-        self.connect('rna_M', 'tow.tower.rna_M')
-        self.connect('rna_Ixx', 'tow.mIxx')
-        self.connect('rna_Iyy', 'tow.mIyy')
-        self.connect('rna_Izz', 'tow.mIzz')
-        self.connect('rna_Ixy', 'tow.mIxy')
-        self.connect('rna_Iyz', 'tow.mIyz')
-        self.connect('rna_Ixz', 'tow.mIxz')
-        self.connect('rna_mass', ['wobos.rnaM', 'tow.rna_mass'])
-        self.connect('rna_offset', 'tow.rna_offset')
+        self.connect('rna.loads.top_F', 'tow.tower.rna_F')
+        self.connect('rna.loads.top_M', 'tow.tower.rna_M')
+        self.connect('rna.rna_I_TT', 'tow.mI')
+        self.connect('rna.rna_mass', ['wobos.rnaM', 'tow.rna_mass'])
+        self.connect('rna.rna_cm', 'tow.rna_offset')
+        self.connect('rotor.mass_all_blades', 'rna.blades_mass')
+        self.connect('rotor.I_all_blades', 'rna.blades_I')
+        self.connect('hub_mass', 'rna.hub_mass')
+        self.connect('nac_mass', 'rna.nac_mass')
+        self.connect('hub_cm', 'rna.hub_cm')
+        self.connect('nac_cm', 'rna.nac_cm')
+        self.connect('hub_I', 'rna.hub_I')
+        self.connect('nac_I', 'rna.nac_I')
+        self.connect('tilt', 'rna.tilt')
+        self.connect('rotor.Fxyz_total','rna.loads.F')
+        self.connect('rotor.Mxyz_total','rna.loads.M')
+        self.connect('downwind','rna.downwind')
+        self.connect('rna_weightM','rna.rna_weightM')
         
         self.connect('air_density', ['sm.air_density', 'tow.windLoads.rho','rotor.analysis.rho'])
         self.connect('air_viscosity', ['sm.air_viscosity', 'tow.windLoads.mu','rotor.analysis.mu'])

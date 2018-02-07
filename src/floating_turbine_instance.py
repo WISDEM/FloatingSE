@@ -53,9 +53,9 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['VfactorPC'] = 0.7
         self.params['pitch_extreme'] =  0.0
         self.params['azimuth_extreme'] = 0.0
-        self.params['rstar_damage'] = np.zeros(len(r_aero)+1)
-        self.params['Mxb_damage'] = np.zeros(len(r_aero)+1)
-        self.params['Myb_damage'] = np.zeros(len(r_aero)+1)
+        self.params['rstar_damage'] = np.linspace(0.0, 1.0, len(r_aero)+1) #np.zeros(len(r_aero)+1)
+        self.params['Mxb_damage'] = eps * np.ones(len(r_aero)+1)
+        self.params['Myb_damage'] = eps * np.ones(len(r_aero)+1)
         self.params['strain_ult_spar'] = 1e-2
         self.params['strain_ult_te'] = 2*2500*1e-6
         self.params['m_damage'] = 10.0
@@ -70,6 +70,15 @@ class FloatingTurbineInstance(SemiInstance):
         # TODO
         self.params['rotor.wind.z'] = np.array([90.0])
 
+        # For RNA
+        self.params['hub_mass'] = 0.1*285599.0
+        self.params['nac_mass'] = 0.5*285599.0
+        self.params['hub_cm']   = np.array([-1.13197635, 0.0, 0.50875268])
+        self.params['nac_cm']   = np.array([-1.13197635, 0.0, 0.50875268])
+        self.params['hub_I']    = 0.1*np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 0.0, 5.03710467e+05])
+        self.params['nac_I']    = 0.1*np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 0.0, 5.03710467e+05])
+        self.params['downwind'] = False
+        self.params['rna_weightM'] = True
         
         # For TowerSE
         self.params['hub_height']           = 90.0
@@ -81,23 +90,13 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['wave_acceleration_z0'] = 0.0 
         self.params['z_depth']              = -self.params['water_depth']
 
+        self.params['safety_factor_frequency']   = 1.1
         self.params['safety_factor_stress']      = 1.35
         self.params['safety_factor_materials']   = 1.3
         self.params['safety_factor_buckling']    = 1.1
         self.params['safety_factor_fatigue']     = 1.35*1.3*1.0
         self.params['safety_factor_consequence'] = 1.0
-        
-        self.params['rna_mass']   = 285599.0
-        self.params['rna_F']      = np.array([1284744.19620519, 0.0, -2914124.84400512])
-        self.params['rna_M']      = np.array([3963732.76208099, -2275104.79420872, -346781.68192839])
-        self.params['rna_Ixx']    = 1.14930678e+08
-        self.params['rna_Iyy']    = 2.20354030e+07
-        self.params['rna_Izz']    = 1.87597425e+07
-        self.params['rna_Ixy']    = 0.0
-        self.params['rna_Iyz']    = 0.0
-        self.params['rna_Ixz']    = 5.03710467e+05
-        self.params['rna_offset'] = np.array([-1.13197635, 0.0, 0.50875268])
-        
+      
         self.params['tower_diameter']          = vecOption(6.5, NSECTIONS+1)
         self.params['tower_section_height']    = vecOption(87.6/NSECTIONS, NSECTIONS)
         self.params['tower_wall_thickness']    = vecOption(0.05, NSECTIONS+1)
@@ -348,6 +347,20 @@ class FloatingTurbineInstance(SemiInstance):
                       ('tower_diameter', 3.0, 30.0, 1.0),
                       ('tower_wall_thickness', 0.002, 1.0, 100.0),
                       ('hub_height', 50.0, 300.0, 1.0),
+                      ('hubFraction', 1e-2, 1e-1, 1e2),
+                      ('bladeLength', 30.0, 110.0, 1.0),
+                      ('r_max_chord', 0.1, 0.7, 10.0),
+                      ('chord_sub', 1.0, 5.0, 1.0), #transport widths?
+                      ('theta_sub', -30.0, 30.0, 1.0),
+                      ('precone', 0.0, 20.0, 1.0),
+                      ('tilt', 0.0, 20.0, 1.0),
+                      ('control:Vin', 1.0, 20.0, 1.0),
+                      ('control:Vout', 5.0, 35.0, 1.0),
+                      #('control:ratedPower', 1e6, 15e6, 1e-6),
+                      ('control:maxOmega', 1.0, 30.0, 1.0),
+                      ('control:tsr', 0.5, 15.0, 1.0),
+                      ('sparT', 1e-3, 2e-1, 1e2),
+                      ('teT', 1e-3, 5e-1, 1e2),
                       ('scope_ratio', 1.0, 5.0, 1.0),
                       ('anchor_radius', 1.0, 1e3, 1e-2),
                       ('mooring_diameter', 0.05, 1.0, 1e1),
@@ -382,6 +395,32 @@ class FloatingTurbineInstance(SemiInstance):
         # CONSTRAINTS
         # These are mostly the outputs that were not connected to another model
 
+        # Rotor & RNA
+        self.prob.driver.add_constraint('rotor.Pn_margin', upper=1.0)
+        self.prob.driver.add_constraint('rotor.P1_margin', upper=1.0)
+        self.prob.driver.add_constraint('rotor.Pn_margin_cfem', upper=1.0)
+        self.prob.driver.add_constraint('rotor.P1_margin_cfem', upper=1.0)
+        self.prob.driver.add_constraint('rotor.rotor_strain_sparU', lower=-1.0)
+        self.prob.driver.add_constraint('rotor.rotor_strain_sparL', upper=1.0)
+        self.prob.driver.add_constraint('rotor.rotor_strain_teU', lower=-1.0)
+        self.prob.driver.add_constraint('rotor.rotor_strain_teL', upper=1.0)
+        self.prob.driver.add_constraint('rotor.rotor_buckling_sparU', upper=0.0)
+        self.prob.driver.add_constraint('rotor.rotor_buckling_sparL', upper=0.0)
+        self.prob.driver.add_constraint('rotor.rotor_buckling_teU', upper=0.0)
+        self.prob.driver.add_constraint('rotor.rotor_buckling_teL', upper=0.0)
+        self.prob.driver.add_constraint('rotor.rotor_damage_sparU', upper=0.0)
+        self.prob.driver.add_constraint('rotor.rotor_damage_sparL', upper=0.0)
+        self.prob.driver.add_constraint('rotor.rotor_damage_teU', upper=0.0)
+        self.prob.driver.add_constraint('rotor.rotor_damage_teL', upper=0.0)
+        
+        # Tower related constraints
+        self.prob.driver.add_constraint('tow.manufacturability',upper=0.0)
+        self.prob.driver.add_constraint('tow.weldability',upper=0.0)
+        self.prob.driver.add_constraint('tow.tower.stress',upper=1.0)
+        self.prob.driver.add_constraint('tow.tower.global_buckling',upper=1.0)
+        self.prob.driver.add_constraint('tow.tower.shell_buckling',upper=1.0)
+        #self.prob.driver.add_constraint('tow.tower.damage',upper=1.0)
+
         # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
         # Ensure that fairlead attaches to draft
         self.prob.driver.add_constraint('sm.geomBase.draft_depth_ratio',lower=0.0, upper=0.75)
@@ -394,14 +433,6 @@ class FloatingTurbineInstance(SemiInstance):
         self.prob.driver.add_constraint('sm.gcBase.weldability',upper=0.0)
         self.prob.driver.add_constraint('sm.gcBall.manufacturability',upper=0.0)
         self.prob.driver.add_constraint('sm.gcBall.weldability',upper=0.0)
-
-        # Tower related constraints
-        self.prob.driver.add_constraint('tow.manufacturability',upper=0.0)
-        self.prob.driver.add_constraint('tow.weldability',upper=0.0)
-        self.prob.driver.add_constraint('tow.tower.stress',upper=1.0)
-        self.prob.driver.add_constraint('tow.tower.global_buckling',upper=1.0)
-        self.prob.driver.add_constraint('tow.tower.shell_buckling',upper=1.0)
-        #self.prob.driver.add_constraint('tow.tower.damage',upper=1.0)
         
         # Ensure that the spar top matches the tower base
         self.prob.driver.add_constraint('sm.tt.transition_buffer',lower=0.0, upper=5.0)
