@@ -2,7 +2,6 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import floatingse.cylinder as cylinder
-import commonse.Frustum as frustum
 from floatingse.floatingInstance import nodal2sectional
 
 from commonse import gravity as g
@@ -164,7 +163,7 @@ class TestCylinder(unittest.TestCase):
         
     def testShellMass(self):
         # Straight cylinder
-        expect = 2.0*np.pi*9.75*0.5*5.0*1.5*np.array([20.0, 30.0])
+        expect = np.pi*(10.**2 - 9.5**2)*5.0*1.5*np.array([20.0, 30.0])
         actual = cylinder.compute_shell_mass(self.params)
         self.assertAlmostEqual(actual.sum(), expect.sum())
         npt.assert_almost_equal(actual, expect)

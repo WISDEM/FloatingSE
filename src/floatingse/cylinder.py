@@ -6,7 +6,7 @@ from scipy.integrate import cumtrapz
 from commonse import gravity, eps
 from floatingInstance import nodal2sectional
 from commonse.WindWaveDrag import cylinderDrag
-import commonse.Frustum as frustum
+import commonse.frustum as frustum
 
 def cylinder_drag_per_length(U, r, rho, mu):
     """This function gives the drag per unit height of a cylinder based on Reynolds number.
@@ -175,8 +175,8 @@ def compute_shell_mass(params):
     Ttop = twall[1:]
 
     # Radius (to middle of shell) at base and tops of all frustum sections
-    Rbot = R_od[:-1] - 0.5*Tbot
-    Rtop = R_od[1:] - 0.5*Ttop
+    Rbot = R_od[:-1]
+    Rtop = R_od[1:]
 
     # Shell volume for each section determined by allowing for linear variation in R & T in each section.
     V_shell = frustum.frustumShellVolume(Rbot, Rtop, Tbot, Ttop, h_section)
@@ -614,8 +614,7 @@ class CylinderGeometry(Component):
         unknowns['fairlead_radius'] = fair_off + np.interp(-fairlead, z_nodes, R_od)
         
         # With waterline at z=0, set the z-position of section centroids
-        R          = R_od - 0.5*t_wall
-        cm_section = frustum.frustumShellCG(R[:-1], R[1:], h_section)
+        cm_section = frustum.frustumShellCG(R_od[:-1], R_od[1:], t_wall[:-1], t_wall[1:], h_section)
         unknowns['z_section'] = z_nodes[:-1] + cm_section
 
         # Create constraint output that draft is less than water depth and fairlead is less than draft
