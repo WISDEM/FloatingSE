@@ -1,6 +1,6 @@
 from openmdao.api import Group, IndepVarComp, DirectSolver, ScipyGMRES, Newton, NLGaussSeidel, Brent, RunOnce
 from cylinder import Cylinder, CylinderGeometry
-from semi import Semi, SemiGeometry
+from substructure import Semi, SemiGeometry
 from semiPontoon import SemiPontoon
 from mapMooring import MapMooring
 from towerTransition import TowerTransition
@@ -36,7 +36,7 @@ class SemiAssembly(Group):
         self.add('pon', SemiPontoon(nSection), promotes=['G'])
         
         # Run main Semi analysis
-        self.add('sm', Semi(nSection, nIntPts), promotes=['turbine_mass','turbine_center_of_gravity','turbine_surge_force','turbine_pitch_moment',
+        self.add('sm', Semi(nSection, nIntPts), promotes=['turbine_mass','turbine_center_of_gravity','turbine_force','turbine_moment',
                                                           'total_cost','total_mass'])
 
         # Manufacturing and Welding constraints
@@ -79,6 +79,7 @@ class SemiAssembly(Group):
         self.add('anchor_type',                IndepVarComp('anchor_type', 'SUCTIONPILE', pass_by_obj=True), promotes=['*'])
         self.add('drag_embedment_extra_length',IndepVarComp('drag_embedment_extra_length', 0.0), promotes=['*'])
         self.add('mooring_max_offset',         IndepVarComp('mooring_max_offset', 0.0), promotes=['*'])
+        self.add('mooring_max_heel',           IndepVarComp('mooring_max_heel', 0.0), promotes=['*'])
         self.add('mooring_cost_rate',          IndepVarComp('mooring_cost_rate', 0.0), promotes=['*'])
 
         # Cylinder
@@ -125,16 +126,18 @@ class SemiAssembly(Group):
         # Pontoons
         #self.add('G',                          IndepVarComp('G', 0.0), promotes=['*'])
         self.add('number_of_ballast_columns',  IndepVarComp('number_of_ballast_columns', 0, pass_by_obj=True), promotes=['*'])
-        self.add('pontoon_outer_diameter',       IndepVarComp('pontoon_outer_diameter', 0.0), promotes=['*'])
-        self.add('pontoon_inner_diameter',       IndepVarComp('pontoon_inner_diameter', 0.0), promotes=['*'])
+        self.add('pontoon_outer_diameter',     IndepVarComp('pontoon_outer_diameter', 0.0), promotes=['*'])
+        self.add('pontoon_wall_thickness',     IndepVarComp('pontoon_wall_thickness', 0.0), promotes=['*'])
+        self.add('outer_cross_pontoons',       IndepVarComp('outer_cross_pontoons', True, pass_by_obj=True), promotes=['*'])
         self.add('cross_attachment_pontoons',  IndepVarComp('cross_attachment_pontoons', True, pass_by_obj=True), promotes=['*'])
         self.add('lower_attachment_pontoons',  IndepVarComp('lower_attachment_pontoons', True, pass_by_obj=True), promotes=['*'])
         self.add('upper_attachment_pontoons',  IndepVarComp('upper_attachment_pontoons', True, pass_by_obj=True), promotes=['*'])
         self.add('lower_ring_pontoons',        IndepVarComp('lower_ring_pontoons', True, pass_by_obj=True), promotes=['*'])
         self.add('upper_ring_pontoons',        IndepVarComp('upper_ring_pontoons', True, pass_by_obj=True), promotes=['*'])
         self.add('pontoon_cost_rate',          IndepVarComp('pontoon_cost_rate', 0.0), promotes=['*'])
-        self.add('base_connection_ratio_min', IndepVarComp('base_connection_ratio_min', 0.0), promotes=['*'])
-        self.add('ballast_connection_ratio_min', IndepVarComp('ballast_connection_ratio_min', 0.0), promotes=['*'])
+        self.add('connection_ratio_max',       IndepVarComp('connection_ratio_max', 0.0), promotes=['*'])
+        self.add('base_pontoon_attach_lower',  IndepVarComp('base_pontoon_attach_lower', 0.0), promotes=['*'])
+        self.add('base_pontoon_attach_upper',  IndepVarComp('base_pontoon_attach_upper', 0.0), promotes=['*'])
 
         # Design constraints
         #self.add('min_taper_ratio',            IndepVarComp('min_taper_ratio', 0.0), promotes=['*'])
@@ -156,18 +159,17 @@ class SemiAssembly(Group):
         #self.connect('dummy_mass', 'ball.stack_mass_in')
         #self.connect('turbine_center_of_gravity', 'sm.turbine_center_of_gravity')
         #self.connect('turbine_surge_force', ['pon.turbine_surge_force', 'sm.turbine_surge_force'])
-        self.connect('turbine_surge_force', 'pon.turbine_surge_force')
+        self.connect('turbine_force', 'pon.turbine_force')
         #self.connect('turbine_pitch_moment', ['pon.turbine_pitch_moment', 'sm.turbine_pitch_moment'])
-        self.connect('turbine_pitch_moment', 'pon.turbine_pitch_moment')
+        self.connect('turbine_moment', 'pon.turbine_moment')
 
         self.connect('freeboard_ballast', 'geomBall.freeboard')
         self.connect('section_height_ballast', ['geomBall.section_height', 'ball.section_height'])
         self.connect('outer_diameter_ballast', ['geomBall.outer_diameter', 'ball.outer_diameter', 'sg.ballast_outer_diameter', 'pon.ballast_outer_diameter', 'gcBall.d'])
         self.connect('wall_thickness_ballast', ['geomBall.wall_thickness', 'ball.wall_thickness', 'pon.ballast_wall_thickness', 'gcBall.t'])
 
-        self.connect('fairlead', ['geomBase.fairlead', 'geomBall.fairlead', 'sg.fairlead', 'mm.fairlead','sm.fairlead'])
+        self.connect('fairlead', ['geomBase.fairlead', 'geomBall.fairlead', 'sg.fairlead', 'mm.fairlead','sm.fairlead','pon.fairlead'])
         self.connect('fairlead_offset_from_shell', ['geomBase.fairlead_offset_from_shell', 'geomBall.fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell'])
-        self.connect('tower_metric', 'pon.tower_diameter')
 
         #self.connect('water_density', ['mm.water_density', 'base.water_density', 'ball.water_density', 'pon.water_density', 'sm.water_density'])
         self.connect('water_density', ['base.water_density', 'ball.water_density', 'pon.water_density', 'sm.water_density'])
@@ -179,6 +181,7 @@ class SemiAssembly(Group):
         self.connect('anchor_type', 'mm.anchor_type')
         self.connect('drag_embedment_extra_length', 'mm.drag_embedment_extra_length')
         self.connect('mooring_max_offset', 'mm.max_offset')
+        self.connect('mooring_max_heel', ['mm.max_heel', 'sm.max_heel'])
         self.connect('mooring_cost_rate', 'mm.mooring_cost_rate')
         
         #self.connect('air_density', ['base.air_density', 'ball.air_density'])
@@ -236,13 +239,17 @@ class SemiAssembly(Group):
         self.connect('outfitting_cost_rate', ['base.outfitting_cost_rate', 'ball.outfitting_cost_rate'])
 
         self.connect('pontoon_outer_diameter', 'pon.pontoon_outer_diameter')
-        self.connect('pontoon_inner_diameter', 'pon.pontoon_inner_diameter')
+        self.connect('pontoon_wall_thickness', 'pon.pontoon_wall_thickness')
+        self.connect('outer_cross_pontoons', 'pon.outer_cross_pontoons')
         self.connect('cross_attachment_pontoons', 'pon.cross_attachment_pontoons')
         self.connect('lower_attachment_pontoons', 'pon.lower_attachment_pontoons')
         self.connect('upper_attachment_pontoons', 'pon.upper_attachment_pontoons')
         self.connect('lower_ring_pontoons', 'pon.lower_ring_pontoons')
         self.connect('upper_ring_pontoons', 'pon.upper_ring_pontoons')
         self.connect('pontoon_cost_rate', 'pon.pontoon_cost_rate')
+        self.connect('connection_ratio_max', 'pon.connection_ratio_max')
+        self.connect('base_pontoon_attach_lower', 'pon.base_pontoon_attach_lower')
+        self.connect('base_pontoon_attach_upper', 'pon.base_pontoon_attach_upper')
 
         self.connect('number_of_ballast_columns', ['pon.number_of_ballast_cylinders', 'sm.number_of_ballast_cylinders'])
 
@@ -252,7 +259,8 @@ class SemiAssembly(Group):
         self.connect('min_d_to_t', 'gcBall.min_d_to_t')
         
         # Link outputs from one model to inputs to another
-        self.connect('geomBase.fairlead_radius', 'mm.fairlead_radius')
+        self.connect('sg.fairlead_radius', ['mm.fairlead_radius', 'sm.fairlead_radius'])
+
         self.connect('geomBase.z_nodes', ['base.z_nodes', 'pon.base_z_nodes'])
         self.connect('geomBase.z_section', 'base.z_section')
         self.connect('geomBall.z_nodes', ['ball.z_nodes', 'sg.ballast_z_nodes', 'pon.ballast_z_nodes'])
@@ -262,6 +270,7 @@ class SemiAssembly(Group):
         self.connect('mm.mooring_effective_mass', 'sm.mooring_effective_mass')
         self.connect('mm.mooring_cost', 'sm.mooring_cost')
         self.connect('mm.max_offset_restoring_force', 'sm.mooring_surge_restoring_force')
+        self.connect('mm.max_heel_restoring_force', 'sm.mooring_pitch_restoring_force')
         
         self.connect('base.z_center_of_gravity', 'sm.base_cylinder_center_of_gravity')
         self.connect('base.z_center_of_buoyancy', 'sm.base_cylinder_center_of_buoyancy')
@@ -289,8 +298,6 @@ class SemiAssembly(Group):
         self.connect('pon.pontoon_buoyancy', 'sm.pontoon_buoyancy')
         self.connect('pon.pontoon_center_of_buoyancy', 'sm.pontoon_center_of_buoyancy')
         self.connect('pon.pontoon_center_of_gravity', 'sm.pontoon_center_of_gravity')
-        self.connect('base_connection_ratio_min', 'pon.base_connection_ratio_min')
-        self.connect('ballast_connection_ratio_min', 'pon.ballast_connection_ratio_min')
 
          # Use complex number finite differences
         typeStr = 'fd'

@@ -1,6 +1,6 @@
 from openmdao.api import Group, IndepVarComp
 from cylinder import Cylinder, CylinderGeometry
-from spar import Spar
+from substructure import Spar
 from mapMooring import MapMooring
 from towerTransition import TowerTransition
 from commonse.UtilizationSupplement import GeometricConstraints
@@ -26,7 +26,7 @@ class SparAssembly(Group):
                                                                'material_density','E','nu','yield_stress'])
 
         # Run main Spar analysis
-        self.add('sp', Spar(nSection, nIntPts), promotes=['turbine_mass','turbine_center_of_gravity','turbine_surge_force','turbine_pitch_moment'])
+        self.add('sp', Spar(nSection, nIntPts), promotes=['turbine_mass','turbine_center_of_gravity','turbine_force','turbine_moment'])
 
         # Manufacturing and Welding constraints
         self.add('gc', GeometricConstraints(nSection+1, diamFlag=True), promotes=['min_taper','min_d_to_t'])
@@ -43,12 +43,6 @@ class SparAssembly(Group):
         #self.add('tower_diameter',             IndepVarComp('tower_diameter', np.zeros((nSection+1,))), promotes=['*'])
         #self.add('water_depth',                IndepVarComp('water_depth', 0.0), promotes=['*'])
 
-        # Turbine
-        #self.add('turbine_mass',               IndepVarComp('turbine_mass', 0.0), promotes=['*'])
-        #self.add('turbine_center_of_gravity',  IndepVarComp('turbine_center_of_gravity', np.zeros((3,))), promotes=['*'])
-        #self.add('turbine_surge_force',        IndepVarComp('turbine_surge_force', 0.0), promotes=['*'])
-        #self.add('turbine_pitch_moment',       IndepVarComp('turbine_pitch_moment', 0.0), promotes=['*'])
-
         # Mooring
         #self.add('water_density',              IndepVarComp('water_density', 0.0), promotes=['*'])
         self.add('scope_ratio',                IndepVarComp('scope_ratio', 0.0), promotes=['*'])
@@ -59,6 +53,7 @@ class SparAssembly(Group):
         self.add('anchor_type',                IndepVarComp('anchor_type', 'SUCTIONPILE', pass_by_obj=True), promotes=['*'])
         self.add('drag_embedment_extra_length',IndepVarComp('drag_embedment_extra_length', 0.0), promotes=['*'])
         self.add('mooring_max_offset',         IndepVarComp('mooring_max_offset', 0.0), promotes=['*'])
+        self.add('mooring_max_heel',           IndepVarComp('mooring_max_heel', 0.0), promotes=['*'])
         self.add('mooring_cost_rate',          IndepVarComp('mooring_cost_rate', 0.0), promotes=['*'])
 
         # Cylinder
@@ -109,11 +104,7 @@ class SparAssembly(Group):
         self.connect('fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell')
         #self.connect('tower_diameter', 'tt.tower_metric')
         
-        #self.connect('turbine_mass', ['cyl.stack_mass_in', 'sp.turbine_mass'])
         self.connect('turbine_mass', 'cyl.stack_mass_in')
-        #self.connect('turbine_center_of_gravity', 'sp.turbine_center_of_gravity')
-        #self.connect('turbine_surge_force', 'sp.turbine_surge_force')
-        #self.connect('turbine_pitch_moment', 'sp.turbine_pitch_moment')
 
         #self.connect('water_density', ['mm.water_density', 'cyl.water_density', 'sp.water_density'])
         self.connect('water_density', ['cyl.water_density', 'sp.water_density'])
@@ -125,6 +116,7 @@ class SparAssembly(Group):
         self.connect('anchor_type', 'mm.anchor_type')
         self.connect('drag_embedment_extra_length', 'mm.drag_embedment_extra_length')
         self.connect('mooring_max_offset', 'mm.max_offset')
+        self.connect('mooring_max_heel', ['mm.max_heel', 'sp.max_heel'])
         self.connect('mooring_cost_rate', 'mm.mooring_cost_rate')
         
         #self.connect('air_density', 'cyl.air_density')
@@ -161,7 +153,7 @@ class SparAssembly(Group):
         #self.connect('min_diameter_thickness_ratio', 'gc.min_d_to_t')
         
         # Link outputs from one model to inputs to another
-        self.connect('sg.fairlead_radius', 'mm.fairlead_radius')
+        self.connect('sg.fairlead_radius', ['mm.fairlead_radius', 'sp.fairlead_radius'])
         self.connect('sg.z_nodes', 'cyl.z_nodes')
         self.connect('sg.z_section', 'cyl.z_section')
         
@@ -169,6 +161,7 @@ class SparAssembly(Group):
         self.connect('mm.mooring_effective_mass', 'sp.mooring_effective_mass')
         self.connect('mm.mooring_cost', 'sp.mooring_cost')
         self.connect('mm.max_offset_restoring_force', 'sp.mooring_surge_restoring_force')
+        self.connect('mm.max_heel_restoring_force', 'sp.mooring_pitch_restoring_force')
         
         self.connect('cyl.z_center_of_gravity', 'sp.base_cylinder_center_of_gravity')
         self.connect('cyl.z_center_of_buoyancy', 'sp.base_cylinder_center_of_buoyancy')

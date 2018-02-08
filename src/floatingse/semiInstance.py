@@ -24,6 +24,7 @@ class SemiInstance(FloatingInstance):
         self.params['upper_attachment_pontoons'] = True
         self.params['lower_ring_pontoons'] = True
         self.params['upper_ring_pontoons'] = True
+        self.params['outer_cross_pontoons'] = True
         self.params['pontoon_cost_rate'] = 6.250
 
         # Typically design (start at OC4 semi)
@@ -49,9 +50,10 @@ class SemiInstance(FloatingInstance):
         self.params['stiffener_flange_thickness_ballast'] = 0.02
         self.params['stiffener_spacing_ballast'] = 0.4
         self.params['pontoon_outer_diameter'] = 2*1.6
-        self.params['pontoon_inner_diameter'] = 2*(1.6-0.0175)
-        self.params['base_connection_ratio_min'] = 2.0
-        self.params['ballast_connection_ratio_min'] = 2.0
+        self.params['pontoon_wall_thickness'] = 0.0175
+        self.params['connection_ratio_max'] = 0.25
+        self.params['base_pontoon_attach_lower'] = -20.0
+        self.params['base_pontoon_attach_upper'] = 10.0
 
         # OC4
         self.params['water_depth'] = 200.0
@@ -122,8 +124,10 @@ class SemiInstance(FloatingInstance):
                       ('section_height_ballast',1e-1, 100.0, 1e1),
                       ('outer_diameter_ballast',1.1, 40.0, 10.0),
                       ('wall_thickness_ballast',5e-3, 1.0, 1e3),
-                      ('pontoon_outer_diameter', 0.05, 3.0, 10.0),
-                      ('pontoon_inner_diameter', 0.02, 2.9, 10.0),
+                      ('pontoon_outer_diameter', 1e-1, 3.0, 10.0),
+                      ('pontoon_wall_thickness', 5e-3, 1e-1, 100.0),
+                      ('base_pontoon_attach_lower',-1e2, 1e2, 1.0),
+                      ('base_pontoon_attach_upper',-1e2, 1e2, 1.0),
                       ('scope_ratio', 1.0, 5.0, 1.0),
                       ('anchor_radius', 1.0, 1e3, 1e-2),
                       ('mooring_diameter', 0.05, 1.0, 1e1),
@@ -146,6 +150,7 @@ class SemiInstance(FloatingInstance):
         #prob.driver.add_desvar('mooring_type')
         #prob.driver.add_desvar('anchor_type')
         #prob.driver.add_desvar('bulkhead_nodes')
+        #prob.driver.add_desvar('outer_cross_pontoons')
         #prob.driver.add_desvar('cross_attachment_pontoons')
         #prob.driver.add_desvar('lower_attachment_pontoons')
         #prob.driver.add_desvar('upper_attachment_pontoons')
@@ -201,9 +206,10 @@ class SemiInstance(FloatingInstance):
         self.prob.driver.add_constraint('ball.external_general_unity', upper=1.0)
 
         # Pontoon tube radii
-        self.prob.driver.add_constraint('pon.pontoon_radii_ratio', upper=1.0)
-        self.prob.driver.add_constraint('pon.base_connection_ratio',upper=0.0)
-        self.prob.driver.add_constraint('pon.ballast_connection_ratio',upper=0.0)
+        self.prob.driver.add_constraint('pon.base_connection_ratio',lower=0.0)
+        self.prob.driver.add_constraint('pon.ballast_connection_ratio',lower=0.0)
+        self.prob.driver.add_constraint('pon.pontoon_base_attach_upper', lower=0.5, upper=1.0)
+        self.prob.driver.add_constraint('pon.pontoon_base_attach_lower', lower=0.0, upper=0.5)
 
         # Pontoon stress safety factor
         self.prob.driver.add_constraint('pon.axial_stress_factor', upper=0.8)
@@ -223,7 +229,7 @@ class SemiInstance(FloatingInstance):
         self.prob.driver.add_constraint('sm.offset_force_ratio',lower=0.0, upper=1.0)
 
         # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
-        self.prob.driver.add_constraint('sm.heel_angle',lower=0.0, upper=10.0)
+        self.prob.driver.add_constraint('sm.heel_constraint',lower=0.0, upper=1.0)
 
 
         # OBJECTIVE FUNCTION: Minimize total cost!
@@ -265,9 +271,9 @@ class SemiInstance(FloatingInstance):
         
 def example_semi():
     mysemi = SemiInstance()
-    #mysemi.evaluate('psqp')
-    #mysemi.visualize('semi-initial.jpg')
-    mysemi.run('slsqp')
+    mysemi.evaluate('psqp')
+    mysemi.visualize('semi-initial.jpg')
+    #mysemi.run('slsqp')
     return mysemi
 
 def psqp_optimal():

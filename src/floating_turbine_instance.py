@@ -48,7 +48,6 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['turbulence_class'] = TURBULENCE_CLASS['B']
         self.params['drivetrainType'] = DRIVETRAIN_TYPE['GEARED']
         self.params['gust_stddev'] = 3
-        #self.params['cdf_reference_height_wind_speed'] = 90.0 
         self.params['control:pitch'] = 0.0
         self.params['VfactorPC'] = 0.7
         self.params['pitch_extreme'] =  0.0
@@ -330,64 +329,25 @@ class FloatingTurbineInstance(SemiInstance):
     def get_assembly(self): return FloatingTurbine(NSECTIONS, NPTS, NDEL)
     
     def get_design_variables(self):
+        desvarList = super(FloatingTurbineInstance, self).get_design_variables()
         # Make a neat list of design variables, lower bound, upper bound, scalar
-        desvarList = [('fairlead',0.0, 100.0, 1.0),
-                      ('fairlead_offset_from_shell',0.0, 5.0, 1e2),
-                      ('radius_to_ballast_cylinder',0.0, 40.0, 1.0),
-                      ('freeboard_base',0.0, 50.0, 1.0),
-                      ('section_height_base',1e-1, 100.0, 1e1),
-                      ('outer_diameter_base',1.1, 40.0, 10.0),
-                      ('wall_thickness_base',5e-3, 1.0, 1e3),
-                      ('freeboard_ballast',0.0, 50.0, 1.0),
-                      ('section_height_ballast',1e-1, 100.0, 1e1),
-                      ('outer_diameter_ballast',1.1, 40.0, 10.0),
-                      ('wall_thickness_ballast',5e-3, 1.0, 1e3),
-                      ('pontoon_outer_diameter', 0.1, 10.0, 10.0),
-                      ('pontoon_inner_diameter', 0.02, 9.9, 10.0),
-                      ('tower_diameter', 3.0, 30.0, 1.0),
-                      ('tower_wall_thickness', 0.002, 1.0, 100.0),
-                      ('hub_height', 50.0, 300.0, 1.0),
-                      ('hubFraction', 1e-2, 1e-1, 1e2),
-                      ('bladeLength', 30.0, 110.0, 1.0),
-                      ('r_max_chord', 0.1, 0.7, 10.0),
-                      ('chord_sub', 1.0, 5.0, 1.0), #transport widths?
-                      ('theta_sub', -30.0, 30.0, 1.0),
-                      ('precone', 0.0, 20.0, 1.0),
-                      ('tilt', 0.0, 20.0, 1.0),
-                      ('control:Vin', 1.0, 20.0, 1.0),
-                      ('control:Vout', 5.0, 35.0, 1.0),
-                      #('control:ratedPower', 1e6, 15e6, 1e-6),
-                      ('control:maxOmega', 1.0, 30.0, 1.0),
-                      ('control:tsr', 0.5, 15.0, 1.0),
-                      ('sparT', 1e-3, 2e-1, 1e2),
-                      ('teT', 1e-3, 5e-1, 1e2),
-                      ('scope_ratio', 1.0, 5.0, 1.0),
-                      ('anchor_radius', 1.0, 1e3, 1e-2),
-                      ('mooring_diameter', 0.05, 1.0, 1e1),
-                      ('stiffener_web_height_base', 1e-2, 1.0, 1e2),
-                      ('stiffener_web_thickness_base', 1e-3, 5e-1, 1e2),
-                      ('stiffener_flange_width_base', 1e-2, 5.0, 1e2),
-                      ('stiffener_flange_thickness_base', 1e-3, 5e-1, 1e2),
-                      ('stiffener_spacing_base', 1e-1, 1e2, 1e1),
-                      ('permanent_ballast_height_base', 1e-1, 50.0, 1.0),
-                      ('stiffener_web_height_ballast', 1e-2, 1.0, 1e2),
-                      ('stiffener_web_thickness_ballast', 1e-3, 5e-1, 1e2),
-                      ('stiffener_flange_width_ballast', 1e-2, 5.0, 1e2),
-                      ('stiffener_flange_thickness_ballast', 1e-3, 5e-1, 1e2),
-                      ('stiffener_spacing_ballast', 1e-1, 1e2, 1e1),
-                      ('permanent_ballast_height_ballast', 1e-1, 50.0, 1.0)]
-
-        # TODO: Integer and Boolean design variables
-        #prob.driver.add_desvar('number_of_ballast_columns', lower=1)
-        #prob.driver.add_desvar('number_of_mooring_lines', lower=1)
-        #prob.driver.add_desvar('mooring_type')
-        #prob.driver.add_desvar('anchor_type')
-        #prob.driver.add_desvar('bulkhead_nodes')
-        #prob.driver.add_desvar('cross_attachment_pontoons')
-        #prob.driver.add_desvar('lower_attachment_pontoons')
-        #prob.driver.add_desvar('upper_attachment_pontoons')
-        #prob.driver.add_desvar('lower_ring_pontoons')
-        #prob.driver.add_desvar('upper_ring_pontoons')
+        desvarList.extend( [('tower_diameter', 3.0, 30.0, 1.0),
+                            ('tower_wall_thickness', 0.002, 1.0, 100.0),
+                            ('hub_height', 50.0, 300.0, 1.0),
+                            ('hubFraction', 1e-2, 1e-1, 1e2),
+                            ('bladeLength', 30.0, 110.0, 1.0),
+                            #('r_max_chord', 0.1, 0.7, 10.0),
+                            #('control:Vin', 1.0, 20.0, 1.0),
+                            #('control:Vout', 20.0, 35.0, 1.0),
+                            #('control:ratedPower', 1e6, 15e6, 1e-6),
+                            #('control:maxOmega', 1.0, 30.0, 1.0),
+                            #('control:tsr', 1.0, 15.0, 1.0),
+                            #('sparT', 1e-3, 2e-1, 1e2),
+                            #('teT', 1e-3, 5e-1, 1e2),
+                            ('chord_sub', 1.0, 5.0, 1.0), #transport widths?
+                            ('theta_sub', -30.0, 30.0, 1.0),
+                            ('precone', 0.0, 20.0, 1.0),
+                            ('tilt', 0.0, 20.0, 1.0)] )
         return desvarList
 
     def add_constraints_objective(self):
@@ -404,14 +364,14 @@ class FloatingTurbineInstance(SemiInstance):
         self.prob.driver.add_constraint('rotor.rotor_strain_sparL', upper=1.0)
         self.prob.driver.add_constraint('rotor.rotor_strain_teU', lower=-1.0)
         self.prob.driver.add_constraint('rotor.rotor_strain_teL', upper=1.0)
-        self.prob.driver.add_constraint('rotor.rotor_buckling_sparU', upper=0.0)
-        self.prob.driver.add_constraint('rotor.rotor_buckling_sparL', upper=0.0)
-        self.prob.driver.add_constraint('rotor.rotor_buckling_teU', upper=0.0)
-        self.prob.driver.add_constraint('rotor.rotor_buckling_teL', upper=0.0)
-        self.prob.driver.add_constraint('rotor.rotor_damage_sparU', upper=0.0)
-        self.prob.driver.add_constraint('rotor.rotor_damage_sparL', upper=0.0)
-        self.prob.driver.add_constraint('rotor.rotor_damage_teU', upper=0.0)
-        self.prob.driver.add_constraint('rotor.rotor_damage_teL', upper=0.0)
+        #self.prob.driver.add_constraint('rotor.rotor_buckling_sparU', upper=0.0)
+        #self.prob.driver.add_constraint('rotor.rotor_buckling_sparL', upper=0.0)
+        #self.prob.driver.add_constraint('rotor.rotor_buckling_teU', upper=0.0)
+        #self.prob.driver.add_constraint('rotor.rotor_buckling_teL', upper=0.0)
+        #self.prob.driver.add_constraint('rotor.rotor_damage_sparU', upper=0.0)
+        #self.prob.driver.add_constraint('rotor.rotor_damage_sparL', upper=0.0)
+        #self.prob.driver.add_constraint('rotor.rotor_damage_teU', upper=0.0)
+        #self.prob.driver.add_constraint('rotor.rotor_damage_teL', upper=0.0)
         
         # Tower related constraints
         self.prob.driver.add_constraint('tow.manufacturability',upper=0.0)
@@ -486,7 +446,7 @@ class FloatingTurbineInstance(SemiInstance):
         self.prob.driver.add_constraint('sm.sm.offset_force_ratio',lower=0.0, upper=1.0)
 
         # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
-        self.prob.driver.add_constraint('sm.sm.heel_angle',lower=0.0, upper=10.0)
+        self.prob.driver.add_constraint('sm.sm.heel_constraint',lower=0.0, upper=1.0)
 
 
         # OBJECTIVE FUNCTION: Minimize total cost!
@@ -524,9 +484,9 @@ class FloatingTurbineInstance(SemiInstance):
 
 def example():
     mysemi = FloatingTurbineInstance()
-    mysemi.evaluate('psqp')
+    #mysemi.evaluate('psqp')
     #mysemi.visualize('semi-initial.jpg')
-    #mysemi.run('slsqp')
+    mysemi.run('slsqp')
     return mysemi
 
 def slsqp_optimal():

@@ -143,7 +143,7 @@ class SparInstance(FloatingInstance):
         self.prob.driver.add_constraint('sp.offset_force_ratio',lower=0.0, upper=1.0)
 
         # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
-        self.prob.driver.add_constraint('sp.heel_angle',lower=0.0, upper=10.0)
+        self.prob.driver.add_constraint('sp.heel_constraint',lower=0.0, upper=1.0)
 
         # OBJECTIVE FUNCTION: Minimize total cost!
         self.prob.driver.add_objective('sp.total_cost', scaler=1e-9)
