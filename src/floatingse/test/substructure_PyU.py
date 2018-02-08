@@ -1,12 +1,82 @@
 import numpy as np
 import numpy.testing as npt
 import unittest
-import floatingse.semi as semi
+import floatingse.substructure as subs
 
 from commonse import gravity as g
 NSECTIONS = 5
 NPTS = 100
 
+class TestSpar(unittest.TestCase):
+    def setUp(self):
+        self.params = {}
+        self.unknowns = {}
+        self.resids = {}
+
+        self.params['water_density'] = 1e3
+        self.params['turbine_mass'] = 1e4
+        self.params['mooring_mass'] = 50.0
+        self.params['mooring_effective_mass'] = 40.0
+        self.params['base_cylinder_mass'] = 2e4/NSECTIONS  * np.ones((NSECTIONS,))
+        self.params['base_cylinder_displaced_volume'] = 2e2/NSECTIONS  * np.ones((NSECTIONS,))
+        self.params['base_cylinder_center_of_buoyancy'] = -10.0
+        self.params['base_cylinder_center_of_gravity'] = -8.0
+        self.params['base_freeboard'] = 10.0
+        self.params['water_ballast_mass_vector'] = 1e5*np.arange(5)
+        self.params['water_ballast_zpts_vector'] = np.array([-10, -9, -8, -7, -6])
+        self.params['turbine_center_of_gravity'] = 2.0*np.ones(3)
+        self.params['fairlead'] = 0.5
+        self.params['fairlead_radius'] = 5.0
+        self.params['base_cylinder_Iwaterplane'] = 150.0
+        self.params['base_cylinder_surge_force'] = np.array([11.0, 15.0]) 
+        self.params['base_cylinder_force_points'] = np.array([-7.0, -4.0]) 
+        self.params['turbine_force'] = 13.0*np.ones(3)
+        self.params['turbine_moment'] = 5.0*np.ones(3)
+        self.params['mooring_surge_restoring_force'] = 200.0
+        self.params['mooring_pitch_restoring_force'] = 1e5 * np.ones((10,3))
+        self.params['mooring_pitch_restoring_force'][3:,:] = 0.0
+        self.params['mooring_cost'] = 2.0
+        self.params['base_cylinder_cost'] = 2.5
+        self.params['max_heel'] = 10.0
+
+        self.myspar = subs.Spar(NSECTIONS, NPTS)
+
+    def testBalance(self):
+        self.myspar.balance_spar(self.params, self.unknowns)
+
+        m_expect = 1e4 + 2e4 + 40.0
+        m_water = 2e5 - m_expect
+        h_expect = np.interp(m_water, self.params['water_ballast_mass_vector'], self.params['water_ballast_zpts_vector']) + 10
+        cg_expect = (1e4*2 + 2e4*(-8) + 40*(-0.5) + m_water*(0.5*h_expect-10)) / (m_expect+m_water)
+        self.assertEqual(self.unknowns['variable_ballast_mass'], m_water)
+        self.assertEqual(self.unknowns['variable_ballast_height'], h_expect)
+        self.assertEqual(self.unknowns['total_mass'], m_expect - 1e4 - 40.0 + 50.0)
+        self.assertEqual(self.unknowns['z_center_of_gravity'], cg_expect)
+
+        
+    def testStability(self):
+        self.unknowns['z_center_of_gravity'] = -1.0
+        self.params['mooring_pitch_restoring_force'] = np.zeros((10,3))
+        self.myspar.compute_stability(self.params, self.unknowns)
+
+        Fc = np.trapz(np.array([11.0, 15.0]), np.array([-7, -4.0]))
+        Mc = np.trapz(np.array([11.0, 15.0])*(np.array([-7, -4.0])+1), np.array([-7, -4.0]))
+        m_expect = 2e4 + 50.0
+        static_expect = -10 +1.0
+        meta_expect = static_expect + 150/200.0
+        M_moor = 0.0
+        self.assertEqual(self.unknowns['static_stability'], static_expect)
+        self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
+        self.assertEqual(self.unknowns['offset_force_ratio'], (Fc+13)/200.0)
+        self.assertAlmostEqual(self.unknowns['heel_constraint'], (180/np.pi)*(5+13*11+Mc)/(2e2*g*1e3*meta_expect)/10.0)
+
+
+    def testCost(self):
+        self.myspar.compute_costs(self.params, self.unknowns)
+        self.assertEqual(self.unknowns['total_cost'], 4.5)
+
+        
+    
 class TestSemi(unittest.TestCase):
     def setUp(self):
         self.params = {}
@@ -16,13 +86,16 @@ class TestSemi(unittest.TestCase):
         # From other components
         self.params['turbine_mass'] = 1e4
         self.params['turbine_center_of_gravity'] = 40.0*np.ones(3)
-        self.params['turbine_surge_force'] = 26.0
-        self.params['turbine_pitch_moment'] = 5e4
+        self.params['turbine_force'] = 26.0*np.ones(3)
+        self.params['turbine_moment'] = 5e4*np.ones(3)
         
         self.params['mooring_mass'] = 20.0
         self.params['mooring_effective_mass'] = 15.0
         self.params['mooring_surge_restoring_force'] = 1e2
+        self.params['mooring_pitch_restoring_force'] = 1e5 * np.ones((10,3))
+        self.params['mooring_pitch_restoring_force'][3:,:] = 0.0
         self.params['mooring_cost'] = 256.0
+        self.params['max_heel'] = 10.0
 
         self.params['pontoon_mass'] = 50.0
         self.params['pontoon_cost'] = 512.0
@@ -51,15 +124,16 @@ class TestSemi(unittest.TestCase):
         self.params['ballast_cylinder_cost'] = 64.0
         
         self.params['number_of_ballast_cylinders'] = 3
-        self.params['fairlead'] = 1.0
+        self.params['fairlead'] = 0.5
+        self.params['fairlead_radius'] = 5.0
         self.params['water_ballast_mass_vector'] = 1e9*np.arange(5)
         self.params['water_ballast_zpts_vector'] = np.array([-10, -9, -8, -7, -6])
         self.params['radius_to_ballast_cylinder'] = 20.0
 
         self.params['water_density'] = 1e3
 
-        self.mysemi = semi.Semi(NSECTIONS, NPTS)
-        self.mysemiG = semi.SemiGeometry(2)
+        self.mysemi = subs.Semi(NSECTIONS, NPTS)
+        self.mysemiG = subs.SemiGeometry(2)
 
         
     def testSetGeometry(self):
@@ -81,7 +155,7 @@ class TestSemi(unittest.TestCase):
         V_expect = 1e4*5 + 3*5*5e3 + 2e6/g/1e3
         m_water = 1e3*V_expect - m_expect
         h_expect = np.interp(m_water, self.params['water_ballast_mass_vector'], self.params['water_ballast_zpts_vector']) + 10.0
-        cg_expect = (1e4*40.0 + 50.0*(-10.0) + 5*2e4*(-20.0) + 3*5*1.5e4*(-1.0) + 15.0*(-1.0) + m_water*(-10 + 0.5*h_expect)) / (m_expect+m_water)
+        cg_expect = (1e4*40.0 + 50.0*(-10.0) + 5*2e4*(-20.0) + 3*5*1.5e4*(-1.0) + 15.0*(-0.5) + m_water*(-10 + 0.5*h_expect)) / (m_expect+m_water)
         cb_expect = (2e6/g/1e3*(-15.0) + 5*1e4*(-12.5) + 3*5*5e3*(-5.0)) / V_expect
         
         self.assertEqual(self.unknowns['total_mass'], m_expect - 1e4 - 15.0 + 20.0)
@@ -117,6 +191,7 @@ class TestSemi(unittest.TestCase):
         
 def suite():
     suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestSpar))
     suite.addTest(unittest.makeSuite(TestSemi))
     return suite
 
