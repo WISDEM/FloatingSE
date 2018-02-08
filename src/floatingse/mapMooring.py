@@ -46,8 +46,9 @@ class MapMooring(Component):
         self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines', pass_by_obj=True)
         self.add_param('mooring_type', val='CHAIN', desc='chain, nylon, polyester, fiber, or iwrc', pass_by_obj=True)
         self.add_param('anchor_type', val='SUCTIONPILE', desc='SUCTIONPILE or DRAGEMBEDMENT', pass_by_obj=True)
-        self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
         self.add_param('drag_embedment_extra_length', val=0.0, units='m', desc='Extra mooring line length needed to ensure drag embedment anchors only see horizontal forces')
+        self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
+        self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
 
         # Cost rates
         self.add_param('mooring_cost_rate', val=1.1, desc='miscellaneous cost factor in percent')
@@ -58,8 +59,9 @@ class MapMooring(Component):
         self.add_output('mooring_mass', val=0.0, units='kg',desc='total mass of mooring')
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
         self.add_output('anchor_cost', val=0.0, units='USD',desc='total cost for anchor')
-        self.add_output('vertical_load', val=0.0, units='kg*m/s**2',desc='mooring vertical load in all mooring lines')
-        self.add_output('max_offset_restoring_force', val=0.0, units='kg*m/s**2',desc='sume of forces in x direction')
+        self.add_output('vertical_load', val=0.0, units='N',desc='mooring vertical load in all mooring lines')
+        self.add_output('max_offset_restoring_force', val=0.0, units='N',desc='sum of forces in x direction after max offset')
+        self.add_output('max_heel_restoring_force', val=np.zeros((10,3)), units='N',desc='forces for all mooring lines after max heel')
         self.add_output('plot_matrix', val=np.zeros((3, 20, 3)), units='m', desc='data matrix for plotting') 
 
         # Output constriants
@@ -397,6 +399,7 @@ class MapMooring(Component):
         Dmooring      = params['mooring_diameter']
         nlines        = params['number_of_mooring_lines']
         offset        = params['max_offset']
+        heel          = params['max_heel']
 
         # Write the mooring system input file for this design
         self.write_input_file(params)
@@ -423,6 +426,16 @@ class MapMooring(Component):
         unknowns['vertical_load'] = Fz
         unknowns['mooring_effective_mass'] = Fz / gravity
         unknowns['plot_matrix'] = plotMat
+
+        # Get the restoring moment at maximum angle of heel
+        # Since we don't know the substucture CG, have to just get the forces of the lines now and do the cross product later
+        Fh = np.zeros((10,3))
+        mymap.displace_vessel(0, 0, 0, 0, heel, 0)
+        mymap.update_states(0.0, 0)
+        for k in xrange(nlines):
+            # Force in x-y-z coordinates
+            Fh[k][0], Fh[k][1], Fh[k][2] = mymap.get_fairlead_force_3d(k)
+        unknowns['max_heel_restoring_force'] = Fh
         
         # Get angles by which to find the weakest line
         dangle  = 2.0
@@ -433,7 +446,9 @@ class MapMooring(Component):
         # Will global minimum always be along mooring angle?
         max_tension   = 0.0
         max_angle     = None
+        min_angle     = None
         F_max_tension = None
+        F_min         = np.inf
         T = np.zeros((nlines,))
         F = np.zeros((nlines,))
         # Loop around all angles to find weakest point
@@ -459,9 +474,12 @@ class MapMooring(Component):
                 max_tension   = tempMax
                 F_max_tension = F.sum()
                 max_angle     = a
+            if F.sum() < F_min:
+                F_min     = F.sum()
+                min_angle = a
                 
         # Store the weakest restoring force when the vessel is offset the maximum amount
-        unknowns['max_offset_restoring_force'] = F_max_tension
+        unknowns['max_offset_restoring_force'] = F_min
         unknowns['safety_factor'] = max_tension / self.min_break_load
 
         mymap.end()
