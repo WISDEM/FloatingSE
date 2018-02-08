@@ -17,10 +17,13 @@ class FloatingTurbineInstance(SemiInstance):
         self.params.pop('tower_metric', None)
         self.params.pop('min_d_to_t', None)
         self.params.pop('min_taper', None)
-        self.params.pop('turbine_surge_force', None)
-        self.params.pop('turbine_pitch_moment', None)
+        self.params.pop('turbine_force', None)
+        self.params.pop('turbine_moment', None)
+        self.params.pop('turbine_I_base', None)
         self.params.pop('turbine_center_of_gravity', None)
         self.params.pop('turbine_mass', None)
+        self.params['min_taper_ratio'] = 0.4
+        self.params['min_diameter_thickness_ratio'] = 120.0
 
         # For RotorSE
         self.params['hubFraction'] = 0.025
@@ -424,9 +427,10 @@ class FloatingTurbineInstance(SemiInstance):
         self.prob.driver.add_constraint('sm.ball.external_general_unity', upper=1.0)
 
         # Pontoon tube radii
-        self.prob.driver.add_constraint('sm.pon.pontoon_radii_ratio', upper=1.0)
-        self.prob.driver.add_constraint('sm.pon.base_connection_ratio',upper=0.0)
-        self.prob.driver.add_constraint('sm.pon.ballast_connection_ratio',upper=0.0)
+        self.prob.driver.add_constraint('sm.pon.base_connection_ratio',lower=0.0)
+        self.prob.driver.add_constraint('sm.pon.ballast_connection_ratio',lower=0.0)
+        self.prob.driver.add_constraint('sm.pon.pontoon_base_attach_upper', lower=0.5, upper=1.0)
+        self.prob.driver.add_constraint('sm.pon.pontoon_base_attach_lower', lower=0.0, upper=0.5)
 
         # Pontoon stress safety factor
         self.prob.driver.add_constraint('sm.pon.axial_stress_factor', upper=0.8)

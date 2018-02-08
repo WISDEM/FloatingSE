@@ -33,7 +33,7 @@ class SemiAssembly(Group):
         self.add('ball', Cylinder(nSection, nIntPts))
 
         # Add in the connecting truss
-        self.add('pon', SemiPontoon(nSection), promotes=['G'])
+        self.add('pon', SemiPontoon(nSection), promotes=['G','turbine_mass','turbine_force','turbine_moment','turbine_I_base'])
         
         # Run main Semi analysis
         self.add('sm', Semi(nSection, nIntPts), promotes=['turbine_mass','turbine_center_of_gravity','turbine_force','turbine_moment',
@@ -154,14 +154,8 @@ class SemiAssembly(Group):
                                              'pon.base_outer_diameter', 'gcBase.d', 'tt.base_metric'])
         self.connect('wall_thickness_base', ['geomBase.wall_thickness', 'base.wall_thickness', 'pon.base_wall_thickness', 'gcBase.t'])
 
-        #self.connect('turbine_mass', ['base.stack_mass_in', 'sm.turbine_mass', 'pon.turbine_mass'])
-        self.connect('turbine_mass', ['base.stack_mass_in', 'pon.turbine_mass'])
+        self.connect('turbine_mass', 'base.stack_mass_in')
         #self.connect('dummy_mass', 'ball.stack_mass_in')
-        #self.connect('turbine_center_of_gravity', 'sm.turbine_center_of_gravity')
-        #self.connect('turbine_surge_force', ['pon.turbine_surge_force', 'sm.turbine_surge_force'])
-        self.connect('turbine_force', 'pon.turbine_force')
-        #self.connect('turbine_pitch_moment', ['pon.turbine_pitch_moment', 'sm.turbine_pitch_moment'])
-        self.connect('turbine_moment', 'pon.turbine_moment')
 
         self.connect('freeboard_ballast', 'geomBall.freeboard')
         self.connect('section_height_ballast', ['geomBall.section_height', 'ball.section_height'])

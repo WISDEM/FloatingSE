@@ -88,6 +88,7 @@ class FloatingInstance(object):
 
         # Turbine parameters
         self.params['turbine_mass'] = 371690.0 + 285599.0
+        self.params['turbine_I_base'] = np.array([3.05284574e9, 2.96031642e9, 2.13639924e7, 0.0, 2.89884849e7, 0.0])
         self.params['turbine_center_of_gravity'] = np.array([0.0, 0.0, 43.4])
         self.params['turbine_force'] = np.array( [1.30015900e+06, -3.14321369e-08, -9.12169902e+06] )
         self.params['turbine_moment'] = np.array( [-1.68366922e+06, 1.02556564e+08, 1.47301970e+05] )
@@ -102,8 +103,6 @@ class FloatingInstance(object):
         # Design parameters
         self.params['min_taper'] = 0.4
         self.params['min_d_to_t'] = 120.0
-        #self.params['min_taper_ratio'] = 0.4
-        #self.params['min_diameter_thickness_ratio'] = 120.0
         
     def get_assembly(self):
         raise NotImplementedError("Subclasses should implement this!")

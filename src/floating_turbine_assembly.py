@@ -35,17 +35,17 @@ class FloatingTurbine(Group):
         
         # Tower
         # TODO: Use fatigue
-        self.add('tow', TowerSE(1, nSection+1, 15, 0, wind='PowerWind'), promotes=['tower_section_height','tower_diameter',
-                                                                                   'tower_wall_thickness','tower_outfitting_factor',
-                                                                                   'tower_buckling_length','tower_M_DEL','tower_z_DEL',
-                                                                                   'tower_force_discretization'])
+        self.add('tow', TowerSE(1, nSection+1, 0, wind='PowerWind'), promotes=['tower_section_height','tower_diameter',
+                                                                               'tower_wall_thickness','tower_outfitting_factor',
+                                                                               'tower_buckling_length','tower_M_DEL','tower_z_DEL',
+                                                                               'tower_force_discretization'])
         
         # Semi
         self.add('sm', SemiAssembly(nSection, nIntPts), promotes=['radius_to_ballast_cylinder','fairlead','fairlead_offset_from_shell',
                                                                   'freeboard_base','section_height_base','outer_diameter_base','wall_thickness_base',
                                                                   'freeboard_ballast','section_height_ballast','outer_diameter_ballast','wall_thickness_ballast',
                                                                   'scope_ratio','anchor_radius','mooring_diameter','number_of_mooring_lines','mooring_type',
-                                                                  'anchor_type','drag_embedment_extra_length','mooring_max_offset','mooring_cost_rate',
+                                                                  'anchor_type','drag_embedment_extra_length','mooring_max_offset','mooring_max_heel','mooring_cost_rate',
                                                                   'permanent_ballast_density','stiffener_web_height_base','stiffener_web_thickness_base',
                                                                   'stiffener_flange_width_base','stiffener_flange_thickness_base','stiffener_spacing_base',
                                                                   'bulkhead_nodes_base','permanent_ballast_height_base','stiffener_web_height_ballast',
@@ -54,9 +54,9 @@ class FloatingTurbine(Group):
                                                                   'permanent_ballast_height_ballast','bulkhead_mass_factor','ring_mass_factor','shell_mass_factor',
                                                                   'spar_mass_factor','outfitting_mass_fraction','ballast_cost_rate','tapered_col_cost_rate',
                                                                   'outfitting_cost_rate','number_of_ballast_columns','pontoon_outer_diameter',
-                                                                  'pontoon_inner_diameter','cross_attachment_pontoons','lower_attachment_pontoons',
-                                                                  'upper_attachment_pontoons','lower_ring_pontoons','upper_ring_pontoons','pontoon_cost_rate',
-                                                                  'base_connection_ratio_min', 'ballast_connection_ratio_min'])
+                                                                  'pontoon_wall_thickness','cross_attachment_pontoons','lower_attachment_pontoons',
+                                                                  'upper_attachment_pontoons','lower_ring_pontoons','upper_ring_pontoons','outer_cross_pontoons',
+                                                                  'pontoon_cost_rate','connection_ratio_max','base_pontoon_attach_upper','base_pontoon_attach_lower'])
         # Balance of station
         self.add('wobos', WindOBOS())
 
@@ -616,8 +616,9 @@ class FloatingTurbine(Group):
         # Link outputs from one model to inputs to another
         self.connect('tow.turb.turbine_mass', 'sm.turbine_mass')
         self.connect('tow.turb.turbine_center_of_mass', 'sm.turbine_center_of_gravity')
-        self.connect('tow.tower.turbine_Fx', 'sm.turbine_surge_force')
-        self.connect('tow.tower.turbine_My', 'sm.turbine_pitch_moment')
+        self.connect('tow.turb.turbine_I_base', 'sm.turbine_I_base')
+        self.connect('tow.tower.turbine_F', 'sm.turbine_force')
+        self.connect('tow.tower.turbine_M', 'sm.turbine_moment')
         self.connect('tow.tower_mass', 'wobos.towerM')
         self.connect('dummy_mass', 'sm.ball.stack_mass_in')
 

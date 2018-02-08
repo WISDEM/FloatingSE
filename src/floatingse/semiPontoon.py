@@ -66,6 +66,7 @@ class SemiPontoon(Component):
         self.add_param('turbine_mass', val=eps, units='kg', desc='mass of tower')
         self.add_param('turbine_force', val=np.zeros(3), units='N', desc='Force in xyz-direction on turbine')
         self.add_param('turbine_moment', val=np.zeros(3), units='N*m', desc='Moments about turbine base')
+        self.add_param('turbine_I_base', val=np.zeros(6), units='kg*m**2', desc='Moments about turbine base')
 
         # Manufacturing
         self.add_param('connection_ratio_max', val=0.0, desc='Maximum ratio of pontoon outer diameter to base/ballast outer diameter')
@@ -132,6 +133,7 @@ class SemiPontoon(Component):
         m_turbine      = params['turbine_mass']
         F_turbine      = params['turbine_force']
         M_turbine      = params['turbine_moment']
+        I_turbine      = params['turbine_I_base']
         
         rhoWater       = params['water_density']
         V_base         = params['base_cylinder_displaced_volume']
@@ -447,7 +449,13 @@ class SemiPontoon(Component):
         # Add in extra mass of turbine
         inode   = np.array([baseEndID], dtype=np.int32) # rna
         m_extra = np.array([m_turbine])
-        Ixx = Iyy = Izz = Ixy = Ixz = Iyz = rhox = rhoy = rhoz = np.zeros(m_extra.shape)
+        Ixx = np.array([ I_turbine[0] ])
+        Iyy = np.array([ I_turbine[1] ])
+        Izz = np.array([ I_turbine[2] ])
+        Ixy = np.array([ I_turbine[3] ])
+        Ixz = np.array([ I_turbine[4] ])
+        Iyz = np.array([ I_turbine[5] ])
+        rhox = rhoy = rhoz = np.zeros(m_extra.shape)
         self.frame.changeExtraNodeMass(inode, m_extra, Ixx, Iyy, Izz, Ixy, Ixz, Iyz, rhox, rhoy, rhoz, False)
         
         # Senu TODO: Hydrodynamic loading
@@ -490,7 +498,7 @@ class SemiPontoon(Component):
         unknowns['pontoon_mass'] = m_total.sum() #mass.struct_mass
         unknowns['pontoon_cost'] = coeff * m_total.sum()
         unknowns['pontoon_center_of_gravity'] = np.sum( m_total * elemCoG[:ind,-1] ) / m_total.sum()
-        
+
         # Compute axial and shear stresses in elements given Frame3DD outputs and some geomtry data
         # Method comes from Section 7.14 of Frame3DD documentation
         # http://svn.code.sourceforge.net/p/frame3dd/code/trunk/doc/Frame3DD-manual.html#structuralmodeling
@@ -502,7 +510,6 @@ class SemiPontoon(Component):
         sigma_sh = np.zeros((nE,))
         for iE in xrange(nE):
             Nx = internalForces[iE].Nx[iCase, ind]
-            #print Nx, forces[iE]
             Tx = internalForces[iE].Tx[iCase, ind]
             My = internalForces[iE].My[iCase, ind]
             Mz = internalForces[iE].Mz[iCase, ind]

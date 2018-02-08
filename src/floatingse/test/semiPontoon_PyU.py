@@ -50,6 +50,7 @@ class TestCylinder(unittest.TestCase):
         self.params['turbine_force'] = 6e1*np.ones(3)
         self.params['turbine_moment'] = 7e2*np.ones(3)
         self.params['turbine_mass'] = 6e1
+        self.params['turbine_I_base'] = np.array([3.05284574e9, 2.96031642e9, 2.13639924e7, 0.0, 2.89884849e7, 0.0])
         self.params['water_density'] = 1025.0
         self.params['base_cylinder_displaced_volume'] = 1e2
         self.params['ballast_cylinder_displaced_volume'] = 1e1
