@@ -74,6 +74,7 @@ class TestMapMooring(unittest.TestCase):
         self.params['anchor_type'] = 'suctionpile'
         self.params['drag_embedment_extra_length'] = 300.0
         self.params['max_offset'] = 10.0
+        self.params['max_heel'] = 10.0
 
         self.params['mooring_cost_rate'] = 1.1
 
