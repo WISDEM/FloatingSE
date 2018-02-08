@@ -3,8 +3,7 @@ import unittest
 import cylinder_PyU
 import mapMooring_PyU
 import semiPontoon_PyU
-import semi_PyU
-import spar_PyU
+import substructure_PyU
 
 import numpy as np
 import numpy.testing as npt
@@ -16,8 +15,7 @@ def suiteAll():
     suite = unittest.TestSuite( (cylinder_PyU.suite(),
                                  mapMooring_PyU.suite(),
                                  semiPontoon_PyU.suite(),
-                                 semi_PyU.suite(), 
-                                 spar_PyU.suite()
+                                 substructure_PyU.suite()
     ) )
     return suite
 

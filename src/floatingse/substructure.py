@@ -20,7 +20,7 @@ class SubstructureBase(Component):
         self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
         self.add_param('mooring_effective_mass', val=0.0, units='kg', desc='Mass of mooring lines that weigh on structure, ignoring mass of mooring lines on sea floor')
         self.add_param('mooring_surge_restoring_force', val=0.0, units='N', desc='Restoring force from mooring system after surge motion')
-        self.add_param('mooring_pitch_restoring_force', val=np.array((10,3)), units='N', desc='Restoring force from mooring system after pitch motion')
+        self.add_param('mooring_pitch_restoring_force', val=np.zeros((10,3)), units='N', desc='Restoring force from mooring system after pitch motion')
         self.add_param('mooring_cost', val=0.0, units='USD', desc='Cost of mooring system')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
@@ -63,7 +63,7 @@ class Spar(SubstructureBase):
     """
 
     def __init__(self, nSection, nIntPts):
-        super(Spar,self).__init__()
+        super(Spar,self).__init__(nSection, nIntPts)
 
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -295,7 +295,7 @@ class Semi(SubstructureBase):
     """
 
     def __init__(self, nSection, nIntPts):
-        super(Semi,self).__init__()
+        super(Semi,self).__init__(nSection, nIntPts)
 
         self.add_param('pontoon_mass', val=0.0, units='kg', desc='Mass of pontoon elements and connecting truss')
         self.add_param('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
@@ -314,8 +314,6 @@ class Semi(SubstructureBase):
         self.add_param('ballast_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
         self.add_param('number_of_ballast_cylinders', val=3, desc='Number of ballast cylinders evenly spaced around base cylinder', pass_by_obj=True)
-        self.add_param('water_ballast_mass_vector', val=np.zeros((nIntPts,)), units='kg', desc='mass vector of potential ballast mass')
-        self.add_param('water_ballast_zpts_vector', val=np.zeros((nIntPts,)), units='m', desc='z-points of potential ballast mass')
         self.add_param('radius_to_ballast_cylinder', val=10.0, units='m',desc='Distance from base cylinder centerpoint to ballast cylinder centerpoint')
 
         
