@@ -191,48 +191,6 @@ class TestCylinder(unittest.TestCase):
 
         self.assertAlmostEqual(actual.sum(), expect.sum())
         npt.assert_almost_equal(actual, expect)
-        
-    def testTBeam(self):
-        h_web = 10.0
-        w_flange = 8.0
-        t_web = 3.0
-        t_flange = 4.0
-
-        area, y_cg, Ixx, Iyy = cylinder.TBeamProperties(h_web, t_web, w_flange, t_flange)
-        self.assertEqual(area, 62.0)
-        self.assertAlmostEqual(y_cg, 8.6129, 4)
-        self.assertAlmostEqual(Iyy, 193.16666, 4)
-        self.assertAlmostEqual(Ixx, 1051.37631867699, 4)
-
-        area, y_cg, Ixx, Iyy = cylinder.TBeamProperties(h_web*myones, t_web*myones, w_flange*myones, t_flange*myones)
-        npt.assert_equal(area, 62.0*myones)
-        npt.assert_almost_equal(y_cg, 8.6129*myones, 1e-4)
-        npt.assert_almost_equal(Iyy, 193.16666*myones, 1e-4)
-        npt.assert_almost_equal(Ixx, 1051.37631867699*myones, 1e-4)
-
-    def testPlasticityRF(self):
-        Fy = 4.0
-
-        Fe = 1.0
-        Fi = Fe
-        self.assertEqual(cylinder.plasticityRF(Fe, Fy), Fi)
-        npt.assert_equal(cylinder.plasticityRF(Fe*myones, Fy), Fi*myones)
-    
-        Fe = 3.0
-        Fr = 4.0/3.0
-        Fi = Fe * Fr * (1.0 + 3.75*Fr**2)**(-0.25)
-        self.assertEqual(cylinder.plasticityRF(Fe, Fy), Fi)
-        npt.assert_equal(cylinder.plasticityRF(Fe*myones, Fy), Fi*myones)
-
-    def testSafetyFactor(self):
-        Fy = 100.0
-        k = 1.25
-        self.assertEqual(cylinder.safety_factor(25.0, Fy), k*1.2)
-        npt.assert_equal(cylinder.safety_factor(25.0*myones, Fy), k*1.2*myones)
-        self.assertEqual(cylinder.safety_factor(125.0, Fy), k*1.0)
-        npt.assert_equal(cylinder.safety_factor(125.0*myones, Fy), k*1.0*myones)
-        self.assertAlmostEqual(cylinder.safety_factor(80.0, Fy), k*1.08)
-        npt.assert_almost_equal(cylinder.safety_factor(80.0*myones, Fy), k*1.08*myones)
     
 
     def testSparMassCG(self):
@@ -351,25 +309,6 @@ class TestCylinder(unittest.TestCase):
         npt.assert_equal(self.unknowns['surge_force_points'], zpts)
 
 
-    def testAppliedHoop(self):
-        # Use the API 2U Appendix B as a big unit test!
-        ksi_to_si = 6894757.29317831
-        lbperft3_to_si = 16.0185
-        ft_to_si = 0.3048
-        in_to_si = ft_to_si / 12.0
-
-        R_od     = 0.5 * 600 * in_to_si
-        t_wall   = 0.75 * in_to_si
-        rho      = 64.0 * lbperft3_to_si
-        z        = 60 * ft_to_si
-        pressure = rho * g * z
-        expect   = 1e-3 * 64. * 60. / 144. * ksi_to_si
-
-        self.assertAlmostEqual(pressure, expect, -4)
-        expect *= R_od/t_wall
-        self.assertAlmostEqual(cylinder.compute_applied_hoop(pressure, R_od, t_wall), expect, -4)
-        npt.assert_almost_equal(cylinder.compute_applied_hoop(pressure*myones, R_od*myones, t_wall*myones), expect*myones, decimal=-4)
-
     def testAppliedAxial(self):
         # Use the API 2U Appendix B as a big unit test!
         ksi_to_si = 6894757.29317831
@@ -399,68 +338,6 @@ class TestCylinder(unittest.TestCase):
 
         expect = 9000 * kip_to_si / (2*np.pi*(0.5*self.params['outer_diameter'][0]-0.5*self.params['wall_thickness'][0])*self.params['wall_thickness'][0])
         npt.assert_almost_equal(cylinder.compute_applied_axial(self.params, self.myspar.section_mass), expect* np.ones((3,)), decimal=4)
-        
-    def testStiffenerFactors(self):
-        # Use the API 2U Appendix B as a big unit test!
-        ksi_to_si = 6894757.29317831
-        lbperft3_to_si = 16.0185
-        ft_to_si = 0.3048
-        in_to_si = ft_to_si / 12.0
-        kip_to_si = 4.4482216 * 1e3
-
-        self.params['outer_diameter'] = 600 * np.ones((4,)) * in_to_si
-        self.params['wall_thickness'] = 0.75 * np.ones((4,)) * in_to_si
-        self.params['stiffener_web_thickness'] = 5./8. * np.ones((3,)) * in_to_si
-        self.params['stiffener_web_height'] = 14.0 * np.ones((3,)) * in_to_si
-        self.params['stiffener_flange_thickness'] = 1.0 * np.ones((3,)) * in_to_si
-        self.params['stiffener_flange_width'] = 10.0 * np.ones((3,)) * in_to_si
-        self.params['stiffener_spacing'] = 5.0 * np.ones((3,)) * ft_to_si
-        self.params['E'] = 29e3 * ksi_to_si
-        self.params['nu'] = 0.3
-        self.params['stack_mass_in'] = 9000 * kip_to_si / g
-
-        pressure = 1e-3 * 64. * 60. / 144. * ksi_to_si
-        axial    = 9000 * kip_to_si / (2*np.pi*(0.5*self.params['outer_diameter'][0]-0.5*self.params['wall_thickness'][0])*self.params['wall_thickness'][0])
-        self.assertAlmostEqual(axial, 0.5*9000/299.625/0.75/np.pi*ksi_to_si, -4)
-        KthL, KthG = cylinder.compute_stiffener_factors(self.params, pressure, axial)
-        npt.assert_almost_equal(KthL, 1.0*np.ones((3,)), decimal=1)
-        npt.assert_almost_equal(KthG, 0.5748*np.ones((3,)), decimal=4) #0.5642 if R_flange accounts for t_wall
-    
-    def testStressLimits(self):
-        # Use the API 2U Appendix B as a big unit test!
-        ksi_to_si = 6894757.29317831
-        lbperft3_to_si = 16.0185
-        ft_to_si = 0.3048
-        in_to_si = ft_to_si / 12.0
-        kip_to_si = 4.4482216 * 1e3
-
-        self.params['outer_diameter'] = 600 * np.ones((4,)) * in_to_si
-        self.params['wall_thickness'] = 0.75 * np.ones((4,)) * in_to_si
-        self.params['stiffener_web_thickness'] = 5./8. * np.ones((3,)) * in_to_si
-        self.params['stiffener_web_height'] = 14.0 * np.ones((3,)) * in_to_si
-        self.params['stiffener_flange_thickness'] = 1.0 * np.ones((3,)) * in_to_si
-        self.params['stiffener_flange_width'] = 10.0 * np.ones((3,)) * in_to_si
-        self.params['stiffener_spacing'] = 5.0 * np.ones((3,)) * ft_to_si
-        self.params['section_height'] = 50.0 * np.ones((3,)) * ft_to_si
-        self.params['E'] = 29e3 * ksi_to_si
-        self.params['nu'] = 0.3
-        self.params['yield_stress'] = 50 * ksi_to_si
-
-        KthG = 0.5748
-        FxeL, FreL, FxeG, FreG = cylinder.compute_elastic_stress_limits(self.params, KthG, loading='radial')
-        npt.assert_almost_equal(FxeL, 16.074844135928885*ksi_to_si*np.ones((3,)), decimal=1)
-        npt.assert_almost_equal(FreL, 19.80252150945599*ksi_to_si*np.ones((3,)), decimal=1)
-        npt.assert_almost_equal(FxeG, 37.635953475479639*ksi_to_si*np.ones((3,)), decimal=1)
-        npt.assert_almost_equal(FreG, 93.77314503852581*ksi_to_si*np.ones((3,)), decimal=1)
-
-        FxcL = cylinder.plasticityRF(FxeL, self.params['yield_stress'])
-        FxcG = cylinder.plasticityRF(FxeG, self.params['yield_stress'])
-        FrcL = cylinder.plasticityRF(FreL, self.params['yield_stress'])
-        FrcG = cylinder.plasticityRF(FreG, self.params['yield_stress'])
-        npt.assert_almost_equal(FxcL, 1.0*16.074844135928885*ksi_to_si*np.ones((3,)), decimal=1)
-        npt.assert_almost_equal(FrcL, 1.0*19.80252150945599*ksi_to_si*np.ones((3,)), decimal=1)
-        npt.assert_almost_equal(FxcG, 0.799647237534*37.635953475479639*ksi_to_si*np.ones((3,)), decimal=1)
-        npt.assert_almost_equal(FrcG, 0.444735273606*93.77314503852581*ksi_to_si*np.ones((3,)), decimal=1)
         
     def testCheckStresses(self):
         # Use the API 2U Appendix B as a big unit test!
