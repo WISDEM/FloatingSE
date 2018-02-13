@@ -5,10 +5,10 @@ from commonse import gravity, eps, DirectionVector
 
 
 class SubstructureBase(Component):
-    def __init__(self, nSection, nIntPts):
+    def __init__(self, nFull):
         super(SubstructureBase,self).__init__()
         # Environment
-        self.add_param('water_density', val=1025.0, units='kg/m**3', desc='density of water')
+        self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
 
         # From other components
         self.add_param('turbine_mass', val=eps, units='kg', desc='mass of tower and rna')
@@ -25,18 +25,18 @@ class SubstructureBase(Component):
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
 
-        self.add_param('base_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of cylinder')
-        self.add_param('base_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced')
-        self.add_param('base_cylinder_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of cylinder buoyancy force')
-        self.add_param('base_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
-        self.add_param('base_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
-        self.add_param('base_cylinder_surge_force', val=np.zeros((nIntPts,)), units='N', desc='Force vector in surge direction on cylinder')
-        self.add_param('base_cylinder_force_points', val=np.zeros((nIntPts,)), units='m', desc='zpts for force vector')
-        self.add_param('base_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('base_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of column')
+        self.add_param('base_column_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced')
+        self.add_param('base_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
+        self.add_param('base_column_center_of_gravity', val=0.0, units='m', desc='z-position of center of column mass')
+        self.add_param('base_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
+        self.add_param('base_column_surge_force', val=np.zeros((nFull,)), units='N/m', desc='Force vector in surge direction on column')
+        self.add_param('base_column_force_points', val=np.zeros((nFull,)), units='m', desc='zpts for force vector')
+        self.add_param('base_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
         self.add_param('base_freeboard', val=0.0, units='m', desc='Length of spar above water line')
 
-        self.add_param('water_ballast_mass_vector', val=np.zeros((nIntPts,)), units='kg', desc='mass vector of potential ballast mass')
-        self.add_param('water_ballast_zpts_vector', val=np.zeros((nIntPts,)), units='m', desc='z-points of potential ballast mass')
+        self.add_param('water_ballast_mass_vector', val=np.zeros((nFull,)), units='kg', desc='mass vector of potential ballast mass')
+        self.add_param('water_ballast_zpts_vector', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
 
         # Outputs
         self.add_output('total_mass', val=0.0, units='kg', desc='total mass of spar and moorings')
@@ -53,204 +53,48 @@ class SubstructureBase(Component):
         self.add_output('variable_ballast_mass', val=0.0, units='kg', desc='Amount of variable water ballast')
         self.add_output('variable_ballast_height', val=0.0, units='m', desc='height of water ballast to balance spar')
 
-        
 
-        
-class Spar(SubstructureBase):
-    """
-    OpenMDAO Component class for Spar substructure for floating offshore wind turbines.
-    Should be tightly coupled with MAP Mooring class for full system representation.
-    """
 
-    def __init__(self, nSection, nIntPts):
-        super(Spar,self).__init__(nSection, nIntPts)
-
-        # Derivatives
-        self.deriv_options['type'] = 'fd'
-        self.deriv_options['form'] = 'central'
-        self.deriv_options['step_calc'] = 'relative'
-        self.deriv_options['step_size'] = 1e-5
+class SubstructureDiscretization(Component):
+    def __init__(self, nSection):
+        super(SemiGeometry,self).__init__()
+        self.add_param('base_section_height', val=np.zeros(nSection), units='m', desc='parameterized section heights of base column')
+        self.add_param('ballast_section_height', val=np.zeros(nSection), units='m', desc='parameterized section heights of outer ballast columns')
+        self.add_param('base_freeboard', val=0.0, units='m', desc='Length of base column above water line')
+        self.add_param('ballast_freeboard', val=0.0, units='m', desc='Length of ballast columns above water line')
         
     def solve_nonlinear(self, params, unknowns, resids):
-        # TODO: Get centerlines right- in sparGeometry?
-        # Determine ballast and cg of spar
-        self.balance_spar(params, unknowns)
+        freeboard_base    = params['base_freeboard']
+        freeboard_ballast = params['ballast_freeboard']
         
-        # Determine stability, metacentric height from waterplane profile, displaced volume
-        self.compute_stability(params, unknowns)
+        h_base          = np.sum(params['base_section_height'])
+        h_ballast       = np.sum(params['ballast_section_height'])
+        z_draft_base    = freeboard_base - h_base
+        z_draft_ballast = freeboard_ballast - h_ballast
         
-        # Sum all costs
-        self.compute_costs(params, unknowns)
-
-        
-    def balance_spar(self, params, unknowns):
-        # TODO SEMI: set n_cylinder and ballast_cylinder_mass/vol add n*param for total contributions
-        # Unpack variables
-        m_turb       = params['turbine_mass']
-        m_mooringE   = params['mooring_effective_mass']
-        m_mooring    = params['mooring_mass']
-        m_cylinder   = params['base_cylinder_mass']
-        m_water_data = params['water_ballast_mass_vector']
-        V_cylinder   = params['base_cylinder_displaced_volume']
-        z_cylinder   = params['base_cylinder_center_of_gravity']
-        z_turb       = params['turbine_center_of_gravity'][-1]
-        z_fairlead   = params['fairlead']*(-1)
-        z_water_data = params['water_ballast_zpts_vector']
-        z_cb         = params['base_cylinder_center_of_buoyancy']
-        rhoWater     = params['water_density']
-        npts         = z_water_data.size
-        
-        # Make sure total mass of system with variable water ballast balances against displaced volume
-        # Water ballast should be buried in m_cylinder
-        m_system  = m_cylinder.sum() + m_mooringE + m_turb
-        V_system  = V_cylinder.sum()
-        m_water   = V_system*rhoWater - m_system
-
-        # Output substructure total mass, different than system mass
-        unknowns['total_mass'] = m_system - m_turb - m_mooringE + m_mooring
-        unknowns['total_displacement'] = V_system
-        m_system += m_water
-
-        # Find height given interpolant functions from cylinders
-        if m_water_data[-1] < m_water:
-            # Don't have enough space, so max out variable balast here and constraints will catch this
-            z_end = z_water_data[-1]
-        elif m_water < 0.0:
-            z_end = z_water_data[0]
-        else:
-            z_end = np.interp(m_water, m_water_data, z_water_data)
-        h_water = z_end - z_water_data[0]
-        # 2nd-order accurate derivative of data
-        dmdz = np.gradient(m_water_data, z_water_data)
-        # Put derivative on new data points for integration
-        zpts = np.linspace(z_water_data[0], z_end, npts)
-        dmdz = np.interp(zpts, z_water_data, dmdz)
-        
-        # Find cg of water
-        z_water = np.trapz(zpts * dmdz, zpts) / m_water
-
-        # Find cg of whole system
-        z_cg = (m_turb*z_turb + m_cylinder.sum()*z_cylinder + m_mooringE*z_fairlead + m_water*z_water) / m_system
-        unknowns['variable_ballast_mass']   = m_water
-        unknowns['variable_ballast_height'] = h_water
-        unknowns['z_center_of_gravity']     = z_cg
-
-        # Find cb (center of buoyancy) for whole system
-        unknowns['z_center_of_buoyancy'] = z_cb
-        
-        
-        
-    def compute_stability(self, params, unknowns):
-        # Unpack variables
-        z_cg              = unknowns['z_center_of_gravity']
-        V_cylinder        = params['base_cylinder_displaced_volume']
-        z_cb              = params['base_cylinder_center_of_buoyancy']
-        Iwater_system     = params['base_cylinder_Iwaterplane']
-        F_cylinder_vector = params['base_cylinder_surge_force']
-        cylinder_zpts     = params['base_cylinder_force_points']
-        F_turb            = params['turbine_force']
-        M_turb            = params['turbine_moment']
-        F_restore         = params['mooring_surge_restoring_force']
-        F_restore_pitch   = params['mooring_pitch_restoring_force']
-        rhoWater          = params['water_density']
-        freeboard         = params['base_freeboard']
-        z_fairlead        = params['fairlead']*(-1)
-        R_fairlead        = params['fairlead_radius']
-        max_heel          = params['max_heel']
-        
-        # Compute the distance from the center of buoyancy to the metacentre (BM is naval architecture)
-        # BM = Iw / V where V is the displacement volume (just computed)
-        # Iw is the area moment of inertia (meters^4) of the water-plane cross section about the heel axis
-        # For a spar, we assume this is just the I of a circle about x or y
-        # See https://en.wikipedia.org/wiki/Metacentric_height
-        # https://en.wikipedia.org/wiki/List_of_second_moments_of_area
-        # and http://farside.ph.utexas.edu/teaching/336L/Fluidhtml/node30.html
-
-        # Water plane area of all components
-        #Iwater_system = 0.0
-        #Iwater_system += Iwater_cylinder #+ Awater_cylinder*r_cylinder**2
-        
-        # Measure static stability:
-        # 1. Center of buoyancy should be above CG (difference should be positive)
-        # 2. Metacentric height should be positive
-        V_system = V_cylinder.sum()
-        buoyancy2metacentre_BM         = Iwater_system / V_system
-        unknowns['static_stability'  ] = z_cb - z_cg
-        unknowns['metacentric_height'] = buoyancy2metacentre_BM + unknowns['static_stability']
-        
-        # Compute restoring moment under small angle assumptions
-        # Metacentric height computed during spar balancing calculation
-        F_cylinder = np.trapz(F_cylinder_vector, cylinder_zpts)
-        M_cylinder = np.trapz((cylinder_zpts-z_cg)*F_cylinder_vector, cylinder_zpts)
-
-        # Correct moment from base of turbine to cg of spar M_p = M_o + r_op X F
-        M_turb[0] += F_turb[1] * (freeboard-z_cg) 
-        M_turb[1] += F_turb[0] * (freeboard-z_cg) 
-            
-        F_surge    = F_cylinder + F_turb[0]
-        F_buoy     = V_system * rhoWater * gravity
-        M_pitch    = M_cylinder + M_turb[1]
-        M_restore  = -unknowns['metacentric_height'] * F_buoy # restoring is in clockwise direction
-
-        # Convert mooring restoring force after pitch to a restoring moment
-        nlines = np.count_nonzero(F_restore_pitch[:,2])
-        F_restore_pitch = F_restore_pitch[:nlines,:]
-        moorx  = R_fairlead * np.cos( np.linspace(0, 2*np.pi, nlines+1)[:-1] )
-        moory  = R_fairlead * np.sin( np.linspace(0, 2*np.pi, nlines+1)[:-1] )
-        r_moor = np.c_[moorx, moory, (z_fairlead - z_cg)*np.ones(moorx.shape)]
-        Msum   = 0.0
-        for k in xrange(nlines):
-            dvF   = DirectionVector.fromArray(F_restore_pitch[k,:])
-            dvR   = DirectionVector.fromArray(r_moor[k,:]).yawToHub(max_heel)
-            M     = dvR.cross(dvF)
-            Msum += M.y
-
-        M_restore += Msum
-        
-        # Comput heel angle
-        unknowns['heel_constraint'] = np.abs( np.rad2deg( M_pitch / M_restore ) ) / max_heel
-
-        # Now compute offsets from the applied force
-        # First use added mass (the mass of the water that must be displaced in movement)
-        # http://www.iaea.org/inis/collection/NCLCollectionStore/_Public/09/411/9411273.pdf
-        #mass_add_surge = rhoWater * np.pi * R_od.max() * draft
-        #T_surge        = 2*np.pi*np.sqrt( (unknowns['total_mass']+mass_add_surge) / kstiff_horiz_mooring)
-
-        # Compare restoring force from mooring to force of worst case spar displacement
-        unknowns['offset_force_ratio'] = np.abs(F_surge / F_restore)
+        unknowns['z_system'] = np.linspace( np.minimum(z_draft_base, z_draft_ballast), np.maximum(freeboard_base, freeboard_ballast), self.npts )
 
         
-    def compute_costs(self, params, unknowns):
-        # TODO SEMI: set n_cylinder and ballast_cylinder_cost add n*param for total contributions
-        # Unpack variables
-        c_mooring  = params['mooring_cost']
-        c_cylinder = params['base_cylinder_cost']
-
-        unknowns['total_cost'] = c_mooring + c_cylinder
-
-
-
-
 class SemiGeometry(Component):
     """
     OpenMDAO Component class for Semi substructure for floating offshore wind turbines.
     Should be tightly coupled with MAP Mooring class for full system representation.
     """
 
-    def __init__(self, nSection):
+    def __init__(self, nFull):
         super(SemiGeometry,self).__init__()
 
         # Design variables
-        self.add_param('base_outer_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('ballast_outer_diameter', val=np.zeros((nSection+1,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('ballast_z_nodes', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('base_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('ballast_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('ballast_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
-        self.add_param('fairlead_offset_from_shell', val=0.5, units='m',desc='fairlead offset from shell')
-        self.add_param('radius_to_ballast_cylinder', val=10.0, units='m',desc='Distance from base cylinder centerpoint to ballast cylinder centerpoint')
+        self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
+        self.add_param('radius_to_ballast_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
 
         # Output constraints
         self.add_output('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
-        self.add_output('base_ballast_spacing', val=0.0, desc='Radius of base and ballast cylinders relative to spacing')
+        self.add_output('base_ballast_spacing', val=0.0, desc='Radius of base and ballast columns relative to spacing')
 
         
         # Derivatives
@@ -274,7 +118,7 @@ class SemiGeometry(Component):
         # Unpack variables
         R_od_base       = 0.5*params['base_outer_diameter']
         R_od_ballast    = 0.5*params['ballast_outer_diameter']
-        R_semi          = params['radius_to_ballast_cylinder']
+        R_semi          = params['radius_to_ballast_column']
         z_nodes_ballast = params['ballast_z_nodes']
         fairlead        = params['fairlead'] # depth of mooring attachment point
         fair_off        = params['fairlead_offset_from_shell']
@@ -294,8 +138,8 @@ class Semi(SubstructureBase):
     Should be tightly coupled with MAP Mooring class for full system representation.
     """
 
-    def __init__(self, nSection, nIntPts):
-        super(Semi,self).__init__(nSection, nIntPts)
+    def __init__(self, nFull):
+        super(Semi,self).__init__(nFull)
 
         self.add_param('pontoon_mass', val=0.0, units='kg', desc='Mass of pontoon elements and connecting truss')
         self.add_param('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
@@ -303,18 +147,18 @@ class Semi(SubstructureBase):
         self.add_param('pontoon_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of pontoon buoyancy force')
         self.add_param('pontoon_center_of_gravity', val=0.0, units='m', desc='z-position of center of pontoon mass')
         
-        self.add_param('ballast_cylinder_mass', val=np.zeros((nSection,)), units='kg', desc='mass of cylinder by section')
-        self.add_param('ballast_cylinder_displaced_volume', val=np.zeros((nSection,)), units='m**3', desc='cylinder volume of water displaced by section')
-        self.add_param('ballast_cylinder_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of cylinder buoyancy force')
-        self.add_param('ballast_cylinder_center_of_gravity', val=0.0, units='m', desc='z-position of center of cylinder mass')
-        self.add_param('ballast_cylinder_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
-        self.add_param('ballast_cylinder_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
-        self.add_param('ballast_cylinder_surge_force', val=np.zeros((nIntPts,)), units='N', desc='Force vector in surge direction on cylinder')
-        self.add_param('ballast_cylinder_force_points', val=np.zeros((nIntPts,)), units='m', desc='zpts for force vector')
-        self.add_param('ballast_cylinder_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('ballast_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of column by section')
+        self.add_param('ballast_column_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
+        self.add_param('ballast_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
+        self.add_param('ballast_column_center_of_gravity', val=0.0, units='m', desc='z-position of center of column mass')
+        self.add_param('ballast_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
+        self.add_param('ballast_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
+        self.add_param('ballast_column_surge_force', val=np.zeros((nFull,)), units='N/m', desc='Force vector in surge direction on column')
+        self.add_param('ballast_column_force_points', val=np.zeros((nFull,)), units='m', desc='zpts for force vector')
+        self.add_param('ballast_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
-        self.add_param('number_of_ballast_cylinders', val=3, desc='Number of ballast cylinders evenly spaced around base cylinder', pass_by_obj=True)
-        self.add_param('radius_to_ballast_cylinder', val=10.0, units='m',desc='Distance from base cylinder centerpoint to ballast cylinder centerpoint')
+        self.add_param('number_of_ballast_columns', val=3, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
+        self.add_param('radius_to_ballast_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
 
         
         # Derivatives
@@ -337,26 +181,26 @@ class Semi(SubstructureBase):
         
     def balance_semi(self, params, unknowns):
         # Unpack variables
-        ncylinder    = params['number_of_ballast_cylinders']
+        ncolumn      = params['number_of_ballast_columns']
         m_turb       = params['turbine_mass']
         m_mooringE   = params['mooring_effective_mass']
         m_mooring    = params['mooring_mass']
-        m_base       = params['base_cylinder_mass']
-        m_cylinder   = params['ballast_cylinder_mass']
+        m_base       = params['base_column_mass']
+        m_column     = params['ballast_column_mass']
         m_pontoon    = params['pontoon_mass']
         
-        V_base       = params['base_cylinder_displaced_volume']
-        V_cylinder   = params['ballast_cylinder_displaced_volume']
+        V_base       = params['base_column_displaced_volume']
+        V_column     = params['ballast_column_displaced_volume']
         F_pontoon    = params['pontoon_buoyancy']
         
-        z_base       = params['base_cylinder_center_of_gravity']
-        z_cylinder   = params['ballast_cylinder_center_of_gravity']
+        z_base       = params['base_column_center_of_gravity']
+        z_column     = params['ballast_column_center_of_gravity']
         z_pontoon    = params['pontoon_center_of_gravity']
         z_turb       = params['turbine_center_of_gravity'][-1]
         z_fairlead   = params['fairlead']*(-1)
 
-        z_cb_base     = params['base_cylinder_center_of_buoyancy']
-        z_cb_cylinder = params['ballast_cylinder_center_of_buoyancy']
+        z_cb_base     = params['base_column_center_of_buoyancy']
+        z_cb_column   = params['ballast_column_center_of_buoyancy']
         z_cb_pontoon  = params['pontoon_center_of_buoyancy']
         
         m_water_data = params['water_ballast_mass_vector']
@@ -364,13 +208,13 @@ class Semi(SubstructureBase):
         rhoWater     = params['water_density']
         npts         = z_water_data.size
         
-        # SEMI TODO: Make water_ballast in base only?  cylinders too?  How to apportion?
+        # SEMI TODO: Make water_ballast in base only?  columns too?  How to apportion?
 
         # Make sure total mass of system with variable water ballast balances against displaced volume
-        # Water ballast should be buried in m_cylinder
-        m_system  = m_base.sum() + ncylinder*m_cylinder.sum() + m_mooringE + m_turb + m_pontoon
+        # Water ballast should be buried in m_column
+        m_system  = m_base.sum() + ncolumn*m_column.sum() + m_mooringE + m_turb + m_pontoon
         V_pontoon = F_pontoon/rhoWater/gravity
-        V_system  = V_base.sum() + ncylinder*V_cylinder.sum() + V_pontoon
+        V_system  = V_base.sum() + ncolumn*V_column.sum() + V_pontoon
         m_water   = V_system*rhoWater - m_system
 
         # Output substructure total mass, different than system mass
@@ -378,7 +222,7 @@ class Semi(SubstructureBase):
         unknowns['total_displacement'] = V_system
         m_system += m_water
 
-        # Find height given interpolant functions from cylinders
+        # Find height given interpolant functions from columns
         if m_water_data[-1] < m_water:
             # Don't have enough space, so max out variable balast here and constraints will catch this
             z_end = z_water_data[-1]
@@ -391,7 +235,7 @@ class Semi(SubstructureBase):
         unknowns['variable_ballast_height'] = h_water
 
         # Find cb (center of buoyancy) for whole system
-        z_cb = (V_base.sum()*z_cb_base + ncylinder*V_cylinder.sum()*z_cb_cylinder + V_pontoon*z_cb_pontoon) / V_system
+        z_cb = (V_base.sum()*z_cb_base + ncolumn*V_column.sum()*z_cb_column + V_pontoon*z_cb_pontoon) / V_system
         unknowns['z_center_of_buoyancy'] = z_cb
         
         # Find cg of whole system
@@ -402,43 +246,43 @@ class Semi(SubstructureBase):
         zpts    = np.linspace(z_water_data[0], z_end, npts)
         dmdz    = np.interp(zpts, z_water_data, dmdz)
         z_water = np.trapz(zpts * dmdz, zpts) / m_water
-        z_cg = (m_turb*z_turb + ncylinder*m_cylinder.sum()*z_cylinder + m_base.sum()*z_base +
+        z_cg = (m_turb*z_turb + ncolumn*m_column.sum()*z_column + m_base.sum()*z_base +
                 m_mooringE*z_fairlead + m_water*z_water + m_pontoon*z_pontoon) / m_system
         unknowns['z_center_of_gravity'] = z_cg 
 
         
     def compute_stability(self, params, unknowns):
         # Unpack variables
-        ncylinder         = params['number_of_ballast_cylinders']
-        z_cb              = unknowns['z_center_of_buoyancy']
-        z_cg              = unknowns['z_center_of_gravity']
-        freeboard         = params['base_freeboard']
+        ncolumn         = params['number_of_ballast_columns']
+        z_cb            = unknowns['z_center_of_buoyancy']
+        z_cg            = unknowns['z_center_of_gravity']
+        freeboard       = params['base_freeboard']
         
-        Iwater_base       = params['base_cylinder_Iwaterplane']
-        Iwater_cylinder   = params['ballast_cylinder_Iwaterplane']
-        Awater_cylinder   = params['ballast_cylinder_Awaterplane']
-        m_cylinder        = params['ballast_cylinder_mass']
+        Iwater_base     = params['base_column_Iwaterplane']
+        Iwater_column   = params['ballast_column_Iwaterplane']
+        Awater_column   = params['ballast_column_Awaterplane']
+        m_column        = params['ballast_column_mass']
 
-        V_cylinder        = params['base_cylinder_displaced_volume']
-        V_system          = unknowns['total_displacement']
+        V_column        = params['base_column_displaced_volume']
+        V_system        = unknowns['total_displacement']
         
-        F_base_vector     = params['base_cylinder_surge_force']
-        zpts_base         = params['base_cylinder_force_points']
+        F_base_vector   = params['base_column_surge_force']
+        zpts_base       = params['base_column_force_points']
         
-        F_cylinder_vector = params['ballast_cylinder_surge_force']
-        zpts_cylinder     = params['ballast_cylinder_force_points']
+        F_column_vector = params['ballast_column_surge_force']
+        zpts_column     = params['ballast_column_force_points']
         
-        F_turb            = params['turbine_force']
-        M_turb            = params['turbine_moment']
+        F_turb          = params['turbine_force']
+        M_turb          = params['turbine_moment']
         
-        F_restore         = params['mooring_surge_restoring_force']
-        rhoWater          = params['water_density']
-        R_semi            = params['radius_to_ballast_cylinder']
+        F_restore       = params['mooring_surge_restoring_force']
+        rhoWater        = params['water_density']
+        R_semi          = params['radius_to_ballast_column']
 
-        F_restore_pitch   = params['mooring_pitch_restoring_force']
-        z_fairlead        = params['fairlead']*(-1)
-        R_fairlead        = params['fairlead_radius']
-        max_heel          = params['max_heel']
+        F_restore_pitch = params['mooring_pitch_restoring_force']
+        z_fairlead      = params['fairlead']*(-1)
+        R_fairlead      = params['fairlead_radius']
+        max_heel        = params['max_heel']
         
         # Compute the distance from the center of buoyancy to the metacentre (BM is naval architecture)
         # BM = Iw / V where V is the displacement volume (just computed)
@@ -450,9 +294,9 @@ class Semi(SubstructureBase):
 
         # Water plane area of all components with parallel axis theorem
         Iwater_system = Iwater_base
-        radii = R_semi * np.cos( np.linspace(0, 2*np.pi, ncylinder+1) )
-        for k in xrange(ncylinder):
-            Iwater_system += Iwater_cylinder + Awater_cylinder*radii[k]**2
+        radii = R_semi * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
+        for k in xrange(ncolumn):
+            Iwater_system += Iwater_column + Awater_column*radii[k]**2
         
         # Measure static stability:
         # 1. Center of buoyancy should be above CG (difference should be positive)
@@ -466,21 +310,21 @@ class Semi(SubstructureBase):
         F_base = np.trapz(F_base_vector, zpts_base)
         M_base = np.trapz((zpts_base-z_cg)*F_base_vector, zpts_base)
 
-        F_cylinder = np.trapz(F_cylinder_vector, zpts_cylinder)
-        M_cylinder = np.trapz((zpts_cylinder-z_cg)*F_cylinder_vector, zpts_cylinder)
+        F_column = np.trapz(F_column_vector, zpts_column)
+        M_column = np.trapz((zpts_column-z_cg)*F_column_vector, zpts_column)
 
         M_buoy_weight = 0.0
-        F_buoy_cylinder = V_cylinder.sum() * rhoWater * gravity
-        W_cylinder      = m_cylinder.sum() * gravity
-        for k in xrange(ncylinder):
-            M_buoy_weight += radii[k]*(F_buoy_cylinder - W_cylinder)
+        F_buoy_column = V_column.sum() * rhoWater * gravity
+        W_column      = m_column.sum() * gravity
+        for k in xrange(ncolumn):
+            M_buoy_weight += radii[k]*(F_buoy_column - W_column)
         
         # Correct moment from base of turbine to cg of spar M_p = M_o + r_op X F
         M_turb[0] += F_turb[1] * (freeboard-z_cg) 
         M_turb[1] += F_turb[0] * (freeboard-z_cg) 
 
-        F_surge    = F_base + ncylinder*F_cylinder + F_turb[0]
-        M_pitch    = M_base + ncylinder*M_cylinder + M_buoy_weight + M_turb[1]
+        F_surge    = F_base + ncolumn*F_column + F_turb[0]
+        M_pitch    = M_base + ncolumn*M_column + M_buoy_weight + M_turb[1]
 
         F_buoy     = V_system * rhoWater * gravity
         M_restore  = unknowns['metacentric_height'] * F_buoy
@@ -515,11 +359,11 @@ class Semi(SubstructureBase):
         
     def compute_costs(self, params, unknowns):
         # Unpack variables
-        ncylinder  = params['number_of_ballast_cylinders']
+        ncolumn  = params['number_of_ballast_columns']
         c_mooring  = params['mooring_cost']
-        c_cylinder = params['ballast_cylinder_cost']
-        c_base     = params['base_cylinder_cost']
+        c_column = params['ballast_column_cost']
+        c_base     = params['base_column_cost']
         c_pontoon  = params['pontoon_cost']
 
-        unknowns['total_cost'] = c_mooring + ncylinder*c_cylinder + c_base + c_pontoon
+        unknowns['total_cost'] = c_mooring + ncolumn*c_column + c_base + c_pontoon
         

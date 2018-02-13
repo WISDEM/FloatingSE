@@ -28,7 +28,7 @@ class MapMooring(Component):
         self.cost_per_length     = None
 
         # Environment
-        self.add_param('water_density', val=1025.0, units='kg/m**3', desc='density of water')
+        self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
         self.add_param('water_depth', val=0.0, units='m', desc='water depth')
 
         # Material properties
@@ -37,10 +37,10 @@ class MapMooring(Component):
         self.add_param('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
         
         # Design variables
-        self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
-        self.add_param('scope_ratio', val=1.5, units='m',desc='total mooring line length (scope) to fairlead depth (fairlead anchor to sea floor)')
-        self.add_param('anchor_radius', val=1.0, units='m', desc='radius from center of spar to mooring anchor point')
-        self.add_param('mooring_diameter', val=0.2, units='m',desc='diameter of mooring line')
+        self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
+        self.add_param('scope_ratio', val=0.0, units='m',desc='total mooring line length (scope) to fairlead depth (fairlead anchor to sea floor)')
+        self.add_param('anchor_radius', val=0.0, units='m', desc='radius from center of spar to mooring anchor point')
+        self.add_param('mooring_diameter', val=0.0, units='m',desc='diameter of mooring line')
 
         # User inputs (could be design variables)
         self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines', pass_by_obj=True)
@@ -51,7 +51,7 @@ class MapMooring(Component):
         self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
 
         # Cost rates
-        self.add_param('mooring_cost_rate', val=1.1, desc='miscellaneous cost factor in percent')
+        self.add_param('mooring_cost_rate', val=0.0, desc='miscellaneous cost factor in percent')
 
         # Outputs
         self.add_output('mooring_effective_mass', val=0.0, units='kg',desc='total effective mass of mooring based on vertical loading')

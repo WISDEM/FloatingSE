@@ -9,6 +9,66 @@ class SemiInstance(FloatingInstance):
         super(SemiInstance, self).__init__()
 
         # Parameters beyond those in superclass
+
+        # Environmental parameters
+        self.params['water_depth'] = 218.0
+        #self.params['air_density'] = 1.198
+        self.params['windLoads.rho'] = 1.198
+        #self.params['air_viscosity'] = 1.81e-5
+        self.params['base.windLoads.mu'] = 1.81e-5
+        self.params['water_density'] = 1025.0
+        #self.params['water_viscosity'] = 8.9e-4
+        self.params['base.waveLoads.mu'] = 8.9e-4
+        #self.params['wave_height'] = 10.8
+        self.params['hmax'] = 10.8
+        #self.params['wave_period'] = 9.8
+        self.params['T'] = 9.8
+        self.params['Uc'] = 0.0
+        #self.params['wind_reference_speed'] = 11.73732
+        self.params['Uref'] = 11.73732
+        #self.params['wind_reference_height'] = 90.0
+        self.params['zref'] = 90.0
+        #self.params['alpha'] = 0.11
+        self.params['shearExp'] = 0.11
+        #self.params['morison_mass_coefficient'] = 2.0
+        self.params['cm'] = 2.0
+        self.params['z0'] = 0.0
+        self.params['yaw'] = 0.0
+        self.params['beta'] = 0.0
+        self.params['cd_usr'] = np.inf
+
+        # Mooring parameters
+        self.params['mooring_max_offset'] = 0.1*self.params['water_depth'] # Assumption        
+        self.params['mooring_max_heel'] = 10.0
+        self.params['number_of_mooring_lines'] = 3
+        self.params['mooring_type'] = 'chain'
+        self.params['anchor_type'] = 'suctionpile'
+        self.params['mooring_cost_rate'] = 1.1
+        self.params['scope_ratio'] = 2.6
+        self.params['anchor_radius'] = 420.0
+        self.params['drag_embedment_extra_length'] = 300.0
+        
+        self.params['mooring_diameter'] = 0.14
+
+        # Turbine parameters
+        self.params['turbine_mass'] = 371690.0 + 285599.0
+        self.params['turbine_I_base'] = np.array([3.05284574e9, 2.96031642e9, 2.13639924e7, 0.0, 2.89884849e7, 0.0])
+        self.params['turbine_center_of_gravity'] = np.array([0.0, 0.0, 43.4])
+        self.params['turbine_force'] = np.array( [1.30015900e+06, -3.14321369e-08, -9.12169902e+06] )
+        self.params['turbine_moment'] = np.array( [-1.68366922e+06, 1.02556564e+08, 1.47301970e+05] )
+
+        # Steel properties
+        self.params['material_density'] = 7850.0
+        self.params['E'] = 200e9
+        self.params['G'] = 79.3e9
+        self.params['nu'] = 0.26
+        self.params['yield_stress'] = 3.45e8
+        self.params['loading'] = 'hydrostatic'
+
+        # Design parameters
+        self.params['min_taper'] = 0.4
+        self.params['min_d_to_t'] = 120.0
+
         # Typically static- set defaults
         self.params['permanent_ballast_density'] = 4492.0
         self.params['bulkhead_mass_factor'] = 1.0
@@ -28,7 +88,7 @@ class SemiInstance(FloatingInstance):
         self.params['pontoon_cost_rate'] = 6.250
 
         # Typically design (start at OC4 semi)
-        self.params['radius_to_ballast_cylinder'] = 28.867513459481287
+        self.params['radius_to_ballast_column'] = 28.867513459481287
         self.params['number_of_ballast_columns'] = 3
         self.params['freeboard_base'] = 10.0
         self.params['freeboard_ballast'] = 12.0
@@ -57,12 +117,12 @@ class SemiInstance(FloatingInstance):
 
         # OC4
         self.params['water_depth'] = 200.0
-        self.params['wave_height'] = 10.8
-        self.params['wave_period'] = 9.8
-        self.params['wind_reference_speed'] = 11.0
-        self.params['wind_reference_height'] = 119.0
-        self.params['alpha'] = 0.11
-        self.params['morison_mass_coefficient'] = 2.0
+        self.params['hmax'] = 10.8
+        self.params['T'] = 9.8
+        self.params['Uref'] = 11.0
+        self.params['zref'] = 119.0
+        self.params['shearExp'] = 0.11
+        self.params['cm'] = 2.0
 
         self.params['number_of_mooring_lines'] = 3
         self.params['scope_ratio'] = 835.5 / (self.params['water_depth']-self.params['fairlead']) 
@@ -109,13 +169,13 @@ class SemiInstance(FloatingInstance):
         self.params['bulkhead_nodes_ballast'][0]          = True
         self.params['bulkhead_nodes_ballast'][1]          = True
         
-    def get_assembly(self): return SemiAssembly(NSECTIONS, NPTS)
+    def get_assembly(self): return SemiAssembly(NSECTIONS)
     
     def get_design_variables(self):
         # Make a neat list of design variables, lower bound, upper bound, scalar
         desvarList = [('fairlead',0.0, 100.0, 1.0),
                       ('fairlead_offset_from_shell',0.0, 5.0, 1e2),
-                      ('radius_to_ballast_cylinder',0.0, 40.0, 1.0),
+                      ('radius_to_ballast_column',0.0, 40.0, 1.0),
                       ('freeboard_base',0.0, 50.0, 1.0),
                       ('section_height_base',1e-1, 100.0, 1e1),
                       ('outer_diameter_base',1.1, 40.0, 10.0),
@@ -165,16 +225,16 @@ class SemiInstance(FloatingInstance):
 
         # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
         # Ensure that fairlead attaches to draft
-        self.prob.driver.add_constraint('geomBase.draft_depth_ratio',lower=0.0, upper=0.75)
-        self.prob.driver.add_constraint('geomBall.draft_depth_ratio',lower=0.0, upper=0.75)
-        self.prob.driver.add_constraint('geomBall.fairlead_draft_ratio',lower=0.0, upper=1.0)
+        self.prob.driver.add_constraint('base.draft_depth_ratio',lower=0.0, upper=0.75)
+        self.prob.driver.add_constraint('ball.draft_depth_ratio',lower=0.0, upper=0.75)
+        self.prob.driver.add_constraint('ball.fairlead_draft_ratio',lower=0.0, upper=1.0)
         self.prob.driver.add_constraint('sg.base_ballast_spacing',lower=0.0, upper=1.0)
 
         # Ensure that the radius doesn't change dramatically over a section
-        self.prob.driver.add_constraint('gcBase.manufacturability',upper=0.0)
-        self.prob.driver.add_constraint('gcBase.weldability',upper=0.0)
-        self.prob.driver.add_constraint('gcBall.manufacturability',upper=0.0)
-        self.prob.driver.add_constraint('gcBall.weldability',upper=0.0)
+        self.prob.driver.add_constraint('base.manufacturability',upper=0.0)
+        self.prob.driver.add_constraint('base.weldability',upper=0.0)
+        self.prob.driver.add_constraint('ball.manufacturability',upper=0.0)
+        self.prob.driver.add_constraint('ball.weldability',upper=0.0)
 
         # Ensure that the spar top matches the tower base
         self.prob.driver.add_constraint('tt.transition_buffer',lower=0.0, upper=5.0)
@@ -249,16 +309,16 @@ class SemiInstance(FloatingInstance):
         zcut = 1.0 + np.maximum( self.params['freeboard_base'], self.params['freeboard_ballast'] )
         self.draw_pontoons(fig, pontoonMat, 0.5*self.params['pontoon_outer_diameter'], zcut)
 
-        self.draw_cylinder(fig, [0.0, 0.0], self.params['freeboard_base'], self.params['section_height_base'],
+        self.draw_column(fig, [0.0, 0.0], self.params['freeboard_base'], self.params['section_height_base'],
                            0.5*self.params['outer_diameter_base'], self.params['stiffener_spacing_base'])
 
-        R_semi    = self.params['radius_to_ballast_cylinder']
-        ncylinder = self.params['number_of_ballast_columns']
-        angles = np.linspace(0, 2*np.pi, ncylinder+1)
+        R_semi    = self.params['radius_to_ballast_column']
+        ncolumn = self.params['number_of_ballast_columns']
+        angles = np.linspace(0, 2*np.pi, ncolumn+1)
         x = R_semi * np.cos( angles )
         y = R_semi * np.sin( angles )
-        for k in xrange(ncylinder):
-            self.draw_cylinder(fig, [x[k], y[k]], self.params['freeboard_ballast'], self.params['section_height_ballast'],
+        for k in xrange(ncolumn):
+            self.draw_column(fig, [x[k], y[k]], self.params['freeboard_ballast'], self.params['section_height_ballast'],
                                0.5*self.params['outer_diameter_ballast'], self.params['stiffener_spacing_ballast'])
             
         self.set_figure(fig, fname)
@@ -272,7 +332,7 @@ class SemiInstance(FloatingInstance):
 def example_semi():
     mysemi = SemiInstance()
     mysemi.evaluate('psqp')
-    mysemi.visualize('semi-initial.jpg')
+    #mysemi.visualize('semi-initial.jpg')
     #mysemi.run('slsqp')
     return mysemi
 
@@ -282,7 +342,7 @@ def psqp_optimal():
 
     mysemi.fairlead = 22.2366002
     mysemi.fairlead_offset_from_shell = 4.99949523
-    mysemi.radius_to_ballast_cylinder = 26.79698385
+    mysemi.radius_to_ballast_column = 26.79698385
     mysemi.freeboard_base = 4.97159308
     mysemi.section_height_base = np.array([6.72946378, 5.97993104, 5.47072089, 5.71437475, 5.44290777])
     mysemi.outer_diameter_base = 2*np.array([2.0179943 , 2.21979373, 2.4417731 , 2.68595041, 2.95454545, 3.25 ])
@@ -314,7 +374,7 @@ def psqp_optimal():
     return mysemi
     
     '''
-OrderedDict([('fairlead', array([13.48595326])), ('fairlead_offset_from_shell', array([4.99157996])), ('radius_to_ballast_cylinder', array([30.18481219])), ('freeboard_base', array([9.26170226])), ('section_height_base', array([3.7604404 , 5.01424445, 4.33725659, 3.33214966, 3.2105037 ])), ('outer_diameter_base', array([1.10000012, 1.20837321, 2.89237172, 4.53026726, 3.63197871,
+OrderedDict([('fairlead', array([13.48595326])), ('fairlead_offset_from_shell', array([4.99157996])), ('radius_to_ballast_column', array([30.18481219])), ('freeboard_base', array([9.26170226])), ('section_height_base', array([3.7604404 , 5.01424445, 4.33725659, 3.33214966, 3.2105037 ])), ('outer_diameter_base', array([1.10000012, 1.20837321, 2.89237172, 4.53026726, 3.63197871,
        6.4586864 ])), ('wall_thickness_base', array([0.00649224, 0.00676997, 0.005     , 0.005     , 0.00625276,
        0.00912208])), ('freeboard_ballast', array([5.21222562])), ('section_height_ballast', array([0.46854124, 0.26703874, 6.17196415, 6.07947859, 5.44340214])), ('outer_diameter_ballast', array([ 9.98087107, 11.65105409,  9.93591842, 11.24439331,  9.02905809,
         7.08313227])), ('wall_thickness_ballast', array([0.005, 0.005, 0.005, 0.005, 0.005, 0.005])), ('pontoon_outer_diameter', array([4.43693504])), ('pontoon_inner_diameter', array([4.4333937])), ('scope_ratio', array([4.70199041])), ('anchor_radius', array([837.57485028])), ('mooring_diameter', array([0.66993187])), ('stiffener_web_height_base', array([0.01518644, 0.01      , 0.01452209, 0.05063256, 0.02239869])), ('stiffener_web_thickness_base', array([0.001     , 0.001     , 0.001     , 0.00965457, 0.00119531])), ('stiffener_flange_width_base', array([0.01      , 0.01      , 0.01      , 0.06754642, 0.01      ])), ('stiffener_flange_thickness_base', array([0.00109441, 0.001     , 0.001     , 0.04809957, 0.001     ])), ('stiffener_spacing_base', array([0.62138686, 0.55886008, 0.17846304, 0.21853178, 0.33977136])), ('permanent_ballast_height_base', array([5.46194272])), ('stiffener_web_height_ballast', array([0.01      , 0.01000003, 0.01      , 0.01299782, 0.01      ])), ('stiffener_web_thickness_ballast', array([0.001, 0.001, 0.001, 0.001, 0.001])), ('stiffener_flange_width_ballast', array([0.01      , 0.06168182, 0.01      , 0.01      , 0.01      ])), ('stiffener_flange_thickness_ballast', array([0.001     , 0.00494582, 0.001     , 0.001     , 0.001     ])), ('stiffener_spacing_ballast', array([2.07754793, 0.14845455, 0.71661921, 0.32008663, 1.9621595 ])), ('permanent_ballast_height_ballast', array([0.1]))])

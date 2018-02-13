@@ -9,19 +9,6 @@ from mayavi import mlab
 NSECTIONS = 5
 NPTS = 100
 
-def nodal2sectional(x):
-    """Averages nodal data to be length-1 vector of sectional data
-
-    INPUTS:
-    ----------
-    x   : float vector, nodal data
-
-    OUTPUTS:
-    -------
-    y   : float vector,  sectional data
-    """
-    return 0.5*(x[:-1] + x[1:])
-
 def vecOption(x, in1s):
     myones = in1s if type(in1s) == type(np.array([])) else np.ones((in1s,))
     return (x*myones) if type(x)==type(0.0) or len(x) == 1 else x
@@ -59,50 +46,6 @@ class FloatingInstance(object):
     def __init__(self):
         self.prob = Problem()
         self.params = {}
-
-        # Environmental parameters
-        self.params['water_depth'] = 218.0
-        self.params['air_density'] = 1.198
-        self.params['air_viscosity'] = 1.81e-5
-        self.params['water_density'] = 1025.0
-        self.params['water_viscosity'] = 8.9e-4
-        self.params['wave_height'] = 10.8
-        self.params['wave_period'] = 9.8
-        self.params['wind_reference_speed'] = 11.73732
-        self.params['wind_reference_height'] = 90.0
-        self.params['alpha'] = 0.11
-        self.params['morison_mass_coefficient'] = 2.0
-
-        # Mooring parameters
-        self.params['mooring_max_offset'] = 0.1*self.params['water_depth'] # Assumption        
-        self.params['mooring_max_heel'] = 10.0
-        self.params['number_of_mooring_lines'] = 3
-        self.params['mooring_type'] = 'chain'
-        self.params['anchor_type'] = 'suctionpile'
-        self.params['mooring_cost_rate'] = 1.1
-        self.params['scope_ratio'] = 2.6
-        self.params['anchor_radius'] = 420.0
-        self.params['drag_embedment_extra_length'] = 300.0
-        
-        self.params['mooring_diameter'] = 0.14
-
-        # Turbine parameters
-        self.params['turbine_mass'] = 371690.0 + 285599.0
-        self.params['turbine_I_base'] = np.array([3.05284574e9, 2.96031642e9, 2.13639924e7, 0.0, 2.89884849e7, 0.0])
-        self.params['turbine_center_of_gravity'] = np.array([0.0, 0.0, 43.4])
-        self.params['turbine_force'] = np.array( [1.30015900e+06, -3.14321369e-08, -9.12169902e+06] )
-        self.params['turbine_moment'] = np.array( [-1.68366922e+06, 1.02556564e+08, 1.47301970e+05] )
-
-        # Steel properties
-        self.params['material_density'] = 7850.0
-        self.params['E'] = 200e9
-        self.params['G'] = 79.3e9
-        self.params['nu'] = 0.26
-        self.params['yield_stress'] = 3.45e8
-
-        # Design parameters
-        self.params['min_taper'] = 0.4
-        self.params['min_d_to_t'] = 120.0
         
     def get_assembly(self):
         raise NotImplementedError("Subclasses should implement this!")
@@ -169,6 +112,10 @@ class FloatingInstance(object):
             except KeyError:
                 print 'Cannot set: ', ivar
                 continue
+            except AttributeError as e:
+                print 'Vector issues?: ', ivar
+                print e
+                raise e
             except ValueError as e:
                 print 'Badding setting of: ', ivar
                 print e
@@ -330,7 +277,7 @@ class FloatingInstance(object):
             mlab.plot3d(truss[k,0,:], truss[k,1,:], truss[k,2,:], color=c, tube_radius=R, figure=fig)
 
             
-    def draw_cylinder(self, fig, centerline, freeboard, h_section, r_nodes, spacingVec=None):
+    def draw_column(self, fig, centerline, freeboard, h_section, r_nodes, spacingVec=None):
         npts = 20
         
         z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
