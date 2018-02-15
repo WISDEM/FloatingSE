@@ -1,7 +1,6 @@
 from openmdao.api import Group, Component, IndepVarComp, DirectSolver, ScipyGMRES, Newton, NLGaussSeidel, Brent, RunOnce
-from floatingse.semiAssembly import SemiAssembly
+from floatingse.floating import FloatingSE
 from offshorebos.wind_obos_component import WindOBOS
-from towerse.tower import TowerSE
 from plant_financese.plant_finance import PlantFinance
 from rotorse.rotor import RotorSE
 from commonse.rna import RNA
@@ -11,14 +10,12 @@ import numpy as np
         
 class FloatingTurbine(Group):
 
-    def __init__(self, nSection, nIntPts, nDEL):
+    def __init__(self, nSection):
         super(FloatingTurbine, self).__init__()
 
         self.add('hub_height', IndepVarComp('hub_height', 0.0), promotes=['*'])
 
-        # TODO: Environment
-        #Wind + Loads?
-        #Wave + Loads?
+        # TODO: 
         #Weibull/Rayleigh CDF
         
         # Rotor
@@ -33,30 +30,25 @@ class FloatingTurbine(Group):
         # RNA
         self.add('rna', RNA(1))
         
-        # Tower
-        # TODO: Use fatigue
-        self.add('tow', TowerSE(1, nSection+1, 0, wind='PowerWind'), promotes=['tower_section_height','tower_diameter',
-                                                                               'tower_wall_thickness','tower_outfitting_factor',
-                                                                               'tower_buckling_length','tower_M_DEL','tower_z_DEL',
-                                                                               'tower_force_discretization'])
-        
-        # Semi
-        self.add('sm', SemiAssembly(nSection, nIntPts), promotes=['radius_to_ballast_cylinder','fairlead','fairlead_offset_from_shell',
-                                                                  'freeboard_base','section_height_base','outer_diameter_base','wall_thickness_base',
-                                                                  'freeboard_ballast','section_height_ballast','outer_diameter_ballast','wall_thickness_ballast',
+        # Tower and substructure
+        self.add('sm', FloatingSE(nSection), promotes=['radius_to_ballast_column','fairlead','fairlead_offset_from_shell',
+                                                                  'base_freeboard','base_section_height','base_outer_diameter','base_wall_thickness',
+                                                                  'ballast_freeboard','ballast_section_height','ballast_outer_diameter','ballast_wall_thickness',
                                                                   'scope_ratio','anchor_radius','mooring_diameter','number_of_mooring_lines','mooring_type',
                                                                   'anchor_type','drag_embedment_extra_length','mooring_max_offset','mooring_max_heel','mooring_cost_rate',
-                                                                  'permanent_ballast_density','stiffener_web_height_base','stiffener_web_thickness_base',
-                                                                  'stiffener_flange_width_base','stiffener_flange_thickness_base','stiffener_spacing_base',
-                                                                  'bulkhead_nodes_base','permanent_ballast_height_base','stiffener_web_height_ballast',
-                                                                  'stiffener_web_thickness_ballast','stiffener_flange_width_ballast',
-                                                                  'stiffener_flange_thickness_ballast','stiffener_spacing_ballast','bulkhead_nodes_ballast',
-                                                                  'permanent_ballast_height_ballast','bulkhead_mass_factor','ring_mass_factor','shell_mass_factor',
+                                                                  'permanent_ballast_density','base_stiffener_web_height','base_stiffener_web_thickness',
+                                                                  'base_stiffener_flange_width','base_stiffener_flange_thickness','base_stiffener_spacing',
+                                                                  'base_bulkhead_nodes','base_permanent_ballast_height','ballast_stiffener_web_height',
+                                                                  'ballast_stiffener_web_thickness','ballast_stiffener_flange_width',
+                                                                  'ballast_stiffener_flange_thickness','ballast_stiffener_spacing','ballast_bulkhead_nodes',
+                                                                  'ballast_permanent_ballast_height','bulkhead_mass_factor','ring_mass_factor','shell_mass_factor',
                                                                   'spar_mass_factor','outfitting_mass_fraction','ballast_cost_rate','tapered_col_cost_rate',
                                                                   'outfitting_cost_rate','number_of_ballast_columns','pontoon_outer_diameter',
                                                                   'pontoon_wall_thickness','cross_attachment_pontoons','lower_attachment_pontoons',
                                                                   'upper_attachment_pontoons','lower_ring_pontoons','upper_ring_pontoons','outer_cross_pontoons',
-                                                                  'pontoon_cost_rate','connection_ratio_max','base_pontoon_attach_upper','base_pontoon_attach_lower'])
+                                                                  'pontoon_cost_rate','connection_ratio_max','base_pontoon_attach_upper','base_pontoon_attach_lower','tower_section_height','tower_outer_diameter',
+                                                                               'tower_wall_thickness','tower_outfitting_factor',
+                                                                               'tower_buckling_length','loading'])
         # Balance of station
         self.add('wobos', WindOBOS())
 
@@ -66,18 +58,18 @@ class FloatingTurbine(Group):
         # Define all input variables from all models
 
         # Tower
-        self.add('stress_standard_value',          IndepVarComp('stress_standard_value', 0.0), promotes=['*'])
+        #self.add('stress_standard_value',          IndepVarComp('stress_standard_value', 0.0), promotes=['*'])
         #self.add('fatigue_parameters',             IndepVarComp('fatigue_parameters', np.zeros(nDEL)), promotes=['*'])
         #self.add('fatigue_z',                      IndepVarComp('fatigue_z', np.zeros(nDEL)), promotes=['*'])
-        self.add('frame3dd_matrix_method',         IndepVarComp('frame3dd_matrix_method', 0, pass_by_obj=True), promotes=['*'])
-        self.add('compute_stiffnes',               IndepVarComp('compute_stiffnes', False, pass_by_obj=True), promotes=['*'])
+        #self.add('frame3dd_matrix_method',         IndepVarComp('frame3dd_matrix_method', 0, pass_by_obj=True), promotes=['*'])
+        #self.add('compute_stiffnes',               IndepVarComp('compute_stiffnes', False, pass_by_obj=True), promotes=['*'])
         self.add('project_lifetime',               IndepVarComp('project_lifetime', 0.0), promotes=['*'])
-        self.add('lumped_mass_matrix',             IndepVarComp('lumped_mass_matrix', 0, pass_by_obj=True), promotes=['*'])
-        self.add('slope_SN',                       IndepVarComp('slope_SN', 0, pass_by_obj=True), promotes=['*'])
+        #self.add('lumped_mass_matrix',             IndepVarComp('lumped_mass_matrix', 0, pass_by_obj=True), promotes=['*'])
+        #self.add('slope_SN',                       IndepVarComp('slope_SN', 0, pass_by_obj=True), promotes=['*'])
         self.add('number_of_modes',                IndepVarComp('number_of_modes', 0, pass_by_obj=True), promotes=['*'])
-        self.add('compute_shear',                  IndepVarComp('compute_shear', True, pass_by_obj=True), promotes=['*'])
-        self.add('shift_value',                    IndepVarComp('shift_value', 0.0), promotes=['*'])
-        self.add('frame3dd_convergence_tolerance', IndepVarComp('frame3dd_convergence_tolerance', 1e-9), promotes=['*'])
+        #self.add('compute_shear',                  IndepVarComp('compute_shear', True, pass_by_obj=True), promotes=['*'])
+        #self.add('shift_value',                    IndepVarComp('shift_value', 0.0), promotes=['*'])
+        #self.add('frame3dd_convergence_tolerance', IndepVarComp('frame3dd_convergence_tolerance', 1e-9), promotes=['*'])
         
         # Environment
         self.add('air_density',                IndepVarComp('air_density', 0.0), promotes=['*'])
@@ -88,13 +80,14 @@ class FloatingTurbine(Group):
         self.add('wave_period',                IndepVarComp('wave_period', 0.0), promotes=['*'])
         self.add('wind_reference_speed',       IndepVarComp('wind_reference_speed', 0.0), promotes=['*'])
         self.add('wind_reference_height',      IndepVarComp('wind_reference_height', 0.0), promotes=['*'])
-        self.add('alpha',                      IndepVarComp('alpha', 0.0), promotes=['*'])
+        self.add('shearExp',                      IndepVarComp('shearExp', 0.0), promotes=['*'])
         self.add('wind_bottom_height',         IndepVarComp('wind_bottom_height', 0.0), promotes=['*'])
         self.add('wind_beta',                  IndepVarComp('wind_beta', 0.0), promotes=['*'])
-        self.add('wave_beta',                  IndepVarComp('wave_beta', 0.0), promotes=['*'])
+        #self.add('wave_beta',                  IndepVarComp('wave_beta', 0.0), promotes=['*'])
         self.add('cd_usr',                     IndepVarComp('cd_usr', np.inf), promotes=['*'])
-        self.add('wave_velocity_z0',           IndepVarComp('wave_velocity_z0', 0.0), promotes=['*'])
-        self.add('wave_acceleration_z0',       IndepVarComp('wave_acceleration_z0', 0.0), promotes=['*'])
+        self.add('mean_current_speed',          IndepVarComp('mean_current_speed', 0.0), promotes=['*'])
+        #self.add('wave_velocity_z0',           IndepVarComp('wave_velocity_z0', 0.0), promotes=['*'])
+        #self.add('wave_acceleration_z0',       IndepVarComp('wave_acceleration_z0', 0.0), promotes=['*'])
 
         # Design standards
         self.add('safety_factor_frequency',    IndepVarComp('safety_factor_frequency', 0.0), promotes=['*'])
@@ -118,10 +111,9 @@ class FloatingTurbine(Group):
         self.add('rna_weightM',                IndepVarComp('rna_weightM', True, pass_by_obj=True), promotes=['*'])
         
         # SemiGeometry
-        self.add('z_depth',                    IndepVarComp('z_depth', 0.0), promotes=['*'])
         self.add('water_depth',                IndepVarComp('water_depth', 0.0), promotes=['*'])
 
-        # Cylinder
+        # Column
         self.add('morison_mass_coefficient',   IndepVarComp('morison_mass_coefficient', 0.0), promotes=['*'])
         self.add('material_density',           IndepVarComp('material_density', 0.0), promotes=['*'])
         self.add('E',                          IndepVarComp('E', 0.0), promotes=['*'])
@@ -340,42 +332,42 @@ class FloatingTurbine(Group):
 
         # Connect all input variables from all models
         self.connect('water_depth', ['sm.water_depth', 'wobos.waterD', 'lcoe.sea_depth'])
-        self.connect('z_depth', 'tow.z_floor')
-        self.connect('tower_diameter', 'sm.tower_metric')
-        self.connect('hub_height', ['rotor.analysis.hubHt', 'tow.hub_height', 'wobos.hubH'])
-        self.connect('tower_diameter', 'wobos.towerD', src_indices=[0])
-
-        self.connect('wind_beta', ['tow.wind.betaWind','rotor.wind.betaWind'])
-        self.connect('cd_usr', 'tow.cd_usr')
-        self.connect('wave_acceleration_z0', 'tow.waveLoads.A0')
-        self.connect('wave_velocity_z0', 'tow.waveLoads.U0')
-        self.connect('wave_beta', 'tow.waveLoads.beta0')
+        self.connect('hub_height', ['rotor.analysis.hubHt', 'sm.hub_height', 'wobos.hubH'])
+        self.connect('tower_outer_diameter', 'wobos.towerD', src_indices=[0])
+        #self.connect('sm.tow.z_full', 'rotor.wind.z', src_indices=[])
         
-        self.connect('project_lifetime', ['rotor.struc.lifetime','tow.life','lcoe.project_lifetime','wobos.projLife'])
-        self.connect('slope_SN', 'tow.m_SN')
-        self.connect('compute_shear', 'tow.shear')
-        self.connect('compute_stiffnes', 'tow.geom')
-        self.connect('frame3dd_matrix_method', 'tow.Mmethod')
-        self.connect('shift_value', 'tow.shift')
-        self.connect('number_of_modes', ['tow.nM', 'rotor.nF'])
-        self.connect('frame3dd_convergence_tolerance', 'tow.tol')
-        self.connect('lumped_mass_matrix', 'tow.lump')
-        self.connect('stress_standard_value', 'tow.DC')
+        self.connect('wind_beta', 'sm.beta')
+        self.connect('cd_usr', 'sm.cd_usr')
+        #self.connect('wave_beta', 'sm.waveLoads.beta')
+        self.connect('yaw', 'sm.yaw')
+        self.connect('mean_current_speed', 'sm.Uc')
         
-        self.connect('yaw', 'tow.distLoads.yaw')
+        self.connect('project_lifetime', ['rotor.struc.lifetime','lcoe.project_lifetime','wobos.projLife'])
+        #self.connect('slope_SN', 'sm.m_SN')
+        #self.connect('compute_shear', 'sm.shear')
+        #self.connect('compute_stiffnes', 'sm.geom')
+        #self.connect('frame3dd_matrix_method', 'sm.Mmethod')
+        #self.connect('shift_value', 'sm.shift')
+        # TODO:
+        #self.connect('number_of_modes', ['sm.nM', 'rotor.nF'])
+        self.connect('number_of_modes', 'rotor.nF')
+        #self.connect('frame3dd_convergence_tolerance', 'sm.tol')
+        #self.connect('lumped_mass_matrix', 'sm.lump')
+        #self.connect('stress_standard_value', 'sm.DC')
+        
         self.connect('safety_factor_frequency', 'rotor.eta_freq')
-        self.connect('safety_factor_stress', 'tow.gamma_f')
-        self.connect('safety_factor_materials', 'tow.gamma_m')
-        self.connect('safety_factor_buckling', 'tow.gamma_b')
-        self.connect('safety_factor_fatigue', ['rotor.eta_damage','tow.gamma_fatigue'])
-        self.connect('safety_factor_consequence', 'tow.gamma_n')
-        self.connect('min_taper_ratio', ['tow.min_taper', 'sm.min_taper'])
-        self.connect('min_diameter_thickness_ratio', ['tow.min_d_to_t', 'sm.min_d_to_t'])
-        self.connect('rna.loads.top_F', 'tow.tower.rna_F')
-        self.connect('rna.loads.top_M', 'tow.tower.rna_M')
-        self.connect('rna.rna_I_TT', 'tow.mI')
-        self.connect('rna.rna_mass', ['wobos.rnaM', 'tow.rna_mass'])
-        self.connect('rna.rna_cm', 'tow.rna_offset')
+        self.connect('safety_factor_stress', 'sm.gamma_f')
+        self.connect('safety_factor_materials', 'sm.gamma_m')
+        self.connect('safety_factor_buckling', 'sm.gamma_b')
+        self.connect('safety_factor_fatigue', ['rotor.eta_damage','sm.gamma_fatigue'])
+        self.connect('safety_factor_consequence', 'sm.gamma_n')
+        self.connect('min_taper_ratio', 'sm.min_taper')
+        self.connect('min_diameter_thickness_ratio', 'sm.min_d_to_t')
+        self.connect('rna.loads.top_F', 'sm.rna_force')
+        self.connect('rna.loads.top_M', 'sm.rna_moment')
+        self.connect('rna.rna_I_TT', 'sm.rna_I')
+        self.connect('rna.rna_mass', ['wobos.rnaM', 'sm.rna_mass'])
+        self.connect('rna.rna_cm', 'sm.rna_cg')
         self.connect('rotor.mass_all_blades', 'rna.blades_mass')
         self.connect('rotor.I_all_blades', 'rna.blades_I')
         self.connect('hub_mass', 'rna.hub_mass')
@@ -390,22 +382,22 @@ class FloatingTurbine(Group):
         self.connect('downwind','rna.downwind')
         self.connect('rna_weightM','rna.rna_weightM')
         
-        self.connect('air_density', ['sm.air_density', 'tow.windLoads.rho','rotor.analysis.rho'])
-        self.connect('air_viscosity', ['sm.air_viscosity', 'tow.windLoads.mu','rotor.analysis.mu'])
-        self.connect('water_density', ['sm.water_density', 'tow.waveLoads.rho'])
-        self.connect('water_viscosity', ['sm.water_viscosity', 'tow.waveLoads.mu'])
-        self.connect('wave_height', 'sm.wave_height')
-        self.connect('wave_period', 'sm.wave_period')
-        self.connect('wind_reference_speed', ['sm.wind_reference_speed', 'tow.wind.Uref'])
-        self.connect('wind_reference_height', ['sm.wind_reference_height', 'tow.wind.zref','rotor.wind.zref'])
-        self.connect('wind_bottom_height', ['tow.z0','rotor.wind.z0'])
-        self.connect('alpha', ['sm.alpha', 'tow.wind.shearExp', 'rotor.wind.shearExp'])
-        self.connect('morison_mass_coefficient', ['sm.morison_mass_coefficient', 'tow.cm'])
-        self.connect('material_density', ['sm.material_density', 'tow.rho'])
-        self.connect('E', ['sm.E', 'tow.E'])
-        self.connect('G', ['sm.G', 'tow.G'])
+        self.connect('air_density', ['sm.base.windLoads.rho','rotor.analysis.rho'])
+        self.connect('air_viscosity', ['sm.base.windLoads.mu','rotor.analysis.mu'])
+        self.connect('water_density', 'sm.water_density')
+        self.connect('water_viscosity', 'sm.base.waveLoads.mu')
+        self.connect('wave_height', 'sm.hmax')
+        self.connect('wave_period', 'sm.T')
+        self.connect('wind_reference_speed', 'sm.Uref')
+        self.connect('wind_reference_height', ['sm.zref','rotor.wind.zref'])
+        self.connect('wind_bottom_height', ['sm.z0','rotor.wind.z0'])
+        self.connect('shearExp', ['sm.shearExp', 'rotor.wind.shearExp'])
+        self.connect('morison_mass_coefficient', 'sm.cm')
+        self.connect('material_density', 'sm.material_density')
+        self.connect('E', 'sm.E')
+        self.connect('G', 'sm.G')
         self.connect('nu', 'sm.nu')
-        self.connect('yield_stress', ['sm.yield_stress', 'tow.sigma_y'])
+        self.connect('yield_stress', 'sm.yield_stress')
         
         self.connect('anchor', 'wobos.anchor')
         self.connect('ballast_cost_rate', 'wobos.ballCR')
@@ -614,12 +606,7 @@ class FloatingTurbine(Group):
         self.connect('decomDiscRate', 'wobos.decomDiscRate')
         
         # Link outputs from one model to inputs to another
-        self.connect('tow.turb.turbine_mass', 'sm.turbine_mass')
-        self.connect('tow.turb.turbine_center_of_mass', 'sm.turbine_center_of_gravity')
-        self.connect('tow.turb.turbine_I_base', 'sm.turbine_I_base')
-        self.connect('tow.tower.turbine_F', 'sm.turbine_force')
-        self.connect('tow.tower.turbine_M', 'sm.turbine_moment')
-        self.connect('tow.tower_mass', 'wobos.towerM')
+        self.connect('sm.tower_mass', 'wobos.towerM')
         self.connect('dummy_mass', 'sm.ball.stack_mass_in')
 
         self.connect('sm.total_cost', 'wobos.subTotCost')

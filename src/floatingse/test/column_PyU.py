@@ -202,7 +202,7 @@ class TestProperties(unittest.TestCase):
         cg_system = ((m_spar+m_out)*cg_spar + m_ballast*cg_ballast) / m_expect
 
         self.assertAlmostEqual(m_expect, self.unknowns['total_mass'].sum())
-        self.assertAlmostEqual(cg_system, self.unknowns['z_center_of_gravity'])
+        self.assertAlmostEqual(cg_system, self.unknowns['z_center_of_mass'])
 
         V_expect = np.pi * 100.0 * 35.0
         cb_expect = -17.5

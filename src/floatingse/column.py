@@ -266,7 +266,7 @@ class ColumnProperties(Component):
         self.add_output('variable_ballast_interp_mass', val=np.zeros((nFull,)), units='kg', desc='mass vector of potential ballast mass')
         self.add_output('variable_ballast_interp_zpts', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
 
-        self.add_output('z_center_of_gravity', val=0.0, units='m', desc='z-position CofG of column')
+        self.add_output('z_center_of_mass', val=0.0, units='m', desc='z-position CofG of column')
         self.add_output('z_center_of_buoyancy', val=0.0, units='m', desc='z-position CofB of column')
         self.add_output('Awater', val=0.0, units='m**2', desc='Area of waterplace cross section')
         self.add_output('Iwater', val=0.0, units='m**4', desc='Second moment of area of waterplace cross section')
@@ -456,7 +456,7 @@ class ColumnProperties(Component):
         m_total                = m_spar + m_ballast + m_outfit
         self.section_mass     += m_outfit / self.section_mass.size
         unknowns['total_mass'] = self.section_mass
-        unknowns['z_center_of_gravity'] = ( (m_spar+m_outfit)*cg_spar + m_ballast*cg_ballast ) / m_total
+        unknowns['z_center_of_mass'] = ( (m_spar+m_outfit)*cg_spar + m_ballast*cg_ballast ) / m_total
         
         # Compute volume of each section and mass of displaced water by section
         # Find the radius at the waterline so that we can compute the submerged volume as a sum of frustum sections
@@ -638,7 +638,7 @@ class Column(Group):
                                                            'bulkhead_mass','stiffener_mass','spar_mass_factor','outfitting_mass_fraction',
                                                            'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
                                                            'variable_ballast_interp_mass','variable_ballast_interp_zpts',
-                                                           'z_center_of_gravity','z_center_of_buoyancy','Awater','Iwater',
+                                                           'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater',
                                                            'displaced_volume','total_mass','total_cost'])
 
         self.add('wind', PowerWind(nFull), promotes=['Uref','zref','shearExp','z0'])
@@ -669,7 +669,7 @@ class Column(Group):
         self.connect('total_mass', 'buck.section_mass')
 
         self.connect('water_depth','wave.z_floor')
-        self.connect('z_full', ['wind.z', 'wave.z', 'windLoads.z','waveLoads.z'])
+        self.connect('z_full', ['wind.z', 'wave.z', 'windLoads.z','waveLoads.z','distLoads.z'])
         self.connect('d_full', ['windLoads.d','waveLoads.d'])
         self.connect('beta','waveLoads.beta')
         self.connect('z0', 'wave.z_surface')
@@ -687,11 +687,6 @@ class Column(Group):
         self.connect('windLoads.windLoads:Pz', 'distLoads.windLoads:Pz')
         self.connect('windLoads.windLoads:qdyn', 'distLoads.windLoads:qdyn')
         self.connect('windLoads.windLoads:beta', 'distLoads.windLoads:beta')
-        #self.connect('windLoads.windLoads:Px0', 'distLoads.windLoads:Px0')
-        #self.connect('windLoads.windLoads:Py0', 'distLoads.windLoads:Py0')
-        #self.connect('windLoads.windLoads:Pz0', 'distLoads.windLoads:Pz0')
-        #self.connect('windLoads.windLoads:qdyn0', 'distLoads.windLoads:qdyn0')
-        #self.connect('windLoads.windLoads:beta0', 'distLoads.windLoads:beta0')
         self.connect('windLoads.windLoads:z', 'distLoads.windLoads:z')
         self.connect('windLoads.windLoads:d', 'distLoads.windLoads:d')
         
@@ -700,11 +695,6 @@ class Column(Group):
         self.connect('waveLoads.waveLoads:Pz', 'distLoads.waveLoads:Pz')
         self.connect('waveLoads.waveLoads:pt', 'distLoads.waveLoads:qdyn')
         self.connect('waveLoads.waveLoads:beta', 'distLoads.waveLoads:beta')
-        #self.connect('waveLoads.waveLoads:Px0', 'distLoads.waveLoads:Px0')
-        #self.connect('waveLoads.waveLoads:Py0', 'distLoads.waveLoads:Py0')
-        #self.connect('waveLoads.waveLoads:Pz0', 'distLoads.waveLoads:Pz0')
-        #self.connect('waveLoads.waveLoads:qdyn0', 'distLoads.waveLoads:qdyn0')
-        #self.connect('waveLoads.waveLoads:beta0', 'distLoads.waveLoads:beta0')
         self.connect('waveLoads.waveLoads:z', 'distLoads.waveLoads:z')
         self.connect('waveLoads.waveLoads:d', 'distLoads.waveLoads:d')
 

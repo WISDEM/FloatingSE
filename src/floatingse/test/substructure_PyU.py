@@ -7,87 +7,19 @@ from commonse import gravity as g
 NSECTIONS = 5
 NPTS = 100
 
-class TestSpar(unittest.TestCase):
+class TestSubs(unittest.TestCase):
     def setUp(self):
         self.params = {}
         self.unknowns = {}
         self.resids = {}
 
-        self.params['water_density'] = 1e3
-        self.params['turbine_mass'] = 1e4
-        self.params['mooring_mass'] = 50.0
-        self.params['mooring_effective_mass'] = 40.0
-        self.params['base_cylinder_mass'] = 2e4/NSECTIONS  * np.ones((NSECTIONS,))
-        self.params['base_cylinder_displaced_volume'] = 2e2/NSECTIONS  * np.ones((NSECTIONS,))
-        self.params['base_cylinder_center_of_buoyancy'] = -10.0
-        self.params['base_cylinder_center_of_gravity'] = -8.0
-        self.params['base_freeboard'] = 10.0
-        self.params['water_ballast_mass_vector'] = 1e5*np.arange(5)
-        self.params['water_ballast_zpts_vector'] = np.array([-10, -9, -8, -7, -6])
-        self.params['turbine_center_of_gravity'] = 2.0*np.ones(3)
-        self.params['fairlead'] = 0.5
-        self.params['fairlead_radius'] = 5.0
-        self.params['base_cylinder_Iwaterplane'] = 150.0
-        self.params['base_cylinder_surge_force'] = np.array([11.0, 15.0]) 
-        self.params['base_cylinder_force_points'] = np.array([-7.0, -4.0]) 
-        self.params['turbine_force'] = 13.0*np.ones(3)
-        self.params['turbine_moment'] = 5.0*np.ones(3)
-        self.params['mooring_surge_restoring_force'] = 200.0
-        self.params['mooring_pitch_restoring_force'] = 1e5 * np.ones((10,3))
-        self.params['mooring_pitch_restoring_force'][3:,:] = 0.0
-        self.params['mooring_cost'] = 2.0
-        self.params['base_cylinder_cost'] = 2.5
-        self.params['max_heel'] = 10.0
-
-        self.myspar = subs.Spar(NSECTIONS, NPTS)
-
-    def testBalance(self):
-        self.myspar.balance_spar(self.params, self.unknowns)
-
-        m_expect = 1e4 + 2e4 + 40.0
-        m_water = 2e5 - m_expect
-        h_expect = np.interp(m_water, self.params['water_ballast_mass_vector'], self.params['water_ballast_zpts_vector']) + 10
-        cg_expect = (1e4*2 + 2e4*(-8) + 40*(-0.5) + m_water*(0.5*h_expect-10)) / (m_expect+m_water)
-        self.assertEqual(self.unknowns['variable_ballast_mass'], m_water)
-        self.assertEqual(self.unknowns['variable_ballast_height'], h_expect)
-        self.assertEqual(self.unknowns['total_mass'], m_expect - 1e4 - 40.0 + 50.0)
-        self.assertEqual(self.unknowns['z_center_of_gravity'], cg_expect)
-
-        
-    def testStability(self):
-        self.unknowns['z_center_of_gravity'] = -1.0
-        self.params['mooring_pitch_restoring_force'] = np.zeros((10,3))
-        self.myspar.compute_stability(self.params, self.unknowns)
-
-        Fc = np.trapz(np.array([11.0, 15.0]), np.array([-7, -4.0]))
-        Mc = np.trapz(np.array([11.0, 15.0])*(np.array([-7, -4.0])+1), np.array([-7, -4.0]))
-        m_expect = 2e4 + 50.0
-        static_expect = -10 +1.0
-        meta_expect = static_expect + 150/200.0
-        M_moor = 0.0
-        self.assertEqual(self.unknowns['static_stability'], static_expect)
-        self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
-        self.assertEqual(self.unknowns['offset_force_ratio'], (Fc+13)/200.0)
-        self.assertAlmostEqual(self.unknowns['heel_constraint'], (180/np.pi)*(5+13*11+Mc)/(2e2*g*1e3*meta_expect)/10.0)
-
-
-    def testCost(self):
-        self.myspar.compute_costs(self.params, self.unknowns)
-        self.assertEqual(self.unknowns['total_cost'], 4.5)
-
-        
-    
-class TestSemi(unittest.TestCase):
-    def setUp(self):
-        self.params = {}
-        self.unknowns = {}
-        self.resids = {}
 
         # From other components
-        self.params['turbine_mass'] = 1e4
-        self.params['turbine_center_of_gravity'] = 40.0*np.ones(3)
-        self.params['turbine_force'] = 26.0*np.ones(3)
-        self.params['turbine_moment'] = 5e4*np.ones(3)
+        self.params['structural_mass'] = 1e4
+        self.params['structure_center_of_mass'] = 40.0*np.ones(3)
+        self.params['total_force'] = 26.0*np.ones(3)
+        self.params['total_moment'] = 5e4*np.ones(3)
+        self.params['total_displacement'] = 1e4
         
         self.params['mooring_mass'] = 20.0
         self.params['mooring_effective_mass'] = 15.0
@@ -95,44 +27,29 @@ class TestSemi(unittest.TestCase):
         self.params['mooring_pitch_restoring_force'] = 1e5 * np.ones((10,3))
         self.params['mooring_pitch_restoring_force'][3:,:] = 0.0
         self.params['mooring_cost'] = 256.0
-        self.params['max_heel'] = 10.0
-
-        self.params['pontoon_mass'] = 50.0
-        self.params['pontoon_cost'] = 512.0
-        self.params['pontoon_buoyancy'] = 2e6
-        self.params['pontoon_center_of_buoyancy'] = -15.0
-        self.params['pontoon_center_of_gravity'] = -10.0
-        
-        self.params['base_cylinder_mass'] = 2e4 * np.ones((NSECTIONS,))
-        self.params['base_cylinder_displaced_volume'] = 1e4 * np.ones((NSECTIONS,))
-        self.params['base_cylinder_center_of_buoyancy'] = -12.5
-        self.params['base_cylinder_center_of_gravity'] = -20.0
-        self.params['base_cylinder_Iwaterplane'] = 150.0
-        self.params['base_cylinder_surge_force'] = np.array([11.0, 15.0]) 
-        self.params['base_cylinder_force_points'] = np.array([-7.0, -4.0]) 
-        self.params['base_cylinder_cost'] = 32.0
-        self.params['base_freeboard'] = 10.0
-        
-        self.params['ballast_cylinder_mass'] = 1.5e4 * np.ones((NSECTIONS,))
-        self.params['ballast_cylinder_displaced_volume'] = 5e3 * np.ones((NSECTIONS,))
-        self.params['ballast_cylinder_center_of_buoyancy'] = -5.0
-        self.params['ballast_cylinder_center_of_gravity'] = -1.0
-        self.params['ballast_cylinder_Iwaterplane'] = 50.0
-        self.params['ballast_cylinder_Awaterplane'] = 9.0
-        self.params['ballast_cylinder_surge_force'] = np.array([2.0, 3.0])
-        self.params['ballast_cylinder_force_points'] = np.array([-2.0, -3.0])
-        self.params['ballast_cylinder_cost'] = 64.0
-        
-        self.params['number_of_ballast_cylinders'] = 3
         self.params['fairlead'] = 0.5
         self.params['fairlead_radius'] = 5.0
+        self.params['max_heel'] = 0.0
+
+        self.params['pontoon_cost'] = 512.0
+        
+        self.params['base_column_Iwaterplane'] = 150.0
+        self.params['base_column_cost'] = 32.0
+        self.params['base_freeboard'] = 10.0
+        
+        self.params['ballast_column_Iwaterplane'] = 50.0
+        self.params['ballast_column_Awaterplane'] = 9.0
+        self.params['ballast_column_cost'] = 64.0
+
+        self.params['number_of_ballast_columns'] = 3
         self.params['water_ballast_mass_vector'] = 1e9*np.arange(5)
         self.params['water_ballast_zpts_vector'] = np.array([-10, -9, -8, -7, -6])
-        self.params['radius_to_ballast_cylinder'] = 20.0
+        self.params['radius_to_ballast_column'] = 20.0
+        self.params['z_center_of_buoyancy'] = -2.0
 
         self.params['water_density'] = 1e3
 
-        self.mysemi = subs.Semi(NSECTIONS, NPTS)
+        self.mysemi = subs.Semi(NPTS)
         self.mysemiG = subs.SemiGeometry(2)
 
         
@@ -140,7 +57,7 @@ class TestSemi(unittest.TestCase):
         self.params['base_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['ballast_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['ballast_z_nodes'] = np.array([-35.0, -15.0, 15.0])
-        self.params['radius_to_ballast_cylinder'] = 25.0
+        self.params['radius_to_ballast_column'] = 25.0
         self.params['fairlead'] = 10.0
         self.params['fairlead_offset_from_shell'] = 1.0
         self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
@@ -151,48 +68,60 @@ class TestSemi(unittest.TestCase):
         
     def testBalance(self):
         self.mysemi.balance_semi(self.params, self.unknowns)
-        m_expect = 1e4 + 15.0 + 50.0 + 5*2e4 + 3*1.5e4*5
-        V_expect = 1e4*5 + 3*5*5e3 + 2e6/g/1e3
-        m_water = 1e3*V_expect - m_expect
+        m_water = 1e3*1e4 - 1e4 - 15
         h_expect = np.interp(m_water, self.params['water_ballast_mass_vector'], self.params['water_ballast_zpts_vector']) + 10.0
-        cg_expect = (1e4*40.0 + 50.0*(-10.0) + 5*2e4*(-20.0) + 3*5*1.5e4*(-1.0) + 15.0*(-0.5) + m_water*(-10 + 0.5*h_expect)) / (m_expect+m_water)
-        cb_expect = (2e6/g/1e3*(-15.0) + 5*1e4*(-12.5) + 3*5*5e3*(-5.0)) / V_expect
+        cg_expect_z = (1e4*40.0 + m_water*(-10 + 0.5*h_expect)) / (1e4+m_water)
+        cg_expect_xy = 1e4*40.0/ (1e4+m_water)
         
-        self.assertEqual(self.unknowns['total_mass'], m_expect - 1e4 - 15.0 + 20.0)
-        self.assertEqual(self.unknowns['total_displacement'], V_expect)
         self.assertEqual(self.unknowns['variable_ballast_mass'], m_water)
         self.assertEqual(self.unknowns['variable_ballast_height'], h_expect)
-        self.assertEqual(self.unknowns['z_center_of_buoyancy'], cb_expect)
-        self.assertAlmostEqual(self.unknowns['z_center_of_gravity'], cg_expect)
-
+        npt.assert_almost_equal(self.unknowns['center_of_mass'], np.array([cg_expect_xy, cg_expect_xy, cg_expect_z]))
         
+        self.params['number_of_ballast_columns'] = 0
+        self.mysemi.balance_semi(self.params, self.unknowns)
+
+        self.assertEqual(self.unknowns['variable_ballast_mass'], m_water)
+        self.assertEqual(self.unknowns['variable_ballast_height'], h_expect)
+        npt.assert_almost_equal(self.unknowns['center_of_mass'], np.array([cg_expect_xy, cg_expect_xy, cg_expect_z]))
+        
+
     def testStability(self):
-        self.unknowns['z_center_of_gravity'] = -1.0
-        self.unknowns['z_center_of_buoyancy'] = -2.0
-        self.unknowns['total_displacement'] = 1e4
+        self.params['mooring_pitch_restoring_force'] = 0.0 * np.ones((10,3))
+        self.unknowns['center_of_mass'] = np.array([0.0, 0.0, -1.0])
         self.mysemi.compute_stability(self.params, self.unknowns)
 
-        Fc = np.trapz(np.array([11.0, 15.0]), np.array([-7, -4.0])) + 3*np.trapz(np.array([2.0, 3.0]), np.array([-2, -3.0]))
-        Mc = np.trapz(np.array([11.0, 15.0])*(np.array([-7, -4.0])+1), np.array([-7, -4.0]))
-        m_expect = 2e4 + 50.0
         I_expect = 150.0 + (50.0 + 9.0*(20.0*np.cos(np.deg2rad(np.array([0.0, 120., 240.0]))) )**2).sum()
         static_expect = -2.0 + 1.0
         meta_expect = static_expect + I_expect/1e4
         self.assertEqual(self.unknowns['static_stability'], static_expect)
         self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
-        self.assertEqual(self.unknowns['offset_force_ratio'], (Fc+26)/1e2)
-        #self.assertEqual(self.unknowns['heel_angle'], (180/np.pi)*(16+Mc)/(1e4*g*1e3*meta_expect))
+        self.assertEqual(self.unknowns['offset_force_ratio'], 26.0/1e2)
+        self.assertAlmostEqual(self.unknowns['heel_constraint'], -(180/np.pi)*(5e4)/(1e4*g*1e3*np.abs(meta_expect)))
 
+        self.params['number_of_ballast_columns'] = 0
+        self.mysemi.compute_stability(self.params, self.unknowns)
+
+        I_expect = 150.0
+        static_expect = -2.0 + 1.0
+        meta_expect = static_expect + I_expect/1e4
+        self.assertEqual(self.unknowns['static_stability'], static_expect)
+        self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
+        self.assertEqual(self.unknowns['offset_force_ratio'], 26.0/1e2)
+        self.assertAlmostEqual(self.unknowns['heel_constraint'], -(180/np.pi)*(5e4)/(1e4*g*1e3*np.abs(meta_expect)))
+
+        self.params['fairlead'] = 1.0
+        self.params['mooring_pitch_restoring_force'][:3,-1] = 1.0
+        self.assertAlmostEqual(self.unknowns['heel_constraint'], -(180/np.pi)*(5e4)/(1*5 + 1e4*g*1e3*np.abs(meta_expect)))
 
     def testCost(self):
         self.mysemi.compute_costs(self.params, self.unknowns)
         c_expect = 256.0 + 512.0 + 32.0 + 3*64.0
         self.assertEqual(self.unknowns['total_cost'], c_expect)
+
         
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestSpar))
-    suite.addTest(unittest.makeSuite(TestSemi))
+    suite.addTest(unittest.makeSuite(TestSubs))
     return suite
 
 if __name__ == '__main__':

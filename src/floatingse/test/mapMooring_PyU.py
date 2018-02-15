@@ -2,7 +2,7 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import floatingse.mapMooring as mapMooring
-from floatingse.cylinder import CylinderGeometry
+from floatingse.column import ColumnGeometry
 
 from commonse import gravity as g
 
@@ -59,9 +59,11 @@ class TestMapMooring(unittest.TestCase):
         self.params['wall_thickness'] = np.array([0.5, 0.5, 0.5])
         self.params['outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['section_height'] = np.array([20.0, 30.0])
+        self.params['z_param_in'] = self.params['z_full_in'] = np.r_[0.0, np.cumsum(self.params['section_height'])]
+        self.params['section_center_of_mass'] = np.array([10.0, 35.0])
         self.params['freeboard'] = 15.0
         self.params['fairlead'] = 10.0
-        self.params['fairlead_offset_from_shell'] = 1.0
+        self.params['fairlead_radius'] = 11.0
 
         self.params['water_density'] = 1025.0 #1e3
         self.params['water_depth'] = 218.0 #100.0
@@ -91,7 +93,7 @@ class TestMapMooring(unittest.TestCase):
         self.mymap.finput.close()
         
     def set_geometry(self):
-        geom = CylinderGeometry(2)
+        geom = ColumnGeometry(2, 3)
         tempUnknowns = {}
         geom.solve_nonlinear(self.params, tempUnknowns, None)
         for pairs in tempUnknowns.items():

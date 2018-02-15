@@ -14,18 +14,70 @@ class FloatingTurbineInstance(SemiInstance):
         super(FloatingTurbineInstance, self).__init__()
         
         # Remove what we don't need from Semi
-        self.params.pop('tower_metric', None)
+        self.params.pop('rna_cg', None)
+        self.params.pop('rna_mass', None)
+        self.params.pop('rna_I', None)
         self.params.pop('min_d_to_t', None)
         self.params.pop('min_taper', None)
-        self.params.pop('turbine_force', None)
-        self.params.pop('turbine_moment', None)
-        self.params.pop('turbine_I_base', None)
-        self.params.pop('turbine_center_of_gravity', None)
-        self.params.pop('turbine_mass', None)
         self.params['min_taper_ratio'] = 0.4
         self.params['min_diameter_thickness_ratio'] = 120.0
 
+
+        # Environmental parameters
+        self.params['air_density'] = self.params['base.windLoads.rho']
+        self.params.pop('base.windLoads.rho')
+        
+        self.params['air_viscosity'] = self.params['base.windLoads.mu']
+        self.params.pop('base.windLoads.mu', None)
+        
+        self.params['water_viscosity'] = self.params['base.waveLoads.mu']
+        self.params.pop('base.waveLoads.mu')
+        
+        self.params['wave_height'] = self.params['hmax']
+        self.params.pop('hmax')
+        
+        self.params['wave_period'] = self.params['T']
+        self.params.pop('T', None)
+        
+        self.params['mean_current_speed'] = self.params['Uc']
+        self.params.pop('Uc', None)
+
+        self.params['wind_reference_speed'] = self.params['Uref']
+        self.params.pop('Uref', None)
+        
+        self.params['wind_reference_height'] = self.params['zref']
+        self.params.pop('zref')
+        
+        self.params['shearExp'] = 0.11
+
+        self.params['morison_mass_coefficient'] = self.params['cm']
+        self.params.pop('cm', None)
+        
+        self.params['wind_bottom_height'] = self.params['z0']
+        self.params.pop('z0', None)
+
+        self.params['wind_beta'] = self.params['beta']
+        self.params.pop('beta', None)
+        
+        #self.params['wave_beta']            = 0.0
+
+        self.params['hub_height']           = 90.0
+        
+        self.params['safety_factor_frequency']   = 1.1
+        self.params['safety_factor_stress']      = 1.35
+        self.params['safety_factor_materials']   = 1.3
+        self.params['safety_factor_buckling']    = 1.1
+        self.params['safety_factor_fatigue']     = 1.35*1.3*1.0
+        self.params['safety_factor_consequence'] = 1.0
+      
+        self.params['project_lifetime']   = 20.0
+        self.params['number_of_turbines'] = 20
+        self.params['annual_opex']        = 7e5
+        self.params['fixed_charge_rate']  = 0.12
+        self.params['discount_rate']      = 0.07
+
         # For RotorSE
+        self.params['number_of_modes'] = 5
         self.params['hubFraction'] = 0.025
         self.params['bladeLength'] =  61.5
         self.params['r_max_chord'] = 0.23577
@@ -70,7 +122,7 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['dynamic_amplication_tip_deflection'] = 1.35
         self.params['shape_parameter'] = 0.0
         # TODO
-        self.params['rotor.wind.z'] = np.array([90.0])
+        self.params['rotor.wind.z'] = np.array(self.params['hub_height'])
 
         # For RNA
         self.params['hub_mass'] = 0.1*285599.0
@@ -81,49 +133,6 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['nac_I']    = 0.1*np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 0.0, 5.03710467e+05])
         self.params['downwind'] = False
         self.params['rna_weightM'] = True
-        
-        # For TowerSE
-        self.params['hub_height']           = 90.0
-        self.params['cd_usr']               = np.inf
-        self.params['wind_bottom_height']   = 0.0
-        self.params['wind_beta']            = 0.0
-        self.params['wave_beta']            = 0.0
-        self.params['wave_velocity_z0']     = 0.0
-        self.params['wave_acceleration_z0'] = 0.0 
-        self.params['z_depth']              = -self.params['water_depth']
-
-        self.params['safety_factor_frequency']   = 1.1
-        self.params['safety_factor_stress']      = 1.35
-        self.params['safety_factor_materials']   = 1.3
-        self.params['safety_factor_buckling']    = 1.1
-        self.params['safety_factor_fatigue']     = 1.35*1.3*1.0
-        self.params['safety_factor_consequence'] = 1.0
-      
-        self.params['tower_diameter']          = vecOption(6.5, NSECTIONS+1)
-        self.params['tower_section_height']    = vecOption(87.6/NSECTIONS, NSECTIONS)
-        self.params['tower_wall_thickness']    = vecOption(0.05, NSECTIONS+1)
-        self.params['tower_buckling_length']   = 30.0
-        self.params['tower_outfitting_factor'] = 1.07
-        self.params['tower_force_discretization'] = 5.0
-
-        self.params['tower_M_DEL']                    = np.zeros(NDEL)
-        self.params['tower_z_DEL']                    = np.zeros(NDEL)
-        self.params['stress_standard_value']          = 80.0
-        self.params['frame3dd_matrix_method']         = 1
-        self.params['compute_stiffnes']               = False
-        self.params['slope_SN']                       = 4
-        self.params['number_of_modes']                = 5
-        self.params['compute_shear']                  = True
-        self.params['frame3dd_convergence_tolerance'] = 1e-9
-        self.params['lumped_mass_matrix']             = 0
-        self.params['shift_value']                    = 0.0
-        
-        
-        self.params['project_lifetime']   = 20.0
-        self.params['number_of_turbines'] = 20
-        self.params['annual_opex']        = 7e5
-        self.params['fixed_charge_rate']  = 0.12
-        self.params['discount_rate']      = 0.07
         
         # Offshore BOS
         # Turbine / Plant parameters
@@ -329,14 +338,12 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['dummy_mass'] = eps
 
         
-    def get_assembly(self): return FloatingTurbine(NSECTIONS, NPTS, NDEL)
+    def get_assembly(self): return FloatingTurbine(NSECTIONS)
     
     def get_design_variables(self):
         desvarList = super(FloatingTurbineInstance, self).get_design_variables()
         # Make a neat list of design variables, lower bound, upper bound, scalar
-        desvarList.extend( [('tower_diameter', 3.0, 30.0, 1.0),
-                            ('tower_wall_thickness', 0.002, 1.0, 100.0),
-                            ('hub_height', 50.0, 300.0, 1.0),
+        desvarList.extend( [('hub_height', 50.0, 300.0, 1.0),
                             ('hubFraction', 1e-2, 1e-1, 1e2),
                             ('bladeLength', 30.0, 110.0, 1.0),
                             #('r_max_chord', 0.1, 0.7, 10.0),
@@ -353,144 +360,40 @@ class FloatingTurbineInstance(SemiInstance):
                             ('tilt', 0.0, 20.0, 1.0)] )
         return desvarList
 
-    def add_constraints_objective(self):
+    def get_constraints(self):
+        conList = super(FloatingTurbineInstance, self).get_constraints()
+        for con in conList:
+            con[0] = 'sm.' + con[0]
 
-        # CONSTRAINTS
-        # These are mostly the outputs that were not connected to another model
+        conList.extend( [['rotor.Pn_margin', None, 1.0, None],
+                         ['rotor.P1_margin', None, 1.0, None],
+                         ['rotor.Pn_margin_cfem', None, 1.0, None],
+                         ['rotor.P1_margin_cfem', None, 1.0, None],
+                         ['rotor.rotor_strain_sparU', -1.0, None, None],
+                         ['rotor.rotor_strain_sparL', None, 1.0, None],
+                         ['rotor.rotor_strain_teU', -1.0, None, None],
+                         ['rotor.rotor_strain_teL', None, 1.0, None] ] )
+                         #['rotor.rotor_buckling_sparU', None, 0.0, None],
+                         #['rotor.rotor_buckling_sparL', None, 0.0, None],
+                         #['rotor.rotor_buckling_teU', None, 0.0, None],
+                         #['rotor.rotor_buckling_teL', None, 0.0, None],
+                         #['rotor.rotor_damage_sparU', None, 0.0, None],
+                         #['rotor.rotor_damage_sparL', None, 0.0, None],
+                         #['rotor.rotor_damage_teU', None, 0.0, None],
+                         #['rotor.rotor_damage_teL', None, 0.0, None],
+        return conList
 
-        # Rotor & RNA
-        self.prob.driver.add_constraint('rotor.Pn_margin', upper=1.0)
-        self.prob.driver.add_constraint('rotor.P1_margin', upper=1.0)
-        self.prob.driver.add_constraint('rotor.Pn_margin_cfem', upper=1.0)
-        self.prob.driver.add_constraint('rotor.P1_margin_cfem', upper=1.0)
-        self.prob.driver.add_constraint('rotor.rotor_strain_sparU', lower=-1.0)
-        self.prob.driver.add_constraint('rotor.rotor_strain_sparL', upper=1.0)
-        self.prob.driver.add_constraint('rotor.rotor_strain_teU', lower=-1.0)
-        self.prob.driver.add_constraint('rotor.rotor_strain_teL', upper=1.0)
-        #self.prob.driver.add_constraint('rotor.rotor_buckling_sparU', upper=0.0)
-        #self.prob.driver.add_constraint('rotor.rotor_buckling_sparL', upper=0.0)
-        #self.prob.driver.add_constraint('rotor.rotor_buckling_teU', upper=0.0)
-        #self.prob.driver.add_constraint('rotor.rotor_buckling_teL', upper=0.0)
-        #self.prob.driver.add_constraint('rotor.rotor_damage_sparU', upper=0.0)
-        #self.prob.driver.add_constraint('rotor.rotor_damage_sparL', upper=0.0)
-        #self.prob.driver.add_constraint('rotor.rotor_damage_teU', upper=0.0)
-        #self.prob.driver.add_constraint('rotor.rotor_damage_teL', upper=0.0)
-        
-        # Tower related constraints
-        self.prob.driver.add_constraint('tow.manufacturability',upper=0.0)
-        self.prob.driver.add_constraint('tow.weldability',upper=0.0)
-        self.prob.driver.add_constraint('tow.tower.stress',upper=1.0)
-        self.prob.driver.add_constraint('tow.tower.global_buckling',upper=1.0)
-        self.prob.driver.add_constraint('tow.tower.shell_buckling',upper=1.0)
-        #self.prob.driver.add_constraint('tow.tower.damage',upper=1.0)
-
-        # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
-        # Ensure that fairlead attaches to draft
-        self.prob.driver.add_constraint('sm.geomBase.draft_depth_ratio',lower=0.0, upper=0.75)
-        self.prob.driver.add_constraint('sm.geomBall.draft_depth_ratio',lower=0.0, upper=0.75)
-        self.prob.driver.add_constraint('sm.geomBall.fairlead_draft_ratio',lower=0.0, upper=1.0)
-        self.prob.driver.add_constraint('sm.sg.base_ballast_spacing',lower=0.0, upper=1.0)
-
-        # Ensure that the radius doesn't change dramatically over a section
-        self.prob.driver.add_constraint('sm.gcBase.manufacturability',upper=0.0)
-        self.prob.driver.add_constraint('sm.gcBase.weldability',upper=0.0)
-        self.prob.driver.add_constraint('sm.gcBall.manufacturability',upper=0.0)
-        self.prob.driver.add_constraint('sm.gcBall.weldability',upper=0.0)
-        
-        # Ensure that the spar top matches the tower base
-        self.prob.driver.add_constraint('sm.tt.transition_buffer',lower=0.0, upper=5.0)
-        
-        # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
-        self.prob.driver.add_constraint('sm.mm.safety_factor',lower=0.0, upper=0.8)
-
-        # Ensure there is sufficient mooring line length, MAP doesn't give an error about this
-        self.prob.driver.add_constraint('sm.mm.mooring_length_min',lower=1.0)
-        self.prob.driver.add_constraint('sm.mm.mooring_length_max',upper=1.0)
-
-        # API Bulletin 2U constraints
-        self.prob.driver.add_constraint('sm.base.flange_spacing_ratio', upper=0.5)
-        self.prob.driver.add_constraint('sm.base.web_radius_ratio', upper=0.5)
-        self.prob.driver.add_constraint('sm.base.flange_compactness', lower=1.0)
-        self.prob.driver.add_constraint('sm.base.web_compactness', lower=1.0)
-        self.prob.driver.add_constraint('sm.base.axial_local_unity', upper=1.0)
-        self.prob.driver.add_constraint('sm.base.axial_general_unity', upper=1.0)
-        self.prob.driver.add_constraint('sm.base.external_local_unity', upper=1.0)
-        self.prob.driver.add_constraint('sm.base.external_general_unity', upper=1.0)
-
-        self.prob.driver.add_constraint('sm.ball.flange_spacing_ratio', upper=0.5)
-        self.prob.driver.add_constraint('sm.ball.web_radius_ratio', upper=0.5)
-        self.prob.driver.add_constraint('sm.ball.flange_compactness', lower=1.0)
-        self.prob.driver.add_constraint('sm.ball.web_compactness', lower=1.0)
-        self.prob.driver.add_constraint('sm.ball.axial_local_unity', upper=1.0)
-        self.prob.driver.add_constraint('sm.ball.axial_general_unity', upper=1.0)
-        self.prob.driver.add_constraint('sm.ball.external_local_unity', upper=1.0)
-        self.prob.driver.add_constraint('sm.ball.external_general_unity', upper=1.0)
-
-        # Pontoon tube radii
-        self.prob.driver.add_constraint('sm.pon.base_connection_ratio',lower=0.0)
-        self.prob.driver.add_constraint('sm.pon.ballast_connection_ratio',lower=0.0)
-        self.prob.driver.add_constraint('sm.pon.pontoon_base_attach_upper', lower=0.5, upper=1.0)
-        self.prob.driver.add_constraint('sm.pon.pontoon_base_attach_lower', lower=0.0, upper=0.5)
-
-        # Pontoon stress safety factor
-        self.prob.driver.add_constraint('sm.pon.axial_stress_factor', upper=0.8)
-        self.prob.driver.add_constraint('sm.pon.shear_stress_factor', upper=0.8)
-        
-        # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
-        self.prob.driver.add_constraint('sm.sm.variable_ballast_height', lower=2.0, upper=100.0)
-        self.prob.driver.add_constraint('sm.sm.variable_ballast_mass', lower=0.0)
-
-        # Metacentric height should be positive for static stability
-        self.prob.driver.add_constraint('sm.sm.metacentric_height', lower=0.1)
-
-        # Center of buoyancy should be above CG (difference should be positive)
-        self.prob.driver.add_constraint('sm.sm.static_stability', lower=0.1)
-
-        # Surge restoring force should be greater than wave-wind forces (ratio < 1)
-        self.prob.driver.add_constraint('sm.sm.offset_force_ratio',lower=0.0, upper=1.0)
-
-        # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
-        self.prob.driver.add_constraint('sm.sm.heel_constraint',lower=0.0, upper=1.0)
-
-
+    def add_objective(self):
         # OBJECTIVE FUNCTION: Minimize total cost!
         self.prob.driver.add_objective('lcoe.lcoe')
 
 
-        
-    def visualize(self, fname=None):
-        fig = self.init_figure()
-
-        self.draw_ocean(fig)
-
-        mooringMat = self.prob['sm.mm.plot_matrix']
-        self.draw_mooring(fig, mooringMat)
-
-        pontoonMat = self.prob['sm.pon.plot_matrix']
-        zcut = 1.0 + np.maximum( self.params['freeboard_base'], self.params['freeboard_ballast'] )
-        self.draw_pontoons(fig, pontoonMat, 0.5*self.params['pontoon_outer_diameter'], zcut)
-
-        self.draw_cylinder(fig, [0.0, 0.0], self.params['freeboard_base'], self.params['section_height_base'],
-                           0.5*self.params['outer_diameter_base'], self.params['stiffener_spacing_base'])
-
-        R_semi    = self.params['radius_to_ballast_cylinder']
-        ncylinder = self.params['number_of_ballast_columns']
-        angles = np.linspace(0, 2*np.pi, ncylinder+1)
-        x = R_semi * np.cos( angles )
-        y = R_semi * np.sin( angles )
-        for k in xrange(ncylinder):
-            self.draw_cylinder(fig, [x[k], y[k]], self.params['freeboard_ballast'], self.params['section_height_ballast'],
-                               0.5*self.params['outer_diameter_ballast'], self.params['stiffener_spacing_ballast'])
-            
-        self.set_figure(fig, fname)
-        
-
 
 def example():
     mysemi = FloatingTurbineInstance()
-    #mysemi.evaluate('psqp')
+    mysemi.evaluate('psqp')
     #mysemi.visualize('semi-initial.jpg')
-    mysemi.run('slsqp')
+    #mysemi.run('slsqp')
     return mysemi
 
 def slsqp_optimal():
