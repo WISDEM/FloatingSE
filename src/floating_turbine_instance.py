@@ -87,7 +87,7 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['tilt'] = 5.0
         self.params['control:Vin'] = 3.0
         self.params['control:Vout'] = 25.0
-        self.params['control:ratedPower'] = 5e6
+        self.params['machine_rating'] = 5e6
         self.params['control:minOmega'] = 0.0
         self.params['control:maxOmega'] = 12.0
         self.params['control:tsr'] = 7.55
@@ -133,10 +133,67 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['nac_I']    = 0.1*np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 0.0, 5.03710467e+05])
         self.params['downwind'] = False
         self.params['rna_weightM'] = True
+
+        # For turbine costs
+        self.params['blade_mass_cost_coeff'] = 13.08
+        self.params['hub_mass_cost_coeff'] = 3.8
+        self.params['pitch_system_mass_cost_coeff'] = 22.91
+        self.params['spinner_mass_cost_coeff'] = 23.0
+        self.params['lss_mass_cost_coeff'] = 12.6
+        self.params['bearings_mass_cost_coeff'] = 6.35
+        self.params['gearbox_mass_cost_coeff'] = 17.4
+        self.params['high_speed_side_mass_cost_coeff'] = 8.25
+        self.params['generator_mass_cost_coeff'] = 17.43
+        self.params['bedplate_mass_cost_coeff'] = 4.5
+        self.params['yaw_system_mass_cost_coeff'] = 11.01
+        self.params['variable_speed_elec_mass_cost_coeff'] = 26.5
+        self.params['hydraulic_cooling_mass_cost_coeff'] = 163.95
+        self.params['nacelle_cover_mass_cost_coeff'] = 7.61
+        self.params['elec_connec_machine_rating_cost_coeff'] = 40.0
+        self.params['nacelle_platforms_mass_cost_coeff'] = 8.7
+        self.params['base_hardware_cost_coeff'] = 0.7
+        self.params['transformer_mass_cost_coeff'] = 26.5
+        self.params['tower_mass_cost_coeff'] = 3.20
+        self.params['hub_assemblyCostMultiplier'] = 0.0
+        self.params['hub_overheadCostMultiplier'] = 0.0
+        self.params['nacelle_assemblyCostMultiplier'] = 0.0
+        self.params['nacelle_overheadCostMultiplier'] = 0.0
+        self.params['tower_assemblyCostMultiplier'] = 0.0
+        self.params['tower_overheadCostMultiplier'] = 0.0
+        self.params['turbine_assemblyCostMultiplier'] = 0.0
+        self.params['turbine_overheadCostMultiplier'] = 0.0
+        self.params['hub_profitMultiplier'] = 0.0
+        self.params['nacelle_profitMultiplier'] = 0.0
+        self.params['tower_profitMultiplier'] = 0.0
+        self.params['turbine_profitMultiplier'] = 0.0
+        self.params['hub_transportMultiplier'] = 0.0
+        self.params['nacelle_transportMultiplier'] = 0.0
+        self.params['tower_transportMultiplier'] = 0.0
+        self.params['turbine_transportMultiplier'] = 0.0
+        self.params['offshore'] = True
+        self.params['crane'] = False
+        self.params['bearing_number'] = 2
+        self.params['bedplate_mass'] = 93090.6
+        self.params['controls_cost_base'] = np.array([35000.0,55900.0])
+        self.params['controls_esc'] = 1.5
+        self.params['crane_cost'] = 0.0
+        self.params['elec_connec_cost_esc'] = 1.5
+        self.params['gearbox_mass'] = 30237.60
+        self.params['generator_mass'] = 16699.85
+        self.params['high_speed_side_mass'] = 1492.45
+        self.params['hydraulic_cooling_mass'] = 1e3
+        self.params['low_speed_shaft_mass'] = 31257.3
+        self.params['main_bearing_mass'] = 9731.41 / 2
+        self.params['nacelle_cover_mass'] = 1e3
+        self.params['nacelle_platforms_mass'] = 1e3
+        self.params['pitch_system_mass'] = 17004.0
+        self.params['spinner_mass'] = 1810.5
+        self.params['transformer_mass'] = 1e3
+        self.params['variable_speed_elec_mass'] = 1e3
+        self.params['yaw_system_mass'] = 11878.24
         
         # Offshore BOS
         # Turbine / Plant parameters
-        self.params['turbCapEx'] =                    1605.0
         self.params['nacelleL'] =                     -np.inf
         self.params['nacelleW'] =                     -np.inf
         self.params['distShore'] =                    90.0
@@ -385,7 +442,7 @@ class FloatingTurbineInstance(SemiInstance):
 
     def add_objective(self):
         # OBJECTIVE FUNCTION: Minimize total cost!
-        self.prob.driver.add_objective('lcoe.lcoe')
+        self.prob.driver.add_objective('lcoe')
 
 
 

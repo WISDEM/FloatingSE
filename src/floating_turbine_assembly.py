@@ -4,6 +4,7 @@ from offshorebos.wind_obos_component import WindOBOS
 from plant_financese.plant_finance import PlantFinance
 from rotorse.rotor import RotorSE
 from commonse.rna import RNA
+from turbine_costsse.turbine_costsse_2015 import Turbine_CostsSE_2015
 
 import numpy as np
 
@@ -22,7 +23,7 @@ class FloatingTurbine(Group):
         self.add('rotor', RotorSE(), promotes=['idx_cylinder_aero','idx_cylinder_str','hubFraction','nBlades','turbine_class','sparT','teT',
                                                'r_max_chord','chord_sub','theta_sub','precurve_sub','bladeLength','precone','tilt','yaw',
                                                'turbulence_class','gust_stddev','VfactorPC','shape_parameter',
-                                               'control:Vin','control:Vout','control:ratedPower','control:minOmega','control:maxOmega',
+                                               'control:Vin','control:Vout','machine_rating','control:minOmega','control:maxOmega',
                                                'control:tsr','control:pitch','pitch_extreme','azimuth_extreme','drivetrainType',
                                                'rstar_damage','Mxb_damage','Myb_damage','strain_ult_spar','strain_ult_te','m_damage',
                                                'nSector','tiploss','hubloss','wakerotation','usecd','AEP_loss_factor','dynamic_amplication_tip_deflection'])
@@ -48,14 +49,20 @@ class FloatingTurbine(Group):
                                                                   'upper_attachment_pontoons','lower_ring_pontoons','upper_ring_pontoons','outer_cross_pontoons',
                                                                   'pontoon_cost_rate','connection_ratio_max','base_pontoon_attach_upper','base_pontoon_attach_lower','tower_section_height','tower_outer_diameter',
                                                                                'tower_wall_thickness','tower_outfitting_factor',
-                                                                               'tower_buckling_length','loading'])
+                                                                               'tower_buckling_length','tower_mass','loading'])
+
+        # Turbine costs
+        self.add('tcost', Turbine_CostsSE_2015(), promotes=['*'])
+        
         # Balance of station
-        self.add('wobos', WindOBOS())
+        self.add('wobos', WindOBOS(), promotes=['tax_rate'])
 
         # LCOE Calculation
-        self.add('lcoe', PlantFinance())
+        self.add('lcoe', PlantFinance(), promotes=['*'])
 
         # Define all input variables from all models
+        self.add('offshore',             IndepVarComp('offshore', True, pass_by_obj=True), promotes=['*'])
+        self.add('crane',                IndepVarComp('crane', False, pass_by_obj=True), promotes=['*'])
 
         # Tower
         #self.add('stress_standard_value',          IndepVarComp('stress_standard_value', 0.0), promotes=['*'])
@@ -125,7 +132,6 @@ class FloatingTurbine(Group):
 
         # Offshore BOS
         # Turbine / Plant parameters, ,
-        self.add('turbCapEx',                    IndepVarComp('turbCapEx', 0.0), promotes=['*']) #1605.0
         self.add('nacelleL',                     IndepVarComp('nacelleL', 0.0), promotes=['*'])
         self.add('nacelleW',                     IndepVarComp('nacelleW', 0.0), promotes=['*'])
         self.add('distShore',                    IndepVarComp('distShore', 0.0), promotes=['*']) #90.0
@@ -331,7 +337,7 @@ class FloatingTurbine(Group):
         self.add('discount_rate',      IndepVarComp('discount_rate', 0.0), promotes=['*'])
 
         # Connect all input variables from all models
-        self.connect('water_depth', ['sm.water_depth', 'wobos.waterD', 'lcoe.sea_depth'])
+        self.connect('water_depth', ['sm.water_depth', 'wobos.waterD', 'sea_depth'])
         self.connect('hub_height', ['rotor.analysis.hubHt', 'sm.hub_height', 'wobos.hubH'])
         self.connect('tower_outer_diameter', 'wobos.towerD', src_indices=[0])
         #self.connect('sm.tow.z_full', 'rotor.wind.z', src_indices=[])
@@ -342,7 +348,7 @@ class FloatingTurbine(Group):
         self.connect('yaw', 'sm.yaw')
         self.connect('mean_current_speed', 'sm.Uc')
         
-        self.connect('project_lifetime', ['rotor.struc.lifetime','lcoe.project_lifetime','wobos.projLife'])
+        self.connect('project_lifetime', ['rotor.struc.lifetime','wobos.projLife'])
         #self.connect('slope_SN', 'sm.m_SN')
         #self.connect('compute_shear', 'sm.shear')
         #self.connect('compute_stiffnes', 'sm.geom')
@@ -410,8 +416,11 @@ class FloatingTurbine(Group):
         self.connect('tapered_col_cost_rate', ['wobos.spStifColCR', 'wobos.spTapColCR', 'wobos.ssStifColCR'])
         self.connect('pontoon_cost_rate', 'wobos.ssTrussCR')
 
-        self.connect('turbCapEx', ['wobos.turbCapEx', 'lcoe.turbine_cost']) # TODO: Turbine_CostsSE, remove variable
-        self.connect('control:ratedPower', 'wobos.turbR')
+        self.connect('nBlades','blade_number')
+        self.connect('rotor.mass_one_blade', 'blade_mass')
+        
+        self.connect('turbine_cost_kW ', 'wobos.turbCapEx')
+        self.connect('machine_rating', 'wobos.turbR')
         self.connect('rotor.diameter', 'wobos.rotorD')
         self.connect('bladeLength', 'wobos.bladeL')
         self.connect('rotor.max_chord', 'wobos.chord')
@@ -447,7 +456,6 @@ class FloatingTurbine(Group):
         self.connect('capital_cost_year_3', 'wobos.capital_cost_year_3')
         self.connect('capital_cost_year_4', 'wobos.capital_cost_year_4')
         self.connect('capital_cost_year_5', 'wobos.capital_cost_year_5')
-        self.connect('tax_rate', ['wobos.tax_rate', 'lcoe.tax_rate'])
         self.connect('interest_during_construction', 'wobos.interest_during_construction')
         self.connect('mpileCR', 'wobos.mpileCR') # TODO: JacketSE, remove variable
         self.connect('mtransCR', 'wobos.mtransCR') # TODO: JacketSE, remove variable
@@ -606,19 +614,17 @@ class FloatingTurbine(Group):
         self.connect('decomDiscRate', 'wobos.decomDiscRate')
         
         # Link outputs from one model to inputs to another
-        self.connect('sm.tower_mass', 'wobos.towerM')
+        self.connect('tower_mass', 'wobos.towerM')
         self.connect('dummy_mass', 'sm.ball.stack_mass_in')
 
         self.connect('sm.total_cost', 'wobos.subTotCost')
         self.connect('sm.total_mass', 'wobos.subTotM')
-        self.connect('wobos.total_bos_cost', 'lcoe.bos_costs')
+        self.connect('wobos.total_bos_cost', 'bos_costs')
 
-        self.connect('number_of_turbines', ['wobos.nTurb', 'lcoe.turbine_number'])
-        self.connect('annual_opex', 'lcoe.avg_annual_opex')
-        self.connect('rotor.AEP', 'lcoe.net_aep')
-        self.connect('wobos.totInstTime', 'lcoe.construction_time')
-        self.connect('fixed_charge_rate', 'lcoe.fixed_charge_rate')
-        self.connect('discount_rate', 'lcoe.discount_rate')
+        self.connect('number_of_turbines', ['wobos.nTurb', 'turbine_number'])
+        self.connect('annual_opex', 'avg_annual_opex')
+        self.connect('rotor.AEP', 'net_aep')
+        self.connect('wobos.totInstTime', 'construction_time')
         
          # Use complex number finite differences
         typeStr = 'fd'
