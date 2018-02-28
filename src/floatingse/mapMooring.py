@@ -49,6 +49,7 @@ class MapMooring(Component):
         self.add_param('drag_embedment_extra_length', val=0.0, units='m', desc='Extra mooring line length needed to ensure drag embedment anchors only see horizontal forces')
         self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
         self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
+        self.add_param('gamma', val=0.0, desc='Safety factor for mooring line tension')
 
         # Cost rates
         self.add_param('mooring_cost_rate', val=0.0, desc='miscellaneous cost factor in percent')
@@ -65,7 +66,7 @@ class MapMooring(Component):
         self.add_output('plot_matrix', val=np.zeros((3, 20, 3)), units='m', desc='data matrix for plotting') 
 
         # Output constriants
-        self.add_output('safety_factor', val=0.0, units='m',desc='range of damaged mooring')
+        self.add_output('axial_unity', val=0.0, units='m',desc='range of damaged mooring')
         self.add_output('mooring_length_min', val=0.0, desc='mooring line length ratio to nodal distance')
         self.add_output('mooring_length_max', val=0.0, desc='mooring line length ratio to nodal distance')
         
@@ -133,8 +134,8 @@ class MapMooring(Component):
             #self.min_break_load      = 2.74e7  * Dmooring2 * (44.0 - 80.0*Dmooring)
             # Use a linear fit to the other fit becuase it is poorly conditioned for optimization
             self.min_break_load      = 1e3*np.maximum(1.0, -5445.2957034820683+176972.68498888266*Dmooring)
-            self.wet_mass_per_length = 9593.4  * Dmooring2 #19.9e3  * Dmooring2
-            self.axial_stiffness     = 4.74374e10 * Dmooring2 #8.54e10 * Dmooring2
+            self.wet_mass_per_length = 19.9e3  * Dmooring2
+            self.axial_stiffness     = 8.54e10 * Dmooring2
             self.area                = 2.0 * 0.25 * np.pi * Dmooring2
             self.cost_per_length     = 3.415e4  * Dmooring2 #0.58*1e-3*self.min_break_load/gravity - 87.6
 
@@ -400,6 +401,7 @@ class MapMooring(Component):
         nlines        = params['number_of_mooring_lines']
         offset        = params['max_offset']
         heel          = params['max_heel']
+        gamma         = params['gamma']
 
         # Write the mooring system input file for this design
         self.write_input_file(params)
@@ -429,12 +431,23 @@ class MapMooring(Component):
 
         # Get the restoring moment at maximum angle of heel
         # Since we don't know the substucture CG, have to just get the forces of the lines now and do the cross product later
-        Fh = np.zeros((10,3))
+        # We also want to allow for arbitraty wind direction and yaw of rotor relative to mooring lines, so we will compare
+        # pitch and roll forces as extremes
+        # TODO: This still isgn't quite the same as clocking the mooring lines in different directions,
+        # which is what we want to do, but that requires multiple input files and solutions
+        Fh1 = np.zeros((10,3))
         mymap.displace_vessel(0, 0, 0, 0, heel, 0)
         mymap.update_states(0.0, 0)
         for k in xrange(nlines):
-            # Force in x-y-z coordinates
-            Fh[k][0], Fh[k][1], Fh[k][2] = mymap.get_fairlead_force_3d(k)
+            Fh1[k][0], Fh1[k][1], Fh1[k][2] = mymap.get_fairlead_force_3d(k)
+
+        Fh2 = np.zeros((10,3))
+        mymap.displace_vessel(0, 0, 0, heel, 0, 0)
+        mymap.update_states(0.0, 0)
+        for k in xrange(nlines):
+            Fh2[k][0], Fh2[k][1], Fh2[k][2] = mymap.get_fairlead_force_3d(k)
+
+        Fh = Fh2 if Fh1.sum(axis=(0,1)) > Fh2.sum(axis=(0,1)) else Fh1
         unknowns['max_heel_restoring_force'] = Fh
         
         # Get angles by which to find the weakest line
@@ -480,7 +493,7 @@ class MapMooring(Component):
                 
         # Store the weakest restoring force when the vessel is offset the maximum amount
         unknowns['max_offset_restoring_force'] = F_min
-        unknowns['safety_factor'] = max_tension / self.min_break_load
+        unknowns['axial_unity'] = gamma * max_tension / self.min_break_load
 
         mymap.end()
 

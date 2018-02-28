@@ -594,7 +594,7 @@ class ColumnBuckling(Component):
         pressure,_   = nodal2sectional( params['pressure'] )
         
         # Create some constraints for reasonable stiffener designs for an optimizer
-        unknowns['flange_spacing_ratio'] = w_flange / L_stiffener
+        unknowns['flange_spacing_ratio'] = w_flange / (0.5*L_stiffener)
         unknowns['web_radius_ratio']     = h_web    / R_od
 
         # Compute applied axial stress simply, like API guidelines (as opposed to running frame3dd)

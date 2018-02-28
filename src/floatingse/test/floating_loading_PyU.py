@@ -43,14 +43,14 @@ class TestFrame(unittest.TestCase):
         self.params['upper_ring_pontoons'] = True
         self.params['outer_cross_pontoons'] = True
 
-        self.params['number_of_ballast_columns'] = 3
+        self.params['number_of_auxillary_columns'] = 3
         self.params['connection_ratio_max'] = 0.25
 
         self.params['fairlead'] = 7.5
         self.params['base_pontoon_attach_upper'] = 8.0
         self.params['base_pontoon_attach_lower'] = -14.0
         
-        self.params['radius_to_ballast_column'] = 10.0
+        self.params['radius_to_auxillary_column'] = 10.0
         self.params['pontoon_outer_diameter'] = 2.0
         self.params['pontoon_wall_thickness'] = 1.0
 
@@ -66,17 +66,17 @@ class TestFrame(unittest.TestCase):
         self.params['base_column_Pz'] = np.zeros((NSECTIONS,))
         self.params['base_column_qdyn'] = 70.0 * np.ones((NSECTIONS+1,))
 
-        self.params['ballast_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
-        self.params['ballast_d_full'] = 2*2.0 * np.ones((NSECTIONS+1,))
-        self.params['ballast_t_full'] = 0.05 * np.ones((NSECTIONS+1,))
-        self.params['ballast_column_mass'] = 1e1 * np.ones((NSECTIONS,))
-        self.params['ballast_column_displaced_volume'] = 1e1 * np.ones((NSECTIONS,))
-        self.params['ballast_column_center_of_buoyancy'] = -5.0
-        self.params['ballast_column_center_of_mass'] = -3.0
-        self.params['ballast_column_Px'] = 50.0 * np.ones((NSECTIONS,))
-        self.params['ballast_column_Py'] = np.zeros((NSECTIONS,))
-        self.params['ballast_column_Pz'] = np.zeros((NSECTIONS,))
-        self.params['ballast_column_qdyn'] = 70.0 * np.ones((NSECTIONS+1,))
+        self.params['auxillary_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
+        self.params['auxillary_d_full'] = 2*2.0 * np.ones((NSECTIONS+1,))
+        self.params['auxillary_t_full'] = 0.05 * np.ones((NSECTIONS+1,))
+        self.params['auxillary_column_mass'] = 1e1 * np.ones((NSECTIONS,))
+        self.params['auxillary_column_displaced_volume'] = 1e1 * np.ones((NSECTIONS,))
+        self.params['auxillary_column_center_of_buoyancy'] = -5.0
+        self.params['auxillary_column_center_of_mass'] = -3.0
+        self.params['auxillary_column_Px'] = 50.0 * np.ones((NSECTIONS,))
+        self.params['auxillary_column_Py'] = np.zeros((NSECTIONS,))
+        self.params['auxillary_column_Pz'] = np.zeros((NSECTIONS,))
+        self.params['auxillary_column_qdyn'] = 70.0 * np.ones((NSECTIONS+1,))
 
         self.params['tower_z_full'] = np.linspace(0, 90, NSECTIONS+1)
         self.params['tower_d_full'] = 2*7.0 * np.ones((NSECTIONS+1,))
@@ -117,11 +117,11 @@ class TestFrame(unittest.TestCase):
 
 
     def testStandard(self):
-        self.params['ballast_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 3.0])
+        self.params['auxillary_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 3.0])
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         npt.assert_equal(self.unknowns['base_connection_ratio'], 0.25-0.1)
-        npt.assert_equal(self.unknowns['ballast_connection_ratio'], 0.25-0.5)
+        npt.assert_equal(self.unknowns['auxillary_connection_ratio'], 0.25-0.5)
         self.assertEqual(self.unknowns['pontoon_base_attach_upper'], 23.0/25.0)
         self.assertEqual(self.unknowns['pontoon_base_attach_lower'], 1.0/25.0)
 
@@ -135,7 +135,7 @@ class TestFrame(unittest.TestCase):
         self.params['lower_ring_pontoons'] = False
         self.params['upper_ring_pontoons'] = False
         self.params['outer_cross_pontoons'] = False
-        self.params['number_of_ballast_columns'] = 0
+        self.params['number_of_auxillary_columns'] = 0
         
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
@@ -143,8 +143,8 @@ class TestFrame(unittest.TestCase):
         
         
     def testOutputsIncremental(self):
-        ncyl   = self.params['number_of_ballast_columns']
-        R_semi = self.params['radius_to_ballast_column']
+        ncyl   = self.params['number_of_auxillary_columns']
+        R_semi = self.params['radius_to_auxillary_column']
         Ro     = 0.5*self.params['pontoon_outer_diameter']
         Ri     = Ro - self.params['pontoon_wall_thickness']
         rho    = self.params['material_density']
@@ -222,15 +222,15 @@ class TestFrame(unittest.TestCase):
         #self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
     def testForces(self):
-        self.params['ballast_z_full'] = np.linspace(-1e-4, 0.0, NSECTIONS+1)
+        self.params['auxillary_z_full'] = np.linspace(-1e-4, 0.0, NSECTIONS+1)
         self.params['base_z_full'] = np.linspace(-1e-4, 0.0, NSECTIONS+1)
         self.params['tower_z_full'] = np.linspace(0, 1e-4, NSECTIONS+1)
         self.params['fairlead'] = 0.0
-        self.params['number_of_ballast_columns'] = 0
+        self.params['number_of_auxillary_columns'] = 0
         self.params['base_column_mass'] = 1.0 * np.ones((NSECTIONS,))
         self.params['base_column_center_of_mass'] = 0.0
-        self.params['ballast_column_mass'] = 0.0 * np.ones((NSECTIONS,))
-        self.params['ballast_column_center_of_mass'] = 0.0
+        self.params['auxillary_column_mass'] = 0.0 * np.ones((NSECTIONS,))
+        self.params['auxillary_column_center_of_mass'] = 0.0
         self.params['tower_mass'] = 1.0 * np.ones((NSECTIONS,))
         self.params['tower_center_of_mass'] = 0.0
         self.params['rna_mass'] = 1.0
@@ -239,10 +239,10 @@ class TestFrame(unittest.TestCase):
         self.params['rna_cg'] = np.array([0.0, 0.0, 0.0])
         self.params['rna_I'] = np.zeros(6)
         self.params['base_column_Px'] = 0.0 * np.ones((NSECTIONS,))
-        self.params['ballast_column_Px'] = 0.0 * np.ones((NSECTIONS,))
+        self.params['auxillary_column_Px'] = 0.0 * np.ones((NSECTIONS,))
         self.params['tower_Px'] = 0.0 * np.ones((NSECTIONS,))
         self.params['base_column_qdyn'] = 0.0 * np.ones((NSECTIONS+1,))
-        self.params['ballast_column_qdyn'] = 0.0 * np.ones((NSECTIONS+1,))
+        self.params['auxillary_column_qdyn'] = 0.0 * np.ones((NSECTIONS+1,))
         self.params['tower_qdyn'] = 0.0 * np.ones((NSECTIONS+1,))
         self.params['cross_attachment_pontoons'] = False
         self.params['lower_attachment_pontoons'] = False

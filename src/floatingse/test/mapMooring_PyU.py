@@ -17,7 +17,7 @@ myones = np.ones((100,))
 truth='---------------------- LINE DICTIONARY ---------------------------------------\n' + \
 'LineType  Diam      MassDenInAir   EA            CB   CIntDamp  Ca   Cdn    Cdt\n' + \
 '(-)       (m)       (kg/m)        (N)           (-)   (Pa-s)    (-)  (-)    (-)\n' + \
-'chain   0.05   28.00867   118593500.0   0.65   1.0E8   0.6   -1.0   0.05\n' + \
+'chain   0.05   53.77517   213500000.0   0.65   1.0E8   0.6   -1.0   0.05\n' + \
 '---------------------- NODE PROPERTIES ---------------------------------------\n' + \
 'Node Type X     Y    Z   M     V FX FY FZ\n' + \
 '(-)  (-) (m)   (m)  (m) (kg) (m^3) (kN) (kN) (kN)\n' + \
@@ -77,6 +77,7 @@ class TestMapMooring(unittest.TestCase):
         self.params['drag_embedment_extra_length'] = 300.0
         self.params['max_offset'] = 10.0
         self.params['max_heel'] = 10.0
+        self.params['gamma'] = 1.35
 
         self.params['mooring_cost_rate'] = 1.1
 

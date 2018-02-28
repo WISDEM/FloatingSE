@@ -93,9 +93,16 @@ class FloatingInstance(object):
         self.params['loading'] = 'hydrostatic'
 
         # Design constraints
-        self.params['min_taper'] = 0.4
-        self.params['min_d_to_t'] = 120.0
+        self.params['min_taper_ratio'] = 0.4
+        self.params['min_diameter_thickness_ratio'] = 120.0
 
+        # Safety factors
+        self.params['gamma_f'] = 1.35
+        self.params['gamma_b'] = 1.1
+        self.params['gamma_m'] = 1.1
+        self.params['gamma_n'] = 1.0
+        self.params['gamma_fatigue'] = 1.755
+        
         # Typically static- set defaults
         self.params['permanent_ballast_density'] = 4492.0
         self.params['bulkhead_mass_factor'] = 1.0
@@ -125,27 +132,27 @@ class FloatingInstance(object):
         self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
         
         # Typically design (start at OC4 semi)
-        self.params['radius_to_ballast_column'] = 28.867513459481287
-        self.params['number_of_ballast_columns'] = 3
+        self.params['radius_to_auxillary_column'] = 28.867513459481287
+        self.params['number_of_auxillary_columns'] = 3
         self.params['base_freeboard'] = 10.0
-        self.params['ballast_freeboard'] = 12.0
+        self.params['auxillary_freeboard'] = 12.0
         self.params['fairlead'] = 14.0
         self.params['fairlead_offset_from_shell'] = 40.868-28.867513459481287-6.0
         self.params['base_outer_diameter'] = 6.5
         self.params['base_wall_thickness'] = 0.03
-        self.params['ballast_wall_thickness'] = 0.06
+        self.params['auxillary_wall_thickness'] = 0.06
         self.params['base_permanent_ballast_height'] = 10.0
         self.params['base_stiffener_web_height'] = 0.1
         self.params['base_stiffener_web_thickness'] = 0.04
         self.params['base_stiffener_flange_width'] = 0.1
         self.params['base_stiffener_flange_thickness'] = 0.02
         self.params['base_stiffener_spacing'] = 0.4
-        self.params['ballast_permanent_ballast_height'] = 0.1
-        self.params['ballast_stiffener_web_height'] = 0.1
-        self.params['ballast_stiffener_web_thickness'] = 0.04
-        self.params['ballast_stiffener_flange_width'] = 0.1
-        self.params['ballast_stiffener_flange_thickness'] = 0.02
-        self.params['ballast_stiffener_spacing'] = 0.4
+        self.params['auxillary_permanent_ballast_height'] = 0.1
+        self.params['auxillary_stiffener_web_height'] = 0.1
+        self.params['auxillary_stiffener_web_thickness'] = 0.04
+        self.params['auxillary_stiffener_flange_width'] = 0.1
+        self.params['auxillary_stiffener_flange_thickness'] = 0.02
+        self.params['auxillary_stiffener_spacing'] = 0.4
         self.params['pontoon_outer_diameter'] = 2*1.6
         self.params['pontoon_wall_thickness'] = 0.0175
         self.params['connection_ratio_max'] = 0.25
@@ -155,8 +162,8 @@ class FloatingInstance(object):
         self.set_length_base( 30.0 )
         self.set_length_ballast( 32.0 )
 
-        self.params['ballast_section_height'] = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
-        self.params['ballast_outer_diameter'] = 2*np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
+        self.params['auxillary_section_height'] = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
+        self.params['auxillary_outer_diameter'] = 2*np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
 
         self.params['scope_ratio'] = 835.5 / (self.params['water_depth']-self.params['fairlead']) 
         self.params['anchor_radius'] = 837.6
@@ -166,7 +173,7 @@ class FloatingInstance(object):
         self.params['base_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
         
     def set_length_ballast(self, inval):
-        self.params['ballast_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
+        self.params['auxillary_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
         
     def check_vectors(self):
         self.params['tower_outer_diameter']            = vecOption(self.params['tower_outer_diameter'], NSECTIONS+1)
@@ -183,16 +190,16 @@ class FloatingInstance(object):
         self.params['base_bulkhead_nodes'][0]          = True
         self.params['base_bulkhead_nodes'][1]          = True
         
-        self.params['ballast_outer_diameter']             = vecOption(self.params['ballast_outer_diameter'], NSECTIONS+1)
-        self.params['ballast_wall_thickness']             = vecOption(self.params['ballast_wall_thickness'], NSECTIONS+1)
-        self.params['ballast_stiffener_web_height']       = vecOption(self.params['ballast_stiffener_web_height'], NSECTIONS)
-        self.params['ballast_stiffener_web_thickness']    = vecOption(self.params['ballast_stiffener_web_thickness'], NSECTIONS)
-        self.params['ballast_stiffener_flange_width']     = vecOption(self.params['ballast_stiffener_flange_width'], NSECTIONS)
-        self.params['ballast_stiffener_flange_thickness'] = vecOption(self.params['ballast_stiffener_flange_thickness'], NSECTIONS)
-        self.params['ballast_stiffener_spacing']          = vecOption(self.params['ballast_stiffener_spacing'], NSECTIONS)
-        self.params['ballast_bulkhead_nodes']             = [False] * (NSECTIONS+1)
-        self.params['ballast_bulkhead_nodes'][0]          = True
-        self.params['ballast_bulkhead_nodes'][1]          = True
+        self.params['auxillary_outer_diameter']             = vecOption(self.params['auxillary_outer_diameter'], NSECTIONS+1)
+        self.params['auxillary_wall_thickness']             = vecOption(self.params['auxillary_wall_thickness'], NSECTIONS+1)
+        self.params['auxillary_stiffener_web_height']       = vecOption(self.params['auxillary_stiffener_web_height'], NSECTIONS)
+        self.params['auxillary_stiffener_web_thickness']    = vecOption(self.params['auxillary_stiffener_web_thickness'], NSECTIONS)
+        self.params['auxillary_stiffener_flange_width']     = vecOption(self.params['auxillary_stiffener_flange_width'], NSECTIONS)
+        self.params['auxillary_stiffener_flange_thickness'] = vecOption(self.params['auxillary_stiffener_flange_thickness'], NSECTIONS)
+        self.params['auxillary_stiffener_spacing']          = vecOption(self.params['auxillary_stiffener_spacing'], NSECTIONS)
+        self.params['auxillary_bulkhead_nodes']             = [False] * (NSECTIONS+1)
+        self.params['auxillary_bulkhead_nodes'][0]          = True
+        self.params['auxillary_bulkhead_nodes'][1]          = True
         
     def get_assembly(self):
         raise NotImplementedError("Subclasses should implement this!")

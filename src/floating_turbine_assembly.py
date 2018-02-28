@@ -32,24 +32,24 @@ class FloatingTurbine(Group):
         self.add('rna', RNA(1))
         
         # Tower and substructure
-        self.add('sm', FloatingSE(nSection), promotes=['radius_to_ballast_column','fairlead','fairlead_offset_from_shell',
-                                                                  'base_freeboard','base_section_height','base_outer_diameter','base_wall_thickness',
-                                                                  'ballast_freeboard','ballast_section_height','ballast_outer_diameter','ballast_wall_thickness',
-                                                                  'scope_ratio','anchor_radius','mooring_diameter','number_of_mooring_lines','mooring_type',
-                                                                  'anchor_type','drag_embedment_extra_length','mooring_max_offset','mooring_max_heel','mooring_cost_rate',
-                                                                  'permanent_ballast_density','base_stiffener_web_height','base_stiffener_web_thickness',
-                                                                  'base_stiffener_flange_width','base_stiffener_flange_thickness','base_stiffener_spacing',
-                                                                  'base_bulkhead_nodes','base_permanent_ballast_height','ballast_stiffener_web_height',
-                                                                  'ballast_stiffener_web_thickness','ballast_stiffener_flange_width',
-                                                                  'ballast_stiffener_flange_thickness','ballast_stiffener_spacing','ballast_bulkhead_nodes',
-                                                                  'ballast_permanent_ballast_height','bulkhead_mass_factor','ring_mass_factor','shell_mass_factor',
-                                                                  'spar_mass_factor','outfitting_mass_fraction','ballast_cost_rate','tapered_col_cost_rate',
-                                                                  'outfitting_cost_rate','number_of_ballast_columns','pontoon_outer_diameter',
-                                                                  'pontoon_wall_thickness','cross_attachment_pontoons','lower_attachment_pontoons',
-                                                                  'upper_attachment_pontoons','lower_ring_pontoons','upper_ring_pontoons','outer_cross_pontoons',
-                                                                  'pontoon_cost_rate','connection_ratio_max','base_pontoon_attach_upper','base_pontoon_attach_lower','tower_section_height','tower_outer_diameter',
-                                                                               'tower_wall_thickness','tower_outfitting_factor',
-                                                                               'tower_buckling_length','tower_mass','loading'])
+        self.add('sm', FloatingSE(nSection), promotes=['radius_to_auxillary_column','fairlead','fairlead_offset_from_shell',
+                                                       'base_freeboard','base_section_height','base_outer_diameter','base_wall_thickness',
+                                                       'auxillary_freeboard','auxillary_section_height','auxillary_outer_diameter','auxillary_wall_thickness',
+                                                       'scope_ratio','anchor_radius','mooring_diameter','number_of_mooring_lines','mooring_type',
+                                                       'anchor_type','drag_embedment_extra_length','mooring_max_offset','mooring_max_heel','mooring_cost_rate',
+                                                       'permanent_ballast_density','base_stiffener_web_height','base_stiffener_web_thickness',
+                                                       'base_stiffener_flange_width','base_stiffener_flange_thickness','base_stiffener_spacing',
+                                                       'base_bulkhead_nodes','base_permanent_ballast_height','auxillary_stiffener_web_height',
+                                                       'auxillary_stiffener_web_thickness','auxillary_stiffener_flange_width',
+                                                       'auxillary_stiffener_flange_thickness','auxillary_stiffener_spacing','auxillary_bulkhead_nodes',
+                                                       'auxillary_permanent_ballast_height','bulkhead_mass_factor','ring_mass_factor','shell_mass_factor',
+                                                       'spar_mass_factor','outfitting_mass_fraction','ballast_cost_rate','tapered_col_cost_rate',
+                                                       'outfitting_cost_rate','number_of_auxillary_columns','pontoon_outer_diameter',
+                                                       'pontoon_wall_thickness','cross_attachment_pontoons','lower_attachment_pontoons',
+                                                       'upper_attachment_pontoons','lower_ring_pontoons','upper_ring_pontoons','outer_cross_pontoons',
+                                                       'pontoon_cost_rate','connection_ratio_max','base_pontoon_attach_upper','base_pontoon_attach_lower',
+                                                       'tower_section_height','tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
+                                                       'tower_buckling_length','tower_mass','loading','min_diameter_thickness_ratio','min_taper_ratio'])
 
         # Turbine costs
         self.add('tcost', Turbine_CostsSE_2015(), promotes=['*'])
@@ -103,8 +103,6 @@ class FloatingTurbine(Group):
         self.add('safety_factor_buckling',     IndepVarComp('safety_factor_buckling', 0.0), promotes=['*'])
         self.add('safety_factor_fatigue',      IndepVarComp('safety_factor_fatigue', 0.0), promotes=['*'])
         self.add('safety_factor_consequence',  IndepVarComp('safety_factor_consequence', 0.0), promotes=['*'])
-        self.add('min_taper_ratio',            IndepVarComp('min_taper_ratio', 0.0), promotes=['*'])
-        self.add('min_diameter_thickness_ratio', IndepVarComp('min_diameter_thickness_ratio', 0.0), promotes=['*'])
 
         # RNA
         self.add('dummy_mass',                 IndepVarComp('dummy_mass', 0.0), promotes=['*'])
@@ -338,7 +336,7 @@ class FloatingTurbine(Group):
 
         # Connect all input variables from all models
         self.connect('water_depth', ['sm.water_depth', 'wobos.waterD', 'sea_depth'])
-        self.connect('hub_height', ['rotor.analysis.hubHt', 'sm.hub_height', 'wobos.hubH'])
+        self.connect('hub_height', ['rotor.hub_height', 'sm.hub_height', 'wobos.hubH'])
         self.connect('tower_outer_diameter', 'wobos.towerD', src_indices=[0])
         #self.connect('sm.tow.z_full', 'rotor.wind.z', src_indices=[])
         
@@ -367,8 +365,6 @@ class FloatingTurbine(Group):
         self.connect('safety_factor_buckling', 'sm.gamma_b')
         self.connect('safety_factor_fatigue', ['rotor.eta_damage','sm.gamma_fatigue'])
         self.connect('safety_factor_consequence', 'sm.gamma_n')
-        self.connect('min_taper_ratio', 'sm.min_taper')
-        self.connect('min_diameter_thickness_ratio', 'sm.min_d_to_t')
         self.connect('rna.loads.top_F', 'sm.rna_force')
         self.connect('rna.loads.top_M', 'sm.rna_moment')
         self.connect('rna.rna_I_TT', 'sm.rna_I')
@@ -419,7 +415,7 @@ class FloatingTurbine(Group):
         self.connect('nBlades','blade_number')
         self.connect('rotor.mass_one_blade', 'blade_mass')
         
-        self.connect('turbine_cost_kW ', 'wobos.turbCapEx')
+        self.connect('turbine_cost_kW', 'wobos.turbCapEx')
         self.connect('machine_rating', 'wobos.turbR')
         self.connect('rotor.diameter', 'wobos.rotorD')
         self.connect('bladeLength', 'wobos.bladeL')
@@ -615,7 +611,7 @@ class FloatingTurbine(Group):
         
         # Link outputs from one model to inputs to another
         self.connect('tower_mass', 'wobos.towerM')
-        self.connect('dummy_mass', 'sm.ball.stack_mass_in')
+        self.connect('dummy_mass', 'sm.aux.stack_mass_in')
 
         self.connect('sm.total_cost', 'wobos.subTotCost')
         self.connect('sm.total_mass', 'wobos.subTotM')

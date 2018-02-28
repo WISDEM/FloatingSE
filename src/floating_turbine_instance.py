@@ -17,11 +17,6 @@ class FloatingTurbineInstance(SemiInstance):
         self.params.pop('rna_cg', None)
         self.params.pop('rna_mass', None)
         self.params.pop('rna_I', None)
-        self.params.pop('min_d_to_t', None)
-        self.params.pop('min_taper', None)
-        self.params['min_taper_ratio'] = 0.4
-        self.params['min_diameter_thickness_ratio'] = 120.0
-
 
         # Environmental parameters
         self.params['air_density'] = self.params['base.windLoads.rho']
@@ -69,6 +64,11 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['safety_factor_buckling']    = 1.1
         self.params['safety_factor_fatigue']     = 1.35*1.3*1.0
         self.params['safety_factor_consequence'] = 1.0
+        self.params.pop('gamma_f', None)
+        self.params.pop('gamma_m', None)
+        self.params.pop('gamma_n', None)
+        self.params.pop('gamma_b', None)
+        self.params.pop('gamma_fatigue', None)
       
         self.params['project_lifetime']   = 20.0
         self.params['number_of_turbines'] = 20
@@ -121,8 +121,6 @@ class FloatingTurbineInstance(SemiInstance):
         self.params['AEP_loss_factor'] = 1.0
         self.params['dynamic_amplication_tip_deflection'] = 1.35
         self.params['shape_parameter'] = 0.0
-        # TODO
-        self.params['rotor.wind.z'] = np.array(self.params['hub_height'])
 
         # For RNA
         self.params['hub_mass'] = 0.1*285599.0
@@ -456,38 +454,6 @@ def example():
 def slsqp_optimal():
     #OrderedDict([('sm.total_cost', array([0.65987536]))])
     mysemi = FloatingTurbineInstance()
-
-    fairlead=0.700118055345
-    fairlead_offset_from_shell=4.99999573349
-    radius_to_ballast_cylinder=24.0062943408
-    freeboard_base=0.43911732433
-    section_height_base=[3.22351301, 1.18643201, 0.36842117, 7.85819571, 0.10149862]
-    outer_diameter_base=[1.10215765, 1.10176146, 1.12730743, 1.40557497, 1.34551741, 3.11536911]
-    wall_thickness_base=[0.00888014, 0.00908301, 0.00711699, 0.0074305, 0.01036372, 0.0064007, ]
-    freeboard_ballast=0.00917073242087
-    section_height_ballast=[0.41568677, 0.19027904, 0.1027831, 0.10319249, 0.10167768]
-    outer_diameter_ballast=[1.1, 1.10000678, 21.84555589, 15.7451946, 7.98475117, 3.57187412]
-    wall_thickness_ballast=[0.00540337, 0.00512813, 0.005, 0.00504785, 0.00531883, 0.02901446]
-    pontoon_outer_diameter=0.238587591233
-    pontoon_inner_diameter=0.0282506439854
-    tower_diameter=[3.00279735, 4.79003221, 3.78145422, 3.1666783, 3.05500872, 3.25601802]
-    tower_wall_thickness=[0.00210799, 0.00200344, 0.00200777, 0.00617966, 0.01447719, 0.01161293]
-    tower_section_height=[0.1, 0.1, 0.1, 0.1, 0.1]
-    scope_ratio=4.29418386598
-    anchor_radius=836.13551283
-    mooring_diameter=0.0500184150196
-    stiffener_web_height_base=[0.01232775, 0.06213763, 0.03086181, 0.51465266, 0.17599423]
-    stiffener_web_thickness_base=[0.00383956, 0.0244798, 0.01232182, 0.03480631, 0.01458695]
-    stiffener_flange_width_base=[0.01836843, 0.06126301, 0.01334884, 4.13546424, 0.22894627]
-    stiffener_flange_thickness_base=[0.01045948, 0.01846925, 0.00807756, 0.49859327, 0.07726461]
-    stiffener_spacing_base=[0.60855135, 0.78253197, 0.42576036, 8.271076, 6.61783294]
-    permanent_ballast_height_base=1.6046620632
-    stiffener_web_height_ballast=[0.01001693, 0.01014131, 0.01, 0.01000002, 0.08771132]
-    stiffener_web_thickness_ballast=[0.16070436, 0.00309267, 0.001, 0.00100016, 0.46245178]
-    stiffener_flange_width_ballast=[0.71634965, 0.01014155, 0.01, 0.01000002, 0.02378251]
-    stiffener_flange_thickness_ballast=[0.11864209, 0.00309244, 0.001, 0.00100018, 0.42417502]
-    stiffener_spacing_ballast=[9.066162, 0.75015028, 0.25110771, 0.39769332, 11.91746405]
-    permanent_ballast_height_ballast=0.331014224803
 
     mysemi.evaluate('slsqp')
     mysemi.visualize('semi-psqp.jpg')
