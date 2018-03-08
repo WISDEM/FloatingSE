@@ -37,14 +37,14 @@ class TestSubs(unittest.TestCase):
         self.params['base_column_cost'] = 32.0
         self.params['base_freeboard'] = 10.0
         
-        self.params['auxillary_column_Iwaterplane'] = 50.0
-        self.params['auxillary_column_Awaterplane'] = 9.0
-        self.params['auxillary_column_cost'] = 64.0
+        self.params['auxiliary_column_Iwaterplane'] = 50.0
+        self.params['auxiliary_column_Awaterplane'] = 9.0
+        self.params['auxiliary_column_cost'] = 64.0
 
-        self.params['number_of_auxillary_columns'] = 3
+        self.params['number_of_auxiliary_columns'] = 3
         self.params['water_ballast_mass_vector'] = 1e9*np.arange(5)
         self.params['water_ballast_zpts_vector'] = np.array([-10, -9, -8, -7, -6])
-        self.params['radius_to_auxillary_column'] = 20.0
+        self.params['radius_to_auxiliary_column'] = 20.0
         self.params['z_center_of_buoyancy'] = -2.0
 
         self.params['water_density'] = 1e3
@@ -55,15 +55,15 @@ class TestSubs(unittest.TestCase):
         
     def testSetGeometry(self):
         self.params['base_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
-        self.params['auxillary_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
-        self.params['auxillary_z_nodes'] = np.array([-35.0, -15.0, 15.0])
-        self.params['radius_to_auxillary_column'] = 25.0
+        self.params['auxiliary_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
+        self.params['auxiliary_z_nodes'] = np.array([-35.0, -15.0, 15.0])
+        self.params['radius_to_auxiliary_column'] = 25.0
         self.params['fairlead'] = 10.0
         self.params['fairlead_offset_from_shell'] = 1.0
         self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
         
         self.assertEqual(self.unknowns['fairlead_radius'], 11.0+25.0)
-        self.assertEqual(self.unknowns['base_auxillary_spacing'], 20.0/25.0)
+        self.assertEqual(self.unknowns['base_auxiliary_spacing'], 20.0/25.0)
 
         
     def testBalance(self):
@@ -77,7 +77,7 @@ class TestSubs(unittest.TestCase):
         self.assertEqual(self.unknowns['variable_ballast_height_ratio'], h_expect/4.0)
         npt.assert_almost_equal(self.unknowns['center_of_mass'], np.array([cg_expect_xy, cg_expect_xy, cg_expect_z]))
         
-        self.params['number_of_auxillary_columns'] = 0
+        self.params['number_of_auxiliary_columns'] = 0
         self.mysemi.balance_semi(self.params, self.unknowns)
 
         self.assertEqual(self.unknowns['variable_ballast_mass'], m_water)
@@ -98,7 +98,7 @@ class TestSubs(unittest.TestCase):
         self.assertEqual(self.unknowns['offset_force_ratio'], 26.0/1e2)
         self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (5e4)/(1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))
 
-        self.params['number_of_auxillary_columns'] = 0
+        self.params['number_of_auxiliary_columns'] = 0
         self.mysemi.compute_stability(self.params, self.unknowns)
 
         I_expect = 150.0

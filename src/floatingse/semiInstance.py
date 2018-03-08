@@ -19,15 +19,15 @@ class SemiInstance(FloatingInstance):
         # Make a neat list of design variables, lower bound, upper bound, scalar
         desvarList = [('fairlead',0.0, 100.0, 1.0),
                       ('fairlead_offset_from_shell',0.0, 5.0, 1e2),
-                      ('radius_to_auxillary_column',0.0, 40.0, 1.0),
+                      ('radius_to_auxiliary_column',0.0, 40.0, 1.0),
                       ('base_freeboard',0.0, 50.0, 1.0),
                       ('base_section_height',1e-1, 100.0, 1e1),
                       ('base_outer_diameter',1.1, 40.0, 10.0),
                       ('base_wall_thickness',5e-3, 1.0, 1e3),
-                      ('auxillary_freeboard',0.0, 50.0, 1.0),
-                      ('auxillary_section_height',1e-1, 100.0, 1e1),
-                      ('auxillary_outer_diameter',1.1, 40.0, 10.0),
-                      ('auxillary_wall_thickness',5e-3, 1.0, 1e3),
+                      ('auxiliary_freeboard',0.0, 50.0, 1.0),
+                      ('auxiliary_section_height',1e-1, 100.0, 1e1),
+                      ('auxiliary_outer_diameter',1.1, 40.0, 10.0),
+                      ('auxiliary_wall_thickness',5e-3, 1.0, 1e3),
                       ('pontoon_outer_diameter', 1e-1, 3.0, 10.0),
                       ('pontoon_wall_thickness', 5e-3, 1e-1, 100.0),
                       ('base_pontoon_attach_lower',-1e2, 1e2, 1.0),
@@ -41,15 +41,15 @@ class SemiInstance(FloatingInstance):
                       ('base_stiffener_flange_thickness', 1e-3, 5e-1, 1e2),
                       ('base_stiffener_spacing', 1e-1, 1e2, 1e1),
                       ('base_permanent_ballast_height', 1e-1, 50.0, 1.0),
-                      ('auxillary_stiffener_web_height', 1e-2, 1.0, 1e2),
-                      ('auxillary_stiffener_web_thickness', 1e-3, 5e-1, 1e2),
-                      ('auxillary_stiffener_flange_width', 1e-2, 5.0, 1e2),
-                      ('auxillary_stiffener_flange_thickness', 1e-3, 5e-1, 1e2),
-                      ('auxillary_stiffener_spacing', 1e-1, 1e2, 1e1),
-                      ('auxillary_permanent_ballast_height', 1e-1, 50.0, 1.0)]
+                      ('auxiliary_stiffener_web_height', 1e-2, 1.0, 1e2),
+                      ('auxiliary_stiffener_web_thickness', 1e-3, 5e-1, 1e2),
+                      ('auxiliary_stiffener_flange_width', 1e-2, 5.0, 1e2),
+                      ('auxiliary_stiffener_flange_thickness', 1e-3, 5e-1, 1e2),
+                      ('auxiliary_stiffener_spacing', 1e-1, 1e2, 1e1),
+                      ('auxiliary_permanent_ballast_height', 1e-1, 50.0, 1.0)]
 
         # TODO: Integer and Boolean design variables
-        #prob.driver.add_desvar('number_of_auxillary_columns', lower=1)
+        #prob.driver.add_desvar('number_of_auxiliary_columns', lower=1)
         #prob.driver.add_desvar('number_of_mooring_lines', lower=1)
         #prob.driver.add_desvar('mooring_type')
         #prob.driver.add_desvar('anchor_type')
@@ -70,7 +70,7 @@ class SemiInstance(FloatingInstance):
             ['base.draft_depth_ratio', 0.0, 0.75, None],
             ['aux.draft_depth_ratio', 0.0, 0.75, None],
             ['aux.fairlead_draft_ratio', 0.0, 1.0, None],
-            ['sg.base_auxillary_spacing', 0.0, 1.0, None],
+            ['sg.base_auxiliary_spacing', 0.0, 1.0, None],
             
             # Ensure that the radius doesn't change dramatically over a section
             ['base.manufacturability', None, 0.0, None],
@@ -111,7 +111,7 @@ class SemiInstance(FloatingInstance):
             
             # Pontoon tube radii
             ['load.base_connection_ratio', 0.0, None, None],
-            ['load.auxillary_connection_ratio', 0.0, None, None],
+            ['load.auxiliary_connection_ratio', 0.0, None, None],
             ['load.pontoon_base_attach_upper', 0.5, 1.0, None],
             ['load.pontoon_base_attach_lower', 0.0, 0.5, None],
             
@@ -154,20 +154,20 @@ class SemiInstance(FloatingInstance):
         self.draw_mooring(fig, mooringMat)
 
         pontoonMat = self.prob['load.plot_matrix']
-        zcut = 1.0 + np.maximum( self.params['base_freeboard'], self.params['auxillary_freeboard'] )
+        zcut = 1.0 + np.maximum( self.params['base_freeboard'], self.params['auxiliary_freeboard'] )
         self.draw_pontoons(fig, pontoonMat, 0.5*self.params['pontoon_outer_diameter'], zcut)
 
         self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                            0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
 
-        R_semi    = self.params['radius_to_auxillary_column']
-        ncolumn = self.params['number_of_auxillary_columns']
+        R_semi    = self.params['radius_to_auxiliary_column']
+        ncolumn = self.params['number_of_auxiliary_columns']
         angles = np.linspace(0, 2*np.pi, ncolumn+1)
         x = R_semi * np.cos( angles )
         y = R_semi * np.sin( angles )
         for k in xrange(ncolumn):
-            self.draw_column(fig, [x[k], y[k]], self.params['auxillary_freeboard'], self.params['auxillary_section_height'],
-                               0.5*self.params['auxillary_outer_diameter'], self.params['auxillary_stiffener_spacing'])
+            self.draw_column(fig, [x[k], y[k]], self.params['auxiliary_freeboard'], self.params['auxiliary_section_height'],
+                               0.5*self.params['auxiliary_outer_diameter'], self.params['auxiliary_stiffener_spacing'])
             
         self.set_figure(fig, fname)
 

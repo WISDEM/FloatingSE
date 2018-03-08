@@ -100,16 +100,16 @@ class SemiGeometry(Component):
 
         # Design variables
         self.add_param('base_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('auxillary_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('auxillary_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('auxiliary_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('auxiliary_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
-        self.add_param('radius_to_auxillary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
+        self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
         
         
         # Output constraints
         self.add_output('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
-        self.add_output('base_auxillary_spacing', val=0.0, desc='Radius of base and ballast columns relative to spacing')
+        self.add_output('base_auxiliary_spacing', val=0.0, desc='Radius of base and ballast columns relative to spacing')
 
         
         # Derivatives
@@ -132,14 +132,14 @@ class SemiGeometry(Component):
         """
         # Unpack variables
         R_od_base       = 0.5*params['base_outer_diameter']
-        R_od_ballast    = 0.5*params['auxillary_outer_diameter']
-        R_semi          = params['radius_to_auxillary_column']
-        z_nodes_ballast = params['auxillary_z_nodes']
+        R_od_ballast    = 0.5*params['auxiliary_outer_diameter']
+        R_semi          = params['radius_to_auxiliary_column']
+        z_nodes_ballast = params['auxiliary_z_nodes']
         fairlead        = params['fairlead'] # depth of mooring attachment point
         fair_off        = params['fairlead_offset_from_shell']
 
         # Set spacing constraint
-        unknowns['base_auxillary_spacing'] = (R_od_base.max() + R_od_ballast.max()) / R_semi
+        unknowns['base_auxiliary_spacing'] = (R_od_base.max() + R_od_ballast.max()) / R_semi
 
         # Determine radius at mooring connection point (fairlead)
         unknowns['fairlead_radius'] = R_semi + fair_off + np.interp(-fairlead, z_nodes_ballast, R_od_ballast)
@@ -158,12 +158,12 @@ class Semi(SubstructureBase):
 
         self.add_param('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
         
-        self.add_param('auxillary_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
-        self.add_param('auxillary_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
-        self.add_param('auxillary_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('auxiliary_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
+        self.add_param('auxiliary_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
+        self.add_param('auxiliary_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
-        self.add_param('number_of_auxillary_columns', val=3, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
-        self.add_param('radius_to_auxillary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
+        self.add_param('number_of_auxiliary_columns', val=3, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
+        self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
 
         
         # Derivatives
@@ -237,20 +237,20 @@ class Semi(SubstructureBase):
         
     def compute_stability(self, params, unknowns):
         # Unpack variables
-        ncolumn         = params['number_of_auxillary_columns']
+        ncolumn         = params['number_of_auxiliary_columns']
         z_cb            = params['z_center_of_buoyancy']
         z_cg            = unknowns['center_of_mass'][-1]
         V_system        = params['total_displacement']
         
         Iwater_base     = params['base_column_Iwaterplane']
-        Iwater_column   = params['auxillary_column_Iwaterplane']
-        Awater_column   = params['auxillary_column_Awaterplane']
+        Iwater_column   = params['auxiliary_column_Iwaterplane']
+        Awater_column   = params['auxiliary_column_Awaterplane']
 
         F_surge         = params['total_force'][0]
         M_pitch         = params['total_moment'][1]
         F_restore       = params['mooring_surge_restoring_force']
         rhoWater        = params['water_density']
-        R_semi          = params['radius_to_auxillary_column']
+        R_semi          = params['radius_to_auxiliary_column']
 
         F_restore_pitch = params['mooring_pitch_restoring_force']
         z_fairlead      = params['fairlead']*(-1)
@@ -311,9 +311,9 @@ class Semi(SubstructureBase):
         
     def compute_costs(self, params, unknowns):
         # Unpack variables
-        ncolumn    = params['number_of_auxillary_columns']
+        ncolumn    = params['number_of_auxiliary_columns']
         c_mooring  = params['mooring_cost']
-        c_aux      = params['auxillary_column_cost']
+        c_aux      = params['auxiliary_column_cost']
         c_base     = params['base_column_cost']
         c_pontoon  = params['pontoon_cost']
 

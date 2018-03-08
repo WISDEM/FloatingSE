@@ -53,8 +53,8 @@ class FloatingSE(Group):
 
         # Define all input variables from all models
         # SemiGeometry
-        self.add('radius_to_auxillary_column', IndepVarComp('radius_to_auxillary_column', 0.0), promotes=['*'])
-        self.add('number_of_auxillary_columns',  IndepVarComp('number_of_auxillary_columns', 0, pass_by_obj=True), promotes=['*'])
+        self.add('radius_to_auxiliary_column', IndepVarComp('radius_to_auxiliary_column', 0.0), promotes=['*'])
+        self.add('number_of_auxiliary_columns',  IndepVarComp('number_of_auxiliary_columns', 0, pass_by_obj=True), promotes=['*'])
         
         self.add('fairlead',                   IndepVarComp('fairlead', 0.0), promotes=['*'])
         self.add('fairlead_offset_from_shell', IndepVarComp('fairlead_offset_from_shell', 0.0), promotes=['*'])
@@ -64,10 +64,10 @@ class FloatingSE(Group):
         self.add('base_outer_diameter',        IndepVarComp('base_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
         self.add('base_wall_thickness',        IndepVarComp('base_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
 
-        self.add('auxillary_freeboard',          IndepVarComp('auxillary_freeboard', 0.0), promotes=['*'])
-        self.add('auxillary_section_height',     IndepVarComp('auxillary_section_height', np.zeros((nSection,))), promotes=['*'])
-        self.add('auxillary_outer_diameter',     IndepVarComp('auxillary_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
-        self.add('auxillary_wall_thickness',     IndepVarComp('auxillary_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
+        self.add('auxiliary_freeboard',          IndepVarComp('auxiliary_freeboard', 0.0), promotes=['*'])
+        self.add('auxiliary_section_height',     IndepVarComp('auxiliary_section_height', np.zeros((nSection,))), promotes=['*'])
+        self.add('auxiliary_outer_diameter',     IndepVarComp('auxiliary_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
+        self.add('auxiliary_wall_thickness',     IndepVarComp('auxiliary_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
 
         # Mooring
         self.add('scope_ratio',                IndepVarComp('scope_ratio', 0.0), promotes=['*'])
@@ -92,13 +92,13 @@ class FloatingSE(Group):
         self.add('base_bulkhead_nodes',             IndepVarComp('base_bulkhead_nodes', [False]*(nSection+1), pass_by_obj=True ), promotes=['*'])
         self.add('base_permanent_ballast_height',   IndepVarComp('base_permanent_ballast_height', 0.0), promotes=['*'])
 
-        self.add('auxillary_stiffener_web_height',       IndepVarComp('auxillary_stiffener_web_height', np.zeros((nSection,))), promotes=['*'])
-        self.add('auxillary_stiffener_web_thickness',    IndepVarComp('auxillary_stiffener_web_thickness', np.zeros((nSection,))), promotes=['*'])
-        self.add('auxillary_stiffener_flange_width',     IndepVarComp('auxillary_stiffener_flange_width', np.zeros((nSection,))), promotes=['*'])
-        self.add('auxillary_stiffener_flange_thickness', IndepVarComp('auxillary_stiffener_flange_thickness', np.zeros((nSection,))), promotes=['*'])
-        self.add('auxillary_stiffener_spacing',          IndepVarComp('auxillary_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
-        self.add('auxillary_bulkhead_nodes',             IndepVarComp('auxillary_bulkhead_nodes', [False]*(nSection+1), pass_by_obj=True ), promotes=['*'])
-        self.add('auxillary_permanent_ballast_height',   IndepVarComp('auxillary_permanent_ballast_height', 0.0), promotes=['*'])
+        self.add('auxiliary_stiffener_web_height',       IndepVarComp('auxiliary_stiffener_web_height', np.zeros((nSection,))), promotes=['*'])
+        self.add('auxiliary_stiffener_web_thickness',    IndepVarComp('auxiliary_stiffener_web_thickness', np.zeros((nSection,))), promotes=['*'])
+        self.add('auxiliary_stiffener_flange_width',     IndepVarComp('auxiliary_stiffener_flange_width', np.zeros((nSection,))), promotes=['*'])
+        self.add('auxiliary_stiffener_flange_thickness', IndepVarComp('auxiliary_stiffener_flange_thickness', np.zeros((nSection,))), promotes=['*'])
+        self.add('auxiliary_stiffener_spacing',          IndepVarComp('auxiliary_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
+        self.add('auxiliary_bulkhead_nodes',             IndepVarComp('auxiliary_bulkhead_nodes', [False]*(nSection+1), pass_by_obj=True ), promotes=['*'])
+        self.add('auxiliary_permanent_ballast_height',   IndepVarComp('auxiliary_permanent_ballast_height', 0.0), promotes=['*'])
 
         self.add('bulkhead_mass_factor',       IndepVarComp('bulkhead_mass_factor', 0.0), promotes=['*'])
         self.add('ring_mass_factor',           IndepVarComp('ring_mass_factor', 0.0), promotes=['*'])
@@ -117,7 +117,7 @@ class FloatingSE(Group):
         #self.add('G',                          IndepVarComp('G', 0.0), promotes=['*'])
 
         # Connect all input variables from all models
-        self.connect('radius_to_auxillary_column', ['sg.radius_to_auxillary_column', 'load.radius_to_auxillary_column', 'sm.radius_to_auxillary_column'])
+        self.connect('radius_to_auxiliary_column', ['sg.radius_to_auxiliary_column', 'load.radius_to_auxiliary_column', 'sm.radius_to_auxiliary_column'])
 
         self.connect('base_freeboard', ['base.freeboard', 'sm.base_freeboard'])
         self.connect('base_section_height', 'base.section_height')
@@ -134,10 +134,10 @@ class FloatingSE(Group):
         self.connect('tow.turbine_mass','base.stack_mass_in')
         self.connect('tow.tower_center_of_mass','load.tower_center_of_mass')
         
-        self.connect('auxillary_freeboard', 'aux.freeboard')
-        self.connect('auxillary_section_height', 'aux.section_height')
-        self.connect('auxillary_outer_diameter', 'aux.diameter')
-        self.connect('auxillary_wall_thickness', 'aux.wall_thickness')
+        self.connect('auxiliary_freeboard', 'aux.freeboard')
+        self.connect('auxiliary_section_height', 'aux.section_height')
+        self.connect('auxiliary_outer_diameter', 'aux.diameter')
+        self.connect('auxiliary_wall_thickness', 'aux.wall_thickness')
 
         self.connect('fairlead', ['base.fairlead','aux.fairlead','sg.fairlead','mm.fairlead','sm.fairlead','load.fairlead'])
         self.connect('fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell')
@@ -172,13 +172,13 @@ class FloatingSE(Group):
         self.connect('base_bulkhead_nodes', 'base.bulkhead_nodes')
         self.connect('base_permanent_ballast_height', 'base.permanent_ballast_height')
         
-        self.connect('auxillary_stiffener_web_height', 'aux.stiffener_web_height')
-        self.connect('auxillary_stiffener_web_thickness', 'aux.stiffener_web_thickness')
-        self.connect('auxillary_stiffener_flange_width', 'aux.stiffener_flange_width')
-        self.connect('auxillary_stiffener_flange_thickness', 'aux.stiffener_flange_thickness')
-        self.connect('auxillary_stiffener_spacing', 'aux.stiffener_spacing')
-        self.connect('auxillary_bulkhead_nodes', 'aux.bulkhead_nodes')
-        self.connect('auxillary_permanent_ballast_height', 'aux.permanent_ballast_height')
+        self.connect('auxiliary_stiffener_web_height', 'aux.stiffener_web_height')
+        self.connect('auxiliary_stiffener_web_thickness', 'aux.stiffener_web_thickness')
+        self.connect('auxiliary_stiffener_flange_width', 'aux.stiffener_flange_width')
+        self.connect('auxiliary_stiffener_flange_thickness', 'aux.stiffener_flange_thickness')
+        self.connect('auxiliary_stiffener_spacing', 'aux.stiffener_spacing')
+        self.connect('auxiliary_bulkhead_nodes', 'aux.bulkhead_nodes')
+        self.connect('auxiliary_permanent_ballast_height', 'aux.permanent_ballast_height')
         
         self.connect('bulkhead_mass_factor', ['base.bulkhead_mass_factor', 'aux.bulkhead_mass_factor'])
         self.connect('ring_mass_factor', ['base.ring_mass_factor', 'aux.ring_mass_factor'])
@@ -189,7 +189,7 @@ class FloatingSE(Group):
         self.connect('tapered_col_cost_rate', ['base.tapered_col_cost_rate', 'aux.tapered_col_cost_rate'])
         self.connect('outfitting_cost_rate', ['base.outfitting_cost_rate', 'aux.outfitting_cost_rate'])
 
-        self.connect('number_of_auxillary_columns', ['load.number_of_auxillary_columns', 'sm.number_of_auxillary_columns'])
+        self.connect('number_of_auxiliary_columns', ['load.number_of_auxiliary_columns', 'sm.number_of_auxiliary_columns'])
 
         # Link outputs from one model to inputs to another
         self.connect('sg.fairlead_radius', ['mm.fairlead_radius', 'sm.fairlead_radius'])
@@ -198,9 +198,9 @@ class FloatingSE(Group):
         self.connect('base.d_full', ['load.base_d_full', 'sg.base_outer_diameter'])
         self.connect('base.t_full', 'load.base_t_full')
 
-        self.connect('aux.z_full', ['sg.auxillary_z_nodes', 'load.auxillary_z_full'])
-        self.connect('aux.d_full', ['load.auxillary_d_full', 'sg.auxillary_outer_diameter'])
-        self.connect('aux.t_full', 'load.auxillary_t_full')
+        self.connect('aux.z_full', ['sg.auxiliary_z_nodes', 'load.auxiliary_z_full'])
+        self.connect('aux.d_full', ['load.auxiliary_d_full', 'sg.auxiliary_outer_diameter'])
+        self.connect('aux.t_full', 'load.auxiliary_t_full')
 
         self.connect('mm.mooring_mass', 'sm.mooring_mass')
         self.connect('mm.mooring_effective_mass', 'sm.mooring_effective_mass')
@@ -221,17 +221,17 @@ class FloatingSE(Group):
         self.connect('base.Pz', 'load.base_column_Pz')
         self.connect('base.qdyn', 'load.base_column_qdyn')
 
-        self.connect('aux.z_center_of_mass', 'load.auxillary_column_center_of_mass')
-        self.connect('aux.z_center_of_buoyancy', 'load.auxillary_column_center_of_buoyancy')
-        self.connect('aux.Iwater', 'sm.auxillary_column_Iwaterplane')
-        self.connect('aux.Awater', 'sm.auxillary_column_Awaterplane')
-        self.connect('aux.displaced_volume', 'load.auxillary_column_displaced_volume')
-        self.connect('aux.total_mass', 'load.auxillary_column_mass')
-        self.connect('aux.total_cost', 'sm.auxillary_column_cost')
-        self.connect('aux.Px', 'load.auxillary_column_Px')
-        self.connect('aux.Py', 'load.auxillary_column_Py')
-        self.connect('aux.Pz', 'load.auxillary_column_Pz')
-        self.connect('aux.qdyn', 'load.auxillary_column_qdyn')
+        self.connect('aux.z_center_of_mass', 'load.auxiliary_column_center_of_mass')
+        self.connect('aux.z_center_of_buoyancy', 'load.auxiliary_column_center_of_buoyancy')
+        self.connect('aux.Iwater', 'sm.auxiliary_column_Iwaterplane')
+        self.connect('aux.Awater', 'sm.auxiliary_column_Awaterplane')
+        self.connect('aux.displaced_volume', 'load.auxiliary_column_displaced_volume')
+        self.connect('aux.total_mass', 'load.auxiliary_column_mass')
+        self.connect('aux.total_cost', 'sm.auxiliary_column_cost')
+        self.connect('aux.Px', 'load.auxiliary_column_Px')
+        self.connect('aux.Py', 'load.auxiliary_column_Py')
+        self.connect('aux.Pz', 'load.auxiliary_column_Pz')
+        self.connect('aux.qdyn', 'load.auxiliary_column_qdyn')
 
         self.connect('load.structural_mass', 'sm.structural_mass')
         self.connect('load.center_of_mass', 'sm.structure_center_of_mass')

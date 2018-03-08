@@ -49,17 +49,17 @@ class FloatingFrame(Component):
         self.add_param('base_pontoon_attach_lower', val=0.0, units='m', desc='z-value of lower truss attachment on base column')
 
         # Ballast columns
-        self.add_param('auxillary_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('auxillary_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('auxillary_t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('auxillary_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
-        self.add_param('auxillary_column_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
-        self.add_param('auxillary_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
-        self.add_param('auxillary_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
-        self.add_param('auxillary_column_Px', np.zeros(nFull), units='N/m', desc='force per unit length in x-direction on ballast')
-        self.add_param('auxillary_column_Py', np.zeros(nFull), units='N/m', desc='force per unit length in y-direction on ballast')
-        self.add_param('auxillary_column_Pz', np.zeros(nFull), units='N/m', desc='force per unit length in z-direction on ballast')
-        self.add_param('auxillary_column_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on ballast')
+        self.add_param('auxiliary_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('auxiliary_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('auxiliary_t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('auxiliary_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
+        self.add_param('auxiliary_column_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
+        self.add_param('auxiliary_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
+        self.add_param('auxiliary_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
+        self.add_param('auxiliary_column_Px', np.zeros(nFull), units='N/m', desc='force per unit length in x-direction on ballast')
+        self.add_param('auxiliary_column_Py', np.zeros(nFull), units='N/m', desc='force per unit length in y-direction on ballast')
+        self.add_param('auxiliary_column_Pz', np.zeros(nFull), units='N/m', desc='force per unit length in z-direction on ballast')
+        self.add_param('auxiliary_column_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on ballast')
 
         self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
 
@@ -76,8 +76,8 @@ class FloatingFrame(Component):
         self.add_param('tower_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on tower')
         
         # Semi geometry
-        self.add_param('radius_to_auxillary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
-        self.add_param('number_of_auxillary_columns', val=3, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
+        self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
+        self.add_param('number_of_auxiliary_columns', val=3, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
 
         # Pontoon properties
         self.add_param('pontoon_outer_diameter', val=0.0, units='m',desc='Outer radius of tubular pontoon that connects ballast or base columns')
@@ -124,7 +124,7 @@ class FloatingFrame(Component):
 
         self.add_output('plot_matrix', val=np.array([]), desc='Ratio of shear stress to yield stress for all pontoon elements', pass_by_obj=True)
         self.add_output('base_connection_ratio', val=np.zeros((nFull,)), desc='Ratio of pontoon outer diameter to base outer diameter')
-        self.add_output('auxillary_connection_ratio', val=np.zeros((nFull,)), desc='Ratio of pontoon outer diameter to base outer diameter')
+        self.add_output('auxiliary_connection_ratio', val=np.zeros((nFull,)), desc='Ratio of pontoon outer diameter to base outer diameter')
         self.add_output('pontoon_base_attach_upper', val=0.0, desc='Fractional distance along base column for upper truss attachment')
         self.add_output('pontoon_base_attach_lower', val=0.0, desc='Fractional distance along base column for lower truss attachment')
 
@@ -154,14 +154,14 @@ class FloatingFrame(Component):
         upperRingFlag   = params['upper_ring_pontoons']
         outerCrossFlag  = params['outer_cross_pontoons']
         
-        R_semi         = params['radius_to_auxillary_column']
+        R_semi         = params['radius_to_auxiliary_column']
         R_od_pontoon   = 0.5*params['pontoon_outer_diameter']
         R_od_base      = 0.5*params['base_d_full']
-        R_od_ballast   = 0.5*params['auxillary_d_full']
+        R_od_ballast   = 0.5*params['auxiliary_d_full']
         R_od_tower     = 0.5*params['tower_d_full']
 
         t_wall_base    = params['base_t_full']
-        t_wall_ballast = params['auxillary_t_full']
+        t_wall_ballast = params['auxiliary_t_full']
         t_wall_pontoon = params['pontoon_wall_thickness']
         t_wall_tower   = params['tower_t_full']
 
@@ -170,16 +170,16 @@ class FloatingFrame(Component):
         rho            = params['material_density']
         sigma_y        = params['yield_stress']
         
-        ncolumn        = params['number_of_auxillary_columns']
+        ncolumn        = params['number_of_auxiliary_columns']
         z_base         = params['base_z_full']
-        z_ballast      = params['auxillary_z_full']
+        z_ballast      = params['auxiliary_z_full']
         z_tower        = params['tower_z_full']
         z_attach_upper = params['base_pontoon_attach_upper']
         z_attach_lower = params['base_pontoon_attach_lower']
         z_fairlead     = -params['fairlead']
         
         m_base         = params['base_column_mass']
-        m_ballast      = params['auxillary_column_mass']
+        m_ballast      = params['auxiliary_column_mass']
         m_tower        = params['tower_mass']
         
         m_rna          = params['rna_mass']
@@ -191,13 +191,13 @@ class FloatingFrame(Component):
         rhoWater       = params['water_density']
         
         V_base         = params['base_column_displaced_volume']
-        V_ballast      = params['auxillary_column_displaced_volume']
+        V_ballast      = params['auxiliary_column_displaced_volume']
 
         z_cb_base      = params['base_column_center_of_buoyancy']
-        z_cb_ballast   = params['auxillary_column_center_of_buoyancy']
+        z_cb_ballast   = params['auxiliary_column_center_of_buoyancy']
         
         cg_base        = np.r_[0.0, 0.0, params['base_column_center_of_mass']]
-        cg_ballast     = np.r_[0.0, 0.0, params['auxillary_column_center_of_mass']]
+        cg_ballast     = np.r_[0.0, 0.0, params['auxiliary_column_center_of_mass']]
         cg_tower       = np.r_[0.0, 0.0, params['tower_center_of_mass']]
         
         coeff          = params['pontoon_cost_rate']
@@ -210,7 +210,7 @@ class FloatingFrame(Component):
 
         # Quick ratio for unknowns
         unknowns['base_connection_ratio']    = params['connection_ratio_max'] - R_od_pontoon/R_od_base
-        unknowns['auxillary_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_ballast
+        unknowns['auxiliary_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_ballast
         unknowns['pontoon_base_attach_upper'] = (z_attach_upper - z_base[0]) / (z_base[-1] - z_base[0]) #0.5<x<1.0
         unknowns['pontoon_base_attach_lower'] = (z_attach_lower - z_base[0]) / (z_base[-1] - z_base[0]) #0.0<x<0.5
         
@@ -504,7 +504,7 @@ class FloatingFrame(Component):
 
         # Wind + Wave loading in local base / ballast / tower c.s.
         Px_base,    Py_base,    Pz_base    = params['base_column_Pz'], params['base_column_Py'], -params['base_column_Px']  # switch to local c.s.
-        Px_ballast, Py_ballast, Pz_ballast = params['auxillary_column_Pz'], params['auxillary_column_Py'], -params['auxillary_column_Px']  # switch to local c.s.
+        Px_ballast, Py_ballast, Pz_ballast = params['auxiliary_column_Pz'], params['auxiliary_column_Py'], -params['auxiliary_column_Px']  # switch to local c.s.
         Px_tower,   Py_tower,   Pz_tower   = params['tower_Pz'], params['tower_Py'], -params['tower_Px']  # switch to local c.s.
         epsOff = 1e-6
         # Get mass right- ballasts, stiffeners, tower, rna, etc.
@@ -713,7 +713,7 @@ class FloatingFrame(Component):
         idx  = range(baseEID-1)
         npon = len(idx)
         if len(idx) > 0:
-            qdyn_pontoon = np.max( np.abs( np.r_[params['base_column_qdyn'], params['auxillary_column_qdyn']] ) )
+            qdyn_pontoon = np.max( np.abs( np.r_[params['base_column_qdyn'], params['auxiliary_column_qdyn']] ) )
             sigma_ax_pon = sigma_ax[idx]
             sigma_sh_pon = sigma_sh[idx]
             sigma_h_pon  = util.hoopStress(2*R_od_pontoon, t_wall_pontoon, qdyn_pontoon) * np.ones(sigma_ax_pon.shape)
