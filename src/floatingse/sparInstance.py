@@ -26,7 +26,7 @@ class SparInstance(FloatingInstance):
         self.params['base_wall_thickness'] = 0.05
         self.params['fairlead_offset_from_shell'] = 5.2-4.7
         self.params['base_permanent_ballast_height'] = 10.0
-
+        
         # OC3
         self.params['water_depth'] = 320.0
         self.params['hmax'] = 10.8
@@ -95,7 +95,7 @@ class SparInstance(FloatingInstance):
             ['tow.weldability', None, 0.0, None],
             
             # Ensure that the spar top matches the tower base
-            ['tt.transition_buffer', -1.0, 1.0, None],
+            ['sg.transition_buffer', -1.0, 1.0, None],
             
             # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
             ['mm.axial_unity', 0.0, 1.0, None],
@@ -120,20 +120,20 @@ class SparInstance(FloatingInstance):
             ['load.tower_global_buckling', None, 1.0, None],
             
             # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
-            ['sm.variable_ballast_height_ratio', 0.0, 1.0, None],
-            ['sm.variable_ballast_mass', 0.0, None, None],
+            ['stab.variable_ballast_height_ratio', 0.0, 1.0, None],
+            ['stab.variable_ballast_mass', 0.0, None, None],
             
             # Metacentric height should be positive for static stability
-            ['sm.metacentric_height', 0.1, None, None],
+            ['stab.metacentric_height', 0.1, None, None],
             
             # Center of buoyancy should be above CG (difference should be positive, None],
-            ['sm.static_stability', 0.1, None, None],
+            ['stab.static_stability', 0.1, None, None],
             
             # Surge restoring force should be greater than wave-wind forces (ratio < 1, None],
-            ['sm.offset_force_ratio', None, 1.0, None],
+            ['stab.offset_force_ratio', None, 1.0, None],
             
             # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
-            ['sm.heel_moment_ratio', None, 1.0, None]]
+            ['stab.heel_moment_ratio', None, 1.0, None]]
         return conlist
 
     def add_objective(self):
@@ -147,11 +147,13 @@ class SparInstance(FloatingInstance):
 
         self.draw_ocean(fig)
 
-        mooringMat = self.prob['mm.plot_matrix']
-        self.draw_mooring(fig, mooringMat)
+        self.draw_mooring(fig, self.prob['mm.plot_matrix'])
 
         self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                            0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
+
+        self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard']+self.params['hub_height'], self.params['tower_section_height'],
+                         0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)
 
         self.set_figure(fig, fname)
 
@@ -163,18 +165,42 @@ class SparInstance(FloatingInstance):
 def example_spar():
     myspar = SparInstance()
     myspar.evaluate('psqp')
-    #myspar.visualize('spar-initial.jpg')
-    #myspar.run('slsqp')
+    myspar.visualize('spar-initial.jpg')
     return myspar
 
-def psqp_optimal():
-    #OrderedDict([('sm.total_cost', array([0.65987536]))])
+def optimize_spar(algo='slsqp'):
+    myspar = SparInstance()
+    myspar.run(algo)
+    myspar.visualize('spar-'+algo+'.jpg')
+    return myspar
+
+def slsqp_optimal():
+    #OrderedDict([('total_cost', array([1.49600082]))])
     myspar = SparInstance()
 
-    myspar.evaluate('psqp')
-    myspar.visualize('spar-psqp.jpg')
+    mypsar.params['fairlead'] = 36.995002263
+    mypsar.params['fairlead_offset_from_shell'] = 0.381237766438
+    mypsar.params['base_freeboard'] = 2.62142203326
+    mypsar.params['base_section_height'] = np.array([41.89338476, 47.60209766, 43.45997812,  0.18040233, 22.67891054])
+    mypsar.params['base_outer_diameter'] = np.array([ 4.98194059,  1.99138766,  1.90623058, 16.46455641,  6.58582333,  4.5])
+    mypsar.params['base_wall_thickness'] = np.array([0.00895063, 0.01387583, 0.01331409, 0.00842058, 0.01090195, 0.01024931])
+    mypsar.params['pontoon_outer_diameter'] = 3.0
+    mypsar.params['pontoon_wall_thickness'] = 0.0175
+    mypsar.params['base_pontoon_attach_lower'] = -20.0
+    mypsar.params['base_pontoon_attach_upper'] = 10.0
+    mypsar.params['scope_ratio'] = 3.2257803294
+    mypsar.params['anchor_radius'] = 853.319366299
+    mypsar.params['mooring_diameter'] = 0.214794904303
+    mypsar.params['base_stiffener_web_height'] = np.array([0.09628871, 0.06689576, 0.10380069, 0.10227783, 0.08345127])
+    mypsar.params['base_stiffener_web_thickness'] = np.array([0.00399962, 0.00277977, 0.00431121, 0.00424795, 0.00417288])
+    mypsar.params['base_stiffener_flange_width'] = np.array([0.01000001, 0.01 0.01001052, 0.01, 0.01000039])
+    mypsar.params['base_stiffener_flange_thickness'] = np.array([0.07579568, 0.07942766, 0.03561651, 0.07014924, 0.01354831])
+    mypsar.params['base_stiffener_spacing'] = np.array([0.16531022, 1.18355589, 0.31825361, 0.26153587, 0.76595662])
+
+    myspar.evaluate('slsqp')
+    myspar.visualize('spar-slsqp.jpg')
     return myspar
         
 if __name__ == '__main__':
-    #psqp_optimal()
-    example_spar()
+    optimize_spar('psqp')
+    #example_spar()

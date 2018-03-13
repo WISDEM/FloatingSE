@@ -1,0 +1,65 @@
+% this file demonstrates the use of the NRELreport style file.
+
+% ---------------
+% PREAMBLE
+% ---------------
+%\documentclass[tagged]{NRELreport}
+\documentclass[tagged,10pt]{NRELarticle}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{units}
+
+
+% -----------------------------------
+\addbibresource{offshore.bib}
+% -----------------------------------
+% DOCUMENT PROPERTIES
+% -----------------------------------
+\title{FloatingSE Documentation}
+\author{Garrett Barter, PhD}
+\date{March 30, 2018}
+% -------------------------------------
+% CUSTOMIZATIONS
+% -------------------------------------
+
+\newcommand{\mbb}[1]{\mathbb{#1}}
+\newcommand{\mbf}[1]{\mathbf{#1}}
+\newcommand{\sbf}[1]{\boldsymbol{#1}}
+\newcommand{\mcal}[1]{\mathcal{#1}}
+% 'st' 'nd' 'rd' 'th' superscripts for numbers
+\newcommand{\first}{\raise.5ex\hbox{\small st}}
+\newcommand{\second}{\raise.5ex\hbox{\small nd}}
+\newcommand{\third}{\raise.5ex\hbox{\small rd}}
+\newcommand{\fourth}{\raise.5ex\hbox{\small th}}
+\renewcommand{\th}{\raise.5ex\hbox{\tiny th}}
+
+% -------------------------------------
+% DOCUMENT STARTS HERE
+% -------------------------------------
+\lstset{language=Python,columns=fullflexible,keepspaces=true,breaklines=true,basicstyle=\footnotesize\ttfamily,mathescape=true}
+\setcounter{tocdepth}{2}
+\begin{document}
+
+%\frontmatter
+%\input{acknowledge}
+%\input{executive_summary}
+
+%\mainmatter
+\tableofcontents
+%\listoffigures
+%\listoftables
+
+\newpage
+\input{introduction}
+\input{package}
+\input{geometry}
+\input{theory}
+\input{execution}
+\input{optimization}
+\input{other}
+
+% bibliography
+\cleardoublepage
+\label{sec:Bib}
+\printbibliography[heading=bibintoc]
+\end{document}

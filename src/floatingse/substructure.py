@@ -4,45 +4,6 @@ import numpy as np
 from commonse import gravity, eps, DirectionVector
 
 
-
-
-class TowerTransition(Component):
-    """
-    OpenMDAO Component class for coupling between substructure and turbine tower
-    """
-
-    def __init__(self, nNodes, diamFlag=True):
-        super(TowerTransition,self).__init__()
-
-        self.diamFlag = diamFlag
-        
-        # Design variables
-        self.add_param('tower_base', val=0.0, units='m', desc='water depth')
-        self.add_param('base_top', val=0.0, units='m', desc='outer radius of tower at base')
-
-        # Output constraints
-        self.add_output('transition_buffer', val=0.0, units='m', desc='Buffer between substructure base and tower base')
-
-        
-    def solve_nonlinear(self, params, unknowns, resids):
-        r_tower = params['tower_base']
-        r_base  = params['base_top']
-
-        # Inputs were diameters and not radii, so we need to convert to radii
-        coeff = 0.5 if self.diamFlag else 1.0
-
-        # Constrain spar top to be at least greater than tower base
-        unknowns['transition_buffer'] = coeff * (r_base - r_tower)
-
-        
-    def linearize(self, params, unknowns, resids):
-        J = {}
-        coeff = 0.5 if self.diamFlag else 1.0
-        J['transition_buffer','tower_base'] = -coeff
-        J['transition_buffer','base_top'] = coeff
-        return J
-
-
 class SubstructureBase(Component):
     def __init__(self, nFull):
         super(SubstructureBase,self).__init__()
@@ -89,27 +50,30 @@ class SubstructureBase(Component):
 
 
         
-class SemiGeometry(Component):
+class SubstructureGeometry(Component):
     """
     OpenMDAO Component class for Semi substructure for floating offshore wind turbines.
     Should be tightly coupled with MAP Mooring class for full system representation.
     """
 
     def __init__(self, nFull):
-        super(SemiGeometry,self).__init__()
+        super(SubstructureGeometry,self).__init__()
 
         # Design variables
         self.add_param('base_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('auxiliary_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('auxiliary_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('base_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
         self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
-        
+        self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
+        self.add_param('tower_base', val=0.0, units='m', desc='tower base diameter')
         
         # Output constraints
         self.add_output('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
         self.add_output('base_auxiliary_spacing', val=0.0, desc='Radius of base and ballast columns relative to spacing')
+        self.add_output('transition_buffer', val=0.0, units='m', desc='Buffer between substructure base and tower base')
 
         
         # Derivatives
@@ -134,7 +98,9 @@ class SemiGeometry(Component):
         R_od_base       = 0.5*params['base_outer_diameter']
         R_od_ballast    = 0.5*params['auxiliary_outer_diameter']
         R_semi          = params['radius_to_auxiliary_column']
+        R_tower         = 0.5*params['tower_base']
         z_nodes_ballast = params['auxiliary_z_nodes']
+        z_nodes_base    = params['base_z_nodes']
         fairlead        = params['fairlead'] # depth of mooring attachment point
         fair_off        = params['fairlead_offset_from_shell']
 
@@ -142,19 +108,24 @@ class SemiGeometry(Component):
         unknowns['base_auxiliary_spacing'] = (R_od_base.max() + R_od_ballast.max()) / R_semi
 
         # Determine radius at mooring connection point (fairlead)
-        unknowns['fairlead_radius'] = R_semi + fair_off + np.interp(-fairlead, z_nodes_ballast, R_od_ballast)
+        if params['number_of_auxiliary_columns'] > 0:
+            unknowns['fairlead_radius'] = R_semi + fair_off + np.interp(-fairlead, z_nodes_ballast, R_od_ballast)
+        else:
+            unknowns['fairlead_radius'] = fair_off + np.interp(-fairlead, z_nodes_base, R_od_base)
+
+        # Constrain spar top to be at least greater than tower base
+        unknowns['transition_buffer'] = R_od_base[-1] - R_tower
 
 
 
-
-class Semi(SubstructureBase):
+class SemiStable(SubstructureBase):
     """
     OpenMDAO Component class for Semisubmersible substructure for floating offshore wind turbines.
     Should be tightly coupled with MAP Mooring class for full system representation.
     """
 
     def __init__(self, nFull):
-        super(Semi,self).__init__(nFull)
+        super(SemiStable,self).__init__(nFull)
 
         self.add_param('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
         
@@ -162,7 +133,7 @@ class Semi(SubstructureBase):
         self.add_param('auxiliary_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
         self.add_param('auxiliary_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
-        self.add_param('number_of_auxiliary_columns', val=3, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
+        self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
         self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
 
         

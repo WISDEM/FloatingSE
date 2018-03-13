@@ -46,7 +46,7 @@ class MapMooring(Component):
         self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines', pass_by_obj=True)
         self.add_param('mooring_type', val='CHAIN', desc='chain, nylon, polyester, fiber, or iwrc', pass_by_obj=True)
         self.add_param('anchor_type', val='SUCTIONPILE', desc='SUCTIONPILE or DRAGEMBEDMENT', pass_by_obj=True)
-        self.add_param('drag_embedment_extra_length', val=0.0, units='m', desc='Extra mooring line length needed to ensure drag embedment anchors only see horizontal forces')
+        self.add_param('drag_embedment_extra_length', val=0.0, units='m', desc='Extra mooring line length so that anchors only see horizontal forces')
         self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
         self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
         self.add_param('gamma', val=0.0, desc='Safety factor for mooring line tension')

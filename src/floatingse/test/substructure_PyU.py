@@ -49,8 +49,8 @@ class TestSubs(unittest.TestCase):
 
         self.params['water_density'] = 1e3
 
-        self.mysemi = subs.Semi(NPTS)
-        self.mysemiG = subs.SemiGeometry(2)
+        self.mysemi = subs.SemiStable(NPTS)
+        self.mysemiG = subs.SubstructureGeometry(2)
 
         
     def testSetGeometry(self):

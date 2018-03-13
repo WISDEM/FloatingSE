@@ -26,11 +26,11 @@ class BulkheadMass(Component):
 
         self.add_output('bulkhead_mass', val=np.zeros(nFull), units='kg', desc='mass of spar bulkheads')
         
-    def list_deriv_vars(self):
-        inputs = ('d_full','t_full')
-        outputs = ('bulkhead_mass',)
-        return inputs, outputs
-    
+        # Derivatives
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
+        
     def solve_nonlinear(self, params, unknowns, resids):
         # Unpack variables
         z_full     = params['z_full'] # at section nodes
@@ -58,7 +58,12 @@ class BulkheadMass(Component):
         #m_bulk[np.logical_not(self.bulk_full)] = 0.0
 
         unknowns['bulkhead_mass'] = m_bulk
-
+    '''
+    def list_deriv_vars(self):
+        inputs = ('d_full','t_full')
+        outputs = ('bulkhead_mass',)
+        return inputs, outputs
+    
     def linearize(self, params, unknowns, resids):
         R_od   = 0.5*params['d_full'] # at section nodes
         twall  = params['t_full'] # at section nodes
@@ -71,6 +76,7 @@ class BulkheadMass(Component):
         J['bulkhead_mass','d_full'] = coeff * np.diag(dVdR*myones) * 0.5 # 0.5 for d->r
         J['bulkhead_mass','t_full'] = coeff * np.diag(dVdt*myones)
         return J
+    '''
     
 
 class StiffenerMass(Component):
@@ -252,7 +258,7 @@ class ColumnProperties(Component):
         self.add_param('shell_mass', val=np.zeros(nFull-1), units='kg', desc='mass of spar shell')
         self.add_param('stiffener_mass', val=np.zeros(nFull-1), units='kg', desc='mass of spar stiffeners')
         self.add_param('bulkhead_mass', val=np.zeros(nFull), units='kg', desc='mass of spar bulkheads')
-        self.add_param('spar_mass_factor', val=0.0, desc='Overall spar mass correction factor')
+        self.add_param('column_mass_factor', val=0.0, desc='Overall spar mass correction factor')
         self.add_param('outfitting_mass_fraction', val=0.0, desc='Mass fraction added for outfitting')
         
         # Cost rates
@@ -329,7 +335,7 @@ class ColumnProperties(Component):
         outfitting_mass in 'unknowns' dictionary set
         """
         # Unpack variables
-        coeff        = params['spar_mass_factor']
+        coeff        = params['column_mass_factor']
         z_nodes      = params['z_full']
         z_section    = params['z_section']
         m_shell      = params['shell_mass']
@@ -635,7 +641,7 @@ class Column(Group):
         
         self.add('col', ColumnProperties(nFull), promotes=['water_density','d_full','t_full','z_full','z_section',
                                                            'permanent_ballast_density','permanent_ballast_height',
-                                                           'bulkhead_mass','stiffener_mass','spar_mass_factor','outfitting_mass_fraction',
+                                                           'bulkhead_mass','stiffener_mass','column_mass_factor','outfitting_mass_fraction',
                                                            'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
                                                            'variable_ballast_interp_mass','variable_ballast_interp_zpts',
                                                            'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater',

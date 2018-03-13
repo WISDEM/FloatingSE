@@ -1,4 +1,4 @@
-from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver
+from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver, DumpRecorder
 import numpy as np
 
 #import matplotlib.pyplot as plt
@@ -108,7 +108,7 @@ class FloatingInstance(object):
         self.params['bulkhead_mass_factor'] = 1.0
         self.params['ring_mass_factor'] = 1.0
         self.params['shell_mass_factor'] = 1.0
-        self.params['spar_mass_factor'] = 1.05
+        self.params['column_mass_factor'] = 1.05
         self.params['outfitting_mass_fraction'] = 0.06
         self.params['ballast_cost_rate'] = 100.0
         self.params['tapered_col_cost_rate'] = 4720.0
@@ -118,10 +118,11 @@ class FloatingInstance(object):
         self.params['upper_attachment_pontoons'] = True
         self.params['lower_ring_pontoons'] = True
         self.params['upper_ring_pontoons'] = True
-        self.params['outer_cross_pontoons'] = False
+        self.params['outer_cross_pontoons'] = True #False
         self.params['pontoon_cost_rate'] = 6.250
 
         # OC4 Tower TODO: CHECK
+        self.params['hub_height'] = 87.6
         self.params['tower_outer_diameter']    = vecOption(6.5, NSECTIONS+1)
         self.params['tower_section_height']    = vecOption(87.6/NSECTIONS, NSECTIONS)
         self.params['tower_wall_thickness']    = vecOption(0.05, NSECTIONS+1)
@@ -130,6 +131,8 @@ class FloatingInstance(object):
         self.params['rna_mass'] = 285598.8
         self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
         self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
+        self.params['rna_force']  = np.array([1284744.196, 0, -2914124.844])
+        self.params['rna_moment'] = np.array([3963732.762, -2275104.794, -346781.682])
         
         # Typically design (start at OC4 semi)
         self.params['radius_to_auxiliary_column'] = 28.867513459481287
@@ -333,6 +336,13 @@ class FloatingInstance(object):
 
         self.add_objective()
 
+        # Recorder
+        #recorder = DumpRecorder('floatingOpt.dat')
+        #recorder.options['record_params'] = True
+        #recorder.options['record_metadata'] = False
+        #recorder.options['record_derivatives'] = False
+        #self.prob.driver.add_recorder(recorder)
+        
         # Note this command must be done after the constraints, design variables, and objective have been set,
         # but before the initial conditions are specified (unless we use the default initial conditions )
         # After setting the intial conditions, running setup() again will revert them back to default values
@@ -384,7 +394,7 @@ class FloatingInstance(object):
         #mybrown = tuple(mybrown.tolist())
         mywater = np.array([95, 158, 160 ]) / 255.0 #(0.0, 0.0, 0.8) [143, 188, 143]
         mywater = tuple(mywater.tolist())
-        alpha   = 0.6
+        alpha   = 0.3
 
         # Waterplane box
         x = y = 50 * np.linspace(-1, 1, npts)
@@ -438,7 +448,7 @@ class FloatingInstance(object):
             mlab.plot3d(truss[k,0,:], truss[k,1,:], truss[k,2,:], color=c, tube_radius=R, figure=fig)
 
             
-    def draw_column(self, fig, centerline, freeboard, h_section, r_nodes, spacingVec=None):
+    def draw_column(self, fig, centerline, freeboard, h_section, r_nodes, spacingVec=None, ckIn=None):
         npts = 20
         
         z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
@@ -453,7 +463,10 @@ class FloatingInstance(object):
             Y = R*np.sin(TH) + centerline[1]
 
             # Draw parameters
-            ck = (0.6,)*3 if np.mod(k,2) == 0 else (0.4,)*3
+            if ckIn is None:
+                ck = (0.6,)*3 if np.mod(k,2) == 0 else (0.4,)*3
+            else:
+                ck = ckIn
             #ax.plot_surface(X, Y, Z, alpha=0.5, color=ck)
             mlab.mesh(X, Y, Z, opacity=0.9, color=ck, figure=fig)
 

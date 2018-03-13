@@ -1,6 +1,6 @@
 from openmdao.api import Group, IndepVarComp
 from column import Column, ColumnGeometry
-from substructure import Semi, SemiGeometry, TowerTransition
+from substructure import SemiStable, SubstructureGeometry
 from floating_loading import FloatingLoading
 from mapMooring import MapMooring
 from towerse.tower import TowerLeanSE
@@ -40,18 +40,16 @@ class FloatingSE(Group):
 
 
         # Run Semi Geometry for interfaces
-        self.add('sg', SemiGeometry(nFull))
-        
-        # Add in transition to tower
-        self.add('tt', TowerTransition(nSection+1, diamFlag=True))
+        self.add('sg', SubstructureGeometry(nFull))
 
         # Next run MapMooring
         self.add('mm', MapMooring(), promotes=['water_density','water_depth'])
         
         # Run main Semi analysis
-        self.add('sm', Semi(nFull), promotes=['water_density','total_cost','total_mass'])
+        self.add('stab', SemiStable(nFull), promotes=['water_density','total_cost','total_mass'])
 
         # Define all input variables from all models
+        
         # SemiGeometry
         self.add('radius_to_auxiliary_column', IndepVarComp('radius_to_auxiliary_column', 0.0), promotes=['*'])
         self.add('number_of_auxiliary_columns',  IndepVarComp('number_of_auxiliary_columns', 0, pass_by_obj=True), promotes=['*'])
@@ -103,7 +101,7 @@ class FloatingSE(Group):
         self.add('bulkhead_mass_factor',       IndepVarComp('bulkhead_mass_factor', 0.0), promotes=['*'])
         self.add('ring_mass_factor',           IndepVarComp('ring_mass_factor', 0.0), promotes=['*'])
         self.add('shell_mass_factor',          IndepVarComp('shell_mass_factor', 0.0), promotes=['*'])
-        self.add('spar_mass_factor',           IndepVarComp('spar_mass_factor', 0.0), promotes=['*'])
+        self.add('column_mass_factor',           IndepVarComp('column_mass_factor', 0.0), promotes=['*'])
         self.add('outfitting_mass_fraction',   IndepVarComp('outfitting_mass_fraction', 0.0), promotes=['*'])
         self.add('ballast_cost_rate',          IndepVarComp('ballast_cost_rate', 0.0), promotes=['*'])
         self.add('tapered_col_cost_rate',      IndepVarComp('tapered_col_cost_rate', 0.0), promotes=['*'])
@@ -117,18 +115,17 @@ class FloatingSE(Group):
         #self.add('G',                          IndepVarComp('G', 0.0), promotes=['*'])
 
         # Connect all input variables from all models
-        self.connect('radius_to_auxiliary_column', ['sg.radius_to_auxiliary_column', 'load.radius_to_auxiliary_column', 'sm.radius_to_auxiliary_column'])
+        self.connect('radius_to_auxiliary_column', ['sg.radius_to_auxiliary_column', 'load.radius_to_auxiliary_column', 'stab.radius_to_auxiliary_column'])
 
-        self.connect('base_freeboard', ['base.freeboard', 'sm.base_freeboard'])
+        self.connect('base_freeboard', ['base.freeboard', 'stab.base_freeboard'])
         self.connect('base_section_height', 'base.section_height')
         self.connect('base_outer_diameter', 'base.diameter')
-        self.connect('base_outer_diameter', 'tt.base_top', src_indices=[nSection])
         self.connect('base_wall_thickness', 'base.wall_thickness')
 
         self.connect('tow.d_full', 'load.windLoads.d')
         self.connect('tow.t_full', 'load.tower_t_full')
         self.connect('tow.z_full', 'load.wind.z')
-        self.connect('tower_outer_diameter','tt.tower_base',src_indices=[0])
+        self.connect('tower_outer_diameter','sg.tower_base',src_indices=[0])
         self.connect('tow.cm.mass','load.tower_mass')
         self.connect('tower_buckling_length','load.tower_buckling_length')
         self.connect('tow.turbine_mass','base.stack_mass_in')
@@ -139,7 +136,7 @@ class FloatingSE(Group):
         self.connect('auxiliary_outer_diameter', 'aux.diameter')
         self.connect('auxiliary_wall_thickness', 'aux.wall_thickness')
 
-        self.connect('fairlead', ['base.fairlead','aux.fairlead','sg.fairlead','mm.fairlead','sm.fairlead','load.fairlead'])
+        self.connect('fairlead', ['base.fairlead','aux.fairlead','sg.fairlead','mm.fairlead','stab.fairlead','load.fairlead'])
         self.connect('fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell')
 
         self.connect('scope_ratio', 'mm.scope_ratio')
@@ -150,7 +147,7 @@ class FloatingSE(Group):
         self.connect('anchor_type', 'mm.anchor_type')
         self.connect('drag_embedment_extra_length', 'mm.drag_embedment_extra_length')
         self.connect('mooring_max_offset', 'mm.max_offset')
-        self.connect('mooring_max_heel', ['mm.max_heel', 'sm.max_heel'])
+        self.connect('mooring_max_heel', ['mm.max_heel', 'stab.max_heel'])
         self.connect('mooring_cost_rate', 'mm.mooring_cost_rate')
         self.connect('gamma_f', 'mm.gamma')
 
@@ -183,18 +180,18 @@ class FloatingSE(Group):
         self.connect('bulkhead_mass_factor', ['base.bulkhead_mass_factor', 'aux.bulkhead_mass_factor'])
         self.connect('ring_mass_factor', ['base.ring_mass_factor', 'aux.ring_mass_factor'])
         self.connect('shell_mass_factor', ['base.cyl_mass.outfitting_factor', 'aux.cyl_mass.outfitting_factor'])
-        self.connect('spar_mass_factor', ['base.spar_mass_factor', 'aux.spar_mass_factor'])
+        self.connect('column_mass_factor', ['base.column_mass_factor', 'aux.column_mass_factor'])
         self.connect('outfitting_mass_fraction', ['base.outfitting_mass_fraction', 'aux.outfitting_mass_fraction'])
         self.connect('ballast_cost_rate', ['base.ballast_cost_rate', 'aux.ballast_cost_rate'])
         self.connect('tapered_col_cost_rate', ['base.tapered_col_cost_rate', 'aux.tapered_col_cost_rate'])
         self.connect('outfitting_cost_rate', ['base.outfitting_cost_rate', 'aux.outfitting_cost_rate'])
 
-        self.connect('number_of_auxiliary_columns', ['load.number_of_auxiliary_columns', 'sm.number_of_auxiliary_columns'])
+        self.connect('number_of_auxiliary_columns', ['sg.number_of_auxiliary_columns', 'load.number_of_auxiliary_columns','stab.number_of_auxiliary_columns'])
 
         # Link outputs from one model to inputs to another
-        self.connect('sg.fairlead_radius', ['mm.fairlead_radius', 'sm.fairlead_radius'])
+        self.connect('sg.fairlead_radius', ['mm.fairlead_radius', 'stab.fairlead_radius'])
 
-        self.connect('base.z_full', 'load.base_z_full')
+        self.connect('base.z_full', ['sg.base_z_nodes', 'load.base_z_full'])
         self.connect('base.d_full', ['load.base_d_full', 'sg.base_outer_diameter'])
         self.connect('base.t_full', 'load.base_t_full')
 
@@ -202,20 +199,20 @@ class FloatingSE(Group):
         self.connect('aux.d_full', ['load.auxiliary_d_full', 'sg.auxiliary_outer_diameter'])
         self.connect('aux.t_full', 'load.auxiliary_t_full')
 
-        self.connect('mm.mooring_mass', 'sm.mooring_mass')
-        self.connect('mm.mooring_effective_mass', 'sm.mooring_effective_mass')
-        self.connect('mm.mooring_cost', 'sm.mooring_cost')
-        self.connect('mm.max_offset_restoring_force', 'sm.mooring_surge_restoring_force')
-        self.connect('mm.max_heel_restoring_force', 'sm.mooring_pitch_restoring_force')
+        self.connect('mm.mooring_mass', 'stab.mooring_mass')
+        self.connect('mm.mooring_effective_mass', 'stab.mooring_effective_mass')
+        self.connect('mm.mooring_cost', 'stab.mooring_cost')
+        self.connect('mm.max_offset_restoring_force', 'stab.mooring_surge_restoring_force')
+        self.connect('mm.max_heel_restoring_force', 'stab.mooring_pitch_restoring_force')
         
         self.connect('base.z_center_of_mass', 'load.base_column_center_of_mass')
         self.connect('base.z_center_of_buoyancy', 'load.base_column_center_of_buoyancy')
-        self.connect('base.Iwater', 'sm.base_column_Iwaterplane')
+        self.connect('base.Iwater', 'stab.base_column_Iwaterplane')
         self.connect('base.displaced_volume', 'load.base_column_displaced_volume')
         self.connect('base.total_mass', 'load.base_column_mass')
-        self.connect('base.total_cost', 'sm.base_column_cost')
-        self.connect('base.variable_ballast_interp_mass', 'sm.water_ballast_mass_vector')
-        self.connect('base.variable_ballast_interp_zpts', 'sm.water_ballast_zpts_vector')
+        self.connect('base.total_cost', 'stab.base_column_cost')
+        self.connect('base.variable_ballast_interp_mass', 'stab.water_ballast_mass_vector')
+        self.connect('base.variable_ballast_interp_zpts', 'stab.water_ballast_zpts_vector')
         self.connect('base.Px', 'load.base_column_Px')
         self.connect('base.Py', 'load.base_column_Py')
         self.connect('base.Pz', 'load.base_column_Pz')
@@ -223,23 +220,23 @@ class FloatingSE(Group):
 
         self.connect('aux.z_center_of_mass', 'load.auxiliary_column_center_of_mass')
         self.connect('aux.z_center_of_buoyancy', 'load.auxiliary_column_center_of_buoyancy')
-        self.connect('aux.Iwater', 'sm.auxiliary_column_Iwaterplane')
-        self.connect('aux.Awater', 'sm.auxiliary_column_Awaterplane')
+        self.connect('aux.Iwater', 'stab.auxiliary_column_Iwaterplane')
+        self.connect('aux.Awater', 'stab.auxiliary_column_Awaterplane')
         self.connect('aux.displaced_volume', 'load.auxiliary_column_displaced_volume')
         self.connect('aux.total_mass', 'load.auxiliary_column_mass')
-        self.connect('aux.total_cost', 'sm.auxiliary_column_cost')
+        self.connect('aux.total_cost', 'stab.auxiliary_column_cost')
         self.connect('aux.Px', 'load.auxiliary_column_Px')
         self.connect('aux.Py', 'load.auxiliary_column_Py')
         self.connect('aux.Pz', 'load.auxiliary_column_Pz')
         self.connect('aux.qdyn', 'load.auxiliary_column_qdyn')
 
-        self.connect('load.structural_mass', 'sm.structural_mass')
-        self.connect('load.center_of_mass', 'sm.structure_center_of_mass')
-        self.connect('load.z_center_of_buoyancy', 'sm.z_center_of_buoyancy')
-        self.connect('load.total_displacement', 'sm.total_displacement')
-        self.connect('load.total_force', 'sm.total_force')
-        self.connect('load.total_moment', 'sm.total_moment')
-        self.connect('load.pontoon_cost', 'sm.pontoon_cost')
+        self.connect('load.structural_mass', 'stab.structural_mass')
+        self.connect('load.center_of_mass', 'stab.structure_center_of_mass')
+        self.connect('load.z_center_of_buoyancy', 'stab.z_center_of_buoyancy')
+        self.connect('load.total_displacement', 'stab.total_displacement')
+        self.connect('load.total_force', 'stab.total_force')
+        self.connect('load.total_moment', 'stab.total_moment')
+        self.connect('load.pontoon_cost', 'stab.pontoon_cost')
 
          # Use complex number finite differences
         typeStr = 'fd'
@@ -252,3 +249,316 @@ class FloatingSE(Group):
         self.deriv_options['step_size'] = stepVal
         self.deriv_options['step_calc'] = stepStr
 
+
+
+def sparExample():
+    # Number of sections to be used in the design
+    nsection = 5
+
+    # Initialize OpenMDAO problem and FloatingSE Group
+    prob = Problem(root=FloatingSE(nsection))
+    prob.setup()
+
+    # Remove all auxiliary columns
+    prob['number_of_auxiliary_columns'] = 0
+    prob['cross_attachment_pontoons']   = False
+    prob['lower_attachment_pontoons']   = False
+    prob['upper_attachment_pontoons']   = False
+    prob['lower_ring_pontoons']         = False
+    prob['upper_ring_pontoons']         = False
+    prob['outer_cross_pontoons']        = False
+
+    # Set environment to that used in OC3 testing campaign
+    prob['water_depth'] = 320.0  # Distance to sea floor [m]
+    prob['hmax']        = 10.8   # Significant wave height [m]
+    prob['T']           = 9.8    # Wave period [s]
+    prob['Uref']        = 11.0   # Wind reference speed [m/s]
+    prob['zref']        = 119.0  # Wind reference height [m]
+    prob['shearExp']    = 0.11   # Shear exponent in wind power law
+    prob['cm']          = 2.0    # Added mass coefficient
+    prob['Uc']          = 0.0    # Mean current speed
+    prob['z0']          = 0.0    # Water line
+    prob['yaw']         = 0.0    # Turbine yaw angle
+    prob['beta']        = 0.0    # Wind beta angle
+    prob['cd_usr']      = np.inf # Compute drag coefficient
+
+    # Wind and water properties
+    prob['base.windLoads.rho'] = 1.226   # Density of air [kg/m^3]
+    prob['base.windLoads.mu']  = 1.78e-5 # Viscosity of air [kg/m/s]
+    prob['water_density']      = 1025.0  # Density of water [kg/m^3]
+    prob['base.waveLoads.mu']  = 1.08e-3 # Viscosity of water [kg/m/s]
+    
+    # Material properties
+    prob['material_density'] = 7850.0          # Steel [kg/m^3]
+    prob['E']                = 200e9           # Young's modulus [N/m^2]
+    prob['G']                = 79.3e9          # Shear modulus [N/m^2]
+    prob['yield_stress']     = 3.45e8          # Elastic yield stress [N/m^2]
+    prob['nu']               = 0.26            # Poisson's ratio
+    prob['permanent_ballast_density'] = 4492.0 # [kg/m^3]
+
+    # Mass and cost scaling factors
+    prob['bulkhead_mass_factor']     = 1.0     # Scaling for unaccounted bulkhead mass
+    prob['ring_mass_factor']         = 1.0     # Scaling for unaccounted stiffener mass
+    prob['shell_mass_factor']        = 1.0     # Scaling for unaccounted shell mass
+    prob['column_mass_factor']       = 1.05    # Scaling for unaccounted column mass
+    prob['outfitting_mass_fraction'] = 0.06    # Fraction of additional outfitting mass for each column
+    prob['ballast_cost_rate']        = 100.0   # Cost factor for ballast mass [$/kg]
+    prob['tapered_col_cost_rate']    = 4720.0  # Cost factor for column mass [$/kg]
+    prob['outfitting_cost_rate']     = 6980.0  # Cost factor for outfitting mass [$/kg]
+    prob['mooring_cost_rate']        = 1.1     # Cost factor for mooring mass [$/kg]
+    
+    # Safety factors
+    prob['gamma_f'] = 1.35 # Safety factor on loads
+    prob['gamma_b'] = 1.1  # Safety factor on buckling
+    prob['gamma_m'] = 1.1  # Safety factor on materials
+    prob['gamma_n'] = 1.0  # Safety factor on consequence of failure
+    prob['gamma_fatigue'] = 1.755 # Not used
+
+    # Column geometry
+    prob['base_permanent_ballast_height'] = 10.0 # Height above keel for permanent ballast [m]
+    prob['base_freeboard']                = 10.0 # Height extension above waterline [m]
+    prob['base_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])  # Length of each section [m]
+    prob['base_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
+    prob['base_wall_thickness'] = 0.05 * np.ones(nsection+1)               # Shell thickness at each section node (linear lofting between) [m]
+    prob['base_bulkhead_nodes'] = [True, True, False, False, False, False] # Locations of internal bulkheads at section interfaces
+    
+    # Column ring stiffener parameters
+    prob['base_stiffener_web_height']       = 0.10 * np.ones(nsection) # (by section) [m]
+    prob['base_stiffener_web_thickness']    = 0.04 * np.ones(nsection) # (by section) [m]
+    prob['base_stiffener_flange_width']     = 0.10 * np.ones(nsection) # (by section) [m]
+    prob['base_stiffener_flange_thickness'] = 0.02 * np.ones(nsection) # (by section) [m]
+    prob['base_stiffener_spacing']          = 0.40 * np.ones(nsection) # (by section) [m]
+    
+    # Mooring parameters
+    prob['number_of_mooring_lines']    = 3             # Evenly spaced around structure
+    prob['mooring_type']               = 'chain'       # Options are chain, nylon, polyester, fiber, or iwrc
+    prob['anchor_type']                = 'suctionpile' # Options are SUCTIONPILE or DRAGEMBEDMENT
+    prob['mooring_diameter']           = 0.09          # Diameter of mooring line/chain [m]
+    prob['fairlead']                   = 70.0          # Distance below waterline for attachment [m]
+    prob['fairlead_offset_from_shell'] = 0.5           # Offset from shell surface for mooring attachment [m]
+    prob['scope_ratio']                = 3.6088        # Ratio of line length to distance to sea floor (from fairlead)
+    prob['anchor_radius']              = 853.87        # Distance from centerline to sea floor landing [m]
+    prob['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
+
+    # Porperties of turbine tower
+    prob['hub_height']              = 87.6                              # Length from tower base to top (not including freeboard) [m]
+    prob['tower_section_height']    = 87.6/nsection * np.ones(nsection) # Length of each tower section [m]
+    prob['tower_outer_diameter']    = 6.50 * np.ones(nsection+1)        # Diameter at each tower section node (linear lofting between) [m]
+    prob['tower_wall_thickness']    = 0.05 * np.ones(nsection+1)        # Diameter at each tower section node (linear lofting between) [m]
+    prob['tower_buckling_length']   = 30.0                              # Tower buckling reinforcement spacing [m]
+    prob['tower_outfitting_factor'] = 1.07                              # Scaling for unaccounted tower mass in outfitting
+
+    # Properties of rotor-nacelle-assembly (RNA)
+    prob['rna_mass']   = 285598.8 # Mass [kg]
+    prob['rna_I']      = 1e5*np.array([1149.307, 220.354, 187.597, 0, 5.037, 0]) # Moment of intertia (xx,yy,zz,xy,xz,yz) [kg/m^2]
+    prob['rna_cg']     = np.array([-1.132, 0, 0.509])                       # Offset of RNA center of mass from tower top (x,y,z) [m]
+    prob['rna_force']  = np.array([1284744.196, 0, -2914124.844])           # Net force acting on RNA (x,y,z) [N]
+    prob['rna_moment'] = np.array([3963732.762, -2275104.794, -346781.682]) # Net moment acting on RNA (x,y,z) [N*m]
+    
+    # Mooring constraints
+    prob['mooring_max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
+    prob['mooring_max_heel']   = 10.0 # Max heel (pitching) angle [deg]
+
+    # Design constraints
+    prob['min_taper_ratio'] = 0.4                # For manufacturability of rolling steel
+    prob['min_diameter_thickness_ratio'] = 120.0 # For weld-ability
+
+    # API 2U flag
+    prob['loading'] = 'hydrostatic'
+
+    # Other variables to avoid divide by zeros, even though it won't matter
+    prob['radius_to_auxiliary_column'] = 15.0
+    prob['auxiliary_section_height'] = 1.0 * np.ones(nsection)
+    prob['auxiliary_outer_diameter'] = 5.0 * np.ones(nsection+1)
+    prob['auxiliary_wall_thickness'] = 0.1 * np.ones(nsection+1)
+    prob['auxiliary_permanent_ballast_height'] = 0.1
+    prob['auxiliary_stiffener_web_height'] = 0.1 * np.ones(nsection)
+    prob['auxiliary_stiffener_web_thickness'] =  0.1 * np.ones(nsection)
+    prob['auxiliary_stiffener_flange_width'] =  0.1 * np.ones(nsection)
+    prob['auxiliary_stiffener_flange_thickness'] =  0.1 * np.ones(nsection)
+    prob['auxiliary_stiffener_spacing'] =  0.1 * np.ones(nsection)
+    prob['pontoon_outer_diameter'] = 1.0
+    prob['pontoon_wall_thickness'] = 0.1
+    
+    prob.run()
+
+    '''
+    f = open('deriv_spar.dat','w')
+    out = prob.check_total_derivatives(f)
+    #out = prob.check_partial_derivatives(f, compact_print=True)
+    f.close()
+    tol = 1e-4
+    for comp in out.keys():
+        for k in out[comp].keys():
+            if ( (out[comp][k]['rel error'][0] > tol) and (out[comp][k]['abs error'][0] > tol) ):
+                print k
+    '''
+
+
+
+
+
+def semiExample():
+    # Number of sections to be used in the design
+    nsection = 5
+
+    # Initialize OpenMDAO problem and FloatingSE Group
+    prob = Problem(root=FloatingSE(nsection))
+    prob.setup()
+
+    # Add in auxiliary columns and truss elements
+    prob['number_of_auxiliary_columns'] = 3
+    prob['cross_attachment_pontoons']   = True # Lower-Upper base-to-auxiliary connecting cross braces
+    prob['lower_attachment_pontoons']   = True # Lower base-to-auxiliary connecting pontoons
+    prob['upper_attachment_pontoons']   = True # Upper base-to-auxiliary connecting pontoons
+    prob['lower_ring_pontoons']         = True # Lower ring of pontoons connecting auxiliary columns
+    prob['upper_ring_pontoons']         = True # Upper ring of pontoons connecting auxiliary columns
+    prob['outer_cross_pontoons']        = True # Auxiliary ring connecting V-cross braces
+
+    # Set environment to that used in OC4 testing campaign
+    prob['water_depth'] = 200.0  # Distance to sea floor [m]
+    prob['hmax']        = 10.8   # Significant wave height [m]
+    prob['T']           = 9.8    # Wave period [s]
+    prob['Uref']        = 11.0   # Wind reference speed [m/s]
+    prob['zref']        = 119.0  # Wind reference height [m]
+    prob['shearExp']    = 0.11   # Shear exponent in wind power law
+    prob['cm']          = 2.0    # Added mass coefficient
+    prob['Uc']          = 0.0    # Mean current speed
+    prob['z0']          = 0.0    # Water line
+    prob['yaw']         = 0.0    # Turbine yaw angle
+    prob['beta']        = 0.0    # Wind beta angle
+    prob['cd_usr']      = np.inf # Compute drag coefficient
+
+    # Wind and water properties
+    prob['base.windLoads.rho'] = 1.226   # Density of air [kg/m^3]
+    prob['base.windLoads.mu']  = 1.78e-5 # Viscosity of air [kg/m/s]
+    prob['water_density']      = 1025.0  # Density of water [kg/m^3]
+    prob['base.waveLoads.mu']  = 1.08e-3 # Viscosity of water [kg/m/s]
+    
+    # Material properties
+    prob['material_density'] = 7850.0          # Steel [kg/m^3]
+    prob['E']                = 200e9           # Young's modulus [N/m^2]
+    prob['G']                = 79.3e9          # Shear modulus [N/m^2]
+    prob['yield_stress']     = 3.45e8          # Elastic yield stress [N/m^2]
+    prob['nu']               = 0.26            # Poisson's ratio
+    prob['permanent_ballast_density'] = 4492.0 # [kg/m^3]
+
+    # Mass and cost scaling factors
+    prob['bulkhead_mass_factor']     = 1.0     # Scaling for unaccounted bulkhead mass
+    prob['ring_mass_factor']         = 1.0     # Scaling for unaccounted stiffener mass
+    prob['shell_mass_factor']        = 1.0     # Scaling for unaccounted shell mass
+    prob['column_mass_factor']       = 1.05    # Scaling for unaccounted column mass
+    prob['outfitting_mass_fraction'] = 0.06    # Fraction of additional outfitting mass for each column
+    prob['ballast_cost_rate']        = 100.0   # Cost factor for ballast mass [$/kg]
+    prob['tapered_col_cost_rate']    = 4720.0  # Cost factor for column mass [$/kg]
+    prob['outfitting_cost_rate']     = 6980.0  # Cost factor for outfitting mass [$/kg]
+    prob['mooring_cost_rate']        = 1.1     # Cost factor for mooring mass [$/kg]
+    prob['pontoon_cost_rate']        = 6.250   # Cost factor for pontoons [$/kg]
+    
+    # Safety factors
+    prob['gamma_f'] = 1.35 # Safety factor on loads
+    prob['gamma_b'] = 1.1  # Safety factor on buckling
+    prob['gamma_m'] = 1.1  # Safety factor on materials
+    prob['gamma_n'] = 1.0  # Safety factor on consequence of failure
+    prob['gamma_fatigue'] = 1.755 # Not used
+
+    # Column geometry
+    prob['base_permanent_ballast_height'] = 10.0 # Height above keel for permanent ballast [m]
+    prob['base_freeboard']                = 10.0 # Height extension above waterline [m]
+    prob['base_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])  # Length of each section [m]
+    prob['base_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
+    prob['base_wall_thickness'] = 0.05 * np.ones(nsection+1)               # Shell thickness at each section node (linear lofting between) [m]
+    prob['base_bulkhead_nodes'] = [True, True, False, False, False, False] # Locations of internal bulkheads at section interfaces
+
+    # Auxiliary column geometry
+    prob['radius_to_auxiliary_column']         = 33.333 * np.cos(np.pi/6) # Centerline of base column to centerline of auxiliary column [m]
+    prob['auxiliary_permanent_ballast_height'] = 0.1                      # Height above keel for permanent ballast [m]
+    prob['auxiliary_freeboard']                = 12.0                     # Height extension above waterline [m]
+    prob['auxiliary_section_height']           = np.array([6.0, 0.1, 7.9, 8.0, 10]) # Length of each section [m]
+    prob['auxiliary_outer_diameter']           = np.array([24, 24, 12, 12, 12, 12]) # Diameter at each section node (linear lofting between) [m]
+    prob['auxiliary_wall_thickness']           = 0.06 * np.ones(nsection+1)         # Shell thickness at each section node (linear lofting between) [m]
+
+    # Column ring stiffener parameters
+    prob['base_stiffener_web_height']       = 0.10 * np.ones(nsection) # (by section) [m]
+    prob['base_stiffener_web_thickness']    = 0.04 * np.ones(nsection) # (by section) [m]
+    prob['base_stiffener_flange_width']     = 0.10 * np.ones(nsection) # (by section) [m]
+    prob['base_stiffener_flange_thickness'] = 0.02 * np.ones(nsection) # (by section) [m]
+    prob['base_stiffener_spacing']          = 0.40 * np.ones(nsection) # (by section) [m]
+
+    # Auxiliary column ring stiffener parameters
+    prob['auxiliary_stiffener_web_height']       = 0.10 * np.ones(nsection) # (by section) [m]
+    prob['auxiliary_stiffener_web_thickness']    = 0.04 * np.ones(nsection) # (by section) [m]
+    prob['auxiliary_stiffener_flange_width']     = 0.01 * np.ones(nsection) # (by section) [m]
+    prob['auxiliary_stiffener_flange_thickness'] = 0.02 * np.ones(nsection) # (by section) [m]
+    prob['auxiliary_stiffener_spacing']          = 0.40 * np.ones(nsection) # (by section) [m]
+
+    # Pontoon parameters
+    prob['pontoon_outer_diameter']    = 3.2    # Diameter of all pontoon/truss elements [m]
+    prob['pontoon_wall_thickness']    = 0.0175 # Thickness of all pontoon/truss elements [m]
+    prob['base_pontoon_attach_lower'] = -20.0  # Lower z-coordinate on base where truss attaches [m]
+    prob['base_pontoon_attach_upper'] = 10.0   # Upper z-coordinate on base where truss attaches [m]
+    
+    # Mooring parameters
+    prob['number_of_mooring_lines']    = 3             # Evenly spaced around structure
+    prob['mooring_type']               = 'chain'       # Options are chain, nylon, polyester, fiber, or iwrc
+    prob['anchor_type']                = 'suctionpile' # Options are SUCTIONPILE or DRAGEMBEDMENT
+    prob['mooring_diameter']           = 0.0766        # Diameter of mooring line/chain [m]
+    prob['fairlead']                   = 14.0          # Distance below waterline for attachment [m]
+    prob['fairlead_offset_from_shell'] = 0.5           # Offset from shell surface for mooring attachment [m]
+    prob['scope_ratio']                = 4.4919        # Ratio of line length to distance to sea floor (from fairlead)
+    prob['anchor_radius']              = 837.6         # Distance from centerline to sea floor landing [m]
+    prob['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
+
+    # Porperties of turbine tower
+    prob['hub_height']              = 87.6                              # Length from tower base to top (not including freeboard) [m]
+    prob['tower_section_height']    = 87.6/nsection * np.ones(nsection) # Length of each tower section [m]
+    prob['tower_outer_diameter']    = 6.50 * np.ones(nsection+1)        # Diameter at each tower section node (linear lofting between) [m]
+    prob['tower_wall_thickness']    = 0.05 * np.ones(nsection+1)        # Diameter at each tower section node (linear lofting between) [m]
+    prob['tower_buckling_length']   = 30.0                              # Tower buckling reinforcement spacing [m]
+    prob['tower_outfitting_factor'] = 1.07                              # Scaling for unaccounted tower mass in outfitting
+
+    # Properties of rotor-nacelle-assembly (RNA)
+    prob['rna_mass']   = 285598.8 # Mass [kg]
+    prob['rna_I']      = 1e5*np.array([1149.307, 220.354, 187.597, 0, 5.037, 0]) # Moment of intertia (xx,yy,zz,xy,xz,yz) [kg/m^2]
+    prob['rna_cg']     = np.array([-1.132, 0, 0.509])                       # Offset of RNA center of mass from tower top (x,y,z) [m]
+    prob['rna_force']  = np.array([1284744.196, 0, -2914124.844])           # Net force acting on RNA (x,y,z) [N]
+    prob['rna_moment'] = np.array([3963732.762, -2275104.794, -346781.682]) # Net moment acting on RNA (x,y,z) [N*m]
+    
+    # Mooring constraints
+    prob['mooring_max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
+    prob['mooring_max_heel']   = 10.0 # Max heel (pitching) angle [deg]
+
+    # Design constraints
+    prob['min_taper_ratio'] = 0.4                # For manufacturability of rolling steel
+    prob['min_diameter_thickness_ratio'] = 120.0 # For weld-ability
+    prob['connection_ratio_max']      = 0.25 # For welding pontoons to columns
+
+    # API 2U flag
+    prob['loading'] = 'hydrostatic'
+    
+    prob.run()
+    
+    '''
+    f = open('deriv_semi.dat','w')
+    out = prob.check_total_derivatives(f)
+    #out = prob.check_partial_derivatives(f, compact_print=True)
+    f.close()
+    tol = 1e-4
+    for comp in out.keys():
+        for k in out[comp].keys():
+            if ( (out[comp][k]['rel error'][0] > tol) and (out[comp][k]['abs error'][0] > tol) ):
+                print k
+    '''
+
+
+
+    
+if __name__ == "__main__":
+    from openmdao.api import Problem
+    import sys
+
+    if sys.argv[1].lower() in ['spar','column','col','oc3']:
+        sparExample()
+    else:
+        semiExample()
+        

@@ -43,7 +43,7 @@ class FloatingTurbine(Group):
                                                        'auxiliary_stiffener_web_thickness','auxiliary_stiffener_flange_width',
                                                        'auxiliary_stiffener_flange_thickness','auxiliary_stiffener_spacing','auxiliary_bulkhead_nodes',
                                                        'auxiliary_permanent_ballast_height','bulkhead_mass_factor','ring_mass_factor','shell_mass_factor',
-                                                       'spar_mass_factor','outfitting_mass_fraction','ballast_cost_rate','tapered_col_cost_rate',
+                                                       'column_mass_factor','outfitting_mass_fraction','ballast_cost_rate','tapered_col_cost_rate',
                                                        'outfitting_cost_rate','number_of_auxiliary_columns','pontoon_outer_diameter',
                                                        'pontoon_wall_thickness','cross_attachment_pontoons','lower_attachment_pontoons',
                                                        'upper_attachment_pontoons','lower_ring_pontoons','upper_ring_pontoons','outer_cross_pontoons',
@@ -77,25 +77,29 @@ class FloatingTurbine(Group):
         #self.add('compute_shear',                  IndepVarComp('compute_shear', True, pass_by_obj=True), promotes=['*'])
         #self.add('shift_value',                    IndepVarComp('shift_value', 0.0), promotes=['*'])
         #self.add('frame3dd_convergence_tolerance', IndepVarComp('frame3dd_convergence_tolerance', 1e-9), promotes=['*'])
-        
+
+        # TODO: Multiple load cases
         # Environment
         self.add('air_density',                IndepVarComp('air_density', 0.0), promotes=['*'])
         self.add('air_viscosity',              IndepVarComp('air_viscosity', 0.0), promotes=['*'])
-        self.add('water_density',              IndepVarComp('water_density', 0.0), promotes=['*'])
-        self.add('water_viscosity',            IndepVarComp('water_viscosity', 0.0), promotes=['*'])
-        self.add('wave_height',                IndepVarComp('wave_height', 0.0), promotes=['*'])
-        self.add('wave_period',                IndepVarComp('wave_period', 0.0), promotes=['*'])
         self.add('wind_reference_speed',       IndepVarComp('wind_reference_speed', 0.0), promotes=['*'])
         self.add('wind_reference_height',      IndepVarComp('wind_reference_height', 0.0), promotes=['*'])
         self.add('shearExp',                      IndepVarComp('shearExp', 0.0), promotes=['*'])
         self.add('wind_bottom_height',         IndepVarComp('wind_bottom_height', 0.0), promotes=['*'])
         self.add('wind_beta',                  IndepVarComp('wind_beta', 0.0), promotes=['*'])
-        #self.add('wave_beta',                  IndepVarComp('wave_beta', 0.0), promotes=['*'])
         self.add('cd_usr',                     IndepVarComp('cd_usr', np.inf), promotes=['*'])
+
+        # Environment
+        self.add('water_depth',                IndepVarComp('water_depth', 0.0), promotes=['*'])
+        self.add('water_density',              IndepVarComp('water_density', 0.0), promotes=['*'])
+        self.add('water_viscosity',            IndepVarComp('water_viscosity', 0.0), promotes=['*'])
+        self.add('wave_height',                IndepVarComp('wave_height', 0.0), promotes=['*'])
+        self.add('wave_period',                IndepVarComp('wave_period', 0.0), promotes=['*'])
         self.add('mean_current_speed',          IndepVarComp('mean_current_speed', 0.0), promotes=['*'])
+        #self.add('wave_beta',                  IndepVarComp('wave_beta', 0.0), promotes=['*'])
         #self.add('wave_velocity_z0',           IndepVarComp('wave_velocity_z0', 0.0), promotes=['*'])
         #self.add('wave_acceleration_z0',       IndepVarComp('wave_acceleration_z0', 0.0), promotes=['*'])
-
+        
         # Design standards
         self.add('safety_factor_frequency',    IndepVarComp('safety_factor_frequency', 0.0), promotes=['*'])
         self.add('safety_factor_stress',       IndepVarComp('safety_factor_stress', 0.0), promotes=['*'])
@@ -115,9 +119,6 @@ class FloatingTurbine(Group):
         self.add('downwind',                   IndepVarComp('downwind', False, pass_by_obj=True), promotes=['*'])
         self.add('rna_weightM',                IndepVarComp('rna_weightM', True, pass_by_obj=True), promotes=['*'])
         
-        # SemiGeometry
-        self.add('water_depth',                IndepVarComp('water_depth', 0.0), promotes=['*'])
-
         # Column
         self.add('morison_mass_coefficient',   IndepVarComp('morison_mass_coefficient', 0.0), promotes=['*'])
         self.add('material_density',           IndepVarComp('material_density', 0.0), promotes=['*'])

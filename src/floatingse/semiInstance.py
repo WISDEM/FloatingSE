@@ -81,7 +81,7 @@ class SemiInstance(FloatingInstance):
             ['tow.weldability', None, 0.0, None],
             
             # Ensure that the spar top matches the tower base
-            ['tt.transition_buffer', -1.0, 1.0, None],
+            ['sg.transition_buffer', -1.0, 1.0, None],
             
             # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
             ['mm.axial_unity', 0.0, 1.0, None],
@@ -122,20 +122,20 @@ class SemiInstance(FloatingInstance):
             ['load.tower_global_buckling', None, 1.0, None],
             
             # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
-            ['sm.variable_ballast_height_ratio', 0.0, 1.0, None],
-            ['sm.variable_ballast_mass', 0.0, None, None],
+            ['stab.variable_ballast_height_ratio', 0.0, 1.0, None],
+            ['stab.variable_ballast_mass', 0.0, None, None],
             
             # Metacentric height should be positive for static stability
-            ['sm.metacentric_height', 0.1, None, None],
+            ['stab.metacentric_height', 0.1, None, None],
             
             # Center of buoyancy should be above CG (difference should be positive, None],
-            ['sm.static_stability', 0.1, None, None],
+            ['stab.static_stability', 0.1, None, None],
             
             # Surge restoring force should be greater than wave-wind forces (ratio < 1, None],
-            ['sm.offset_force_ratio', None, 1.0, None],
+            ['stab.offset_force_ratio', None, 1.0, None],
             
             # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
-            ['sm.heel_moment_ratio', None, 1.0, None]]
+            ['stab.heel_moment_ratio', None, 1.0, None]]
         return conlist
 
 
@@ -160,7 +160,7 @@ class SemiInstance(FloatingInstance):
         self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                            0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
 
-        R_semi    = self.params['radius_to_auxiliary_column']
+        R_semi  = self.params['radius_to_auxiliary_column']
         ncolumn = self.params['number_of_auxiliary_columns']
         angles = np.linspace(0, 2*np.pi, ncolumn+1)
         x = R_semi * np.cos( angles )
@@ -168,6 +168,10 @@ class SemiInstance(FloatingInstance):
         for k in xrange(ncolumn):
             self.draw_column(fig, [x[k], y[k]], self.params['auxiliary_freeboard'], self.params['auxiliary_section_height'],
                                0.5*self.params['auxiliary_outer_diameter'], self.params['auxiliary_stiffener_spacing'])
+
+        self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard']+self.params['hub_height'], self.params['tower_section_height'],
+                         0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)
+
             
         self.set_figure(fig, fname)
 
@@ -180,12 +184,12 @@ class SemiInstance(FloatingInstance):
 def example_semi():
     mysemi = SemiInstance()
     mysemi.evaluate('psqp')
-    #mysemi.visualize('semi-initial.jpg')
+    mysemi.visualize('semi-initial.jpg')
     #mysemi.run('slsqp')
     return mysemi
 
 def psqp_optimal():
-    #OrderedDict([('sm.total_cost', array([0.65987536]))])
+    #OrderedDict([('stab.total_cost', array([0.65987536]))])
     mysemi = SemiInstance()
 
     mysemi.evaluate('psqp')

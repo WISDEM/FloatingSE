@@ -132,7 +132,7 @@ class TestProperties(unittest.TestCase):
         self.params['bulkhead_mass'] = 10.0*myones
         self.params['shell_mass'] = 500.0*np.ones(NPTS-1)
         self.params['stiffener_mass'] = 100.0*np.ones(NPTS-1)
-        self.params['spar_mass_factor'] = 1.1
+        self.params['column_mass_factor'] = 1.1
         self.params['outfitting_mass_fraction'] = 0.05
 
         self.params['permanent_ballast_height'] = 1.0
