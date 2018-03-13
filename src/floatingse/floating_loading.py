@@ -244,6 +244,13 @@ class FloatingFrame(Component):
         xnode = np.zeros(znode.shape)
         ynode = np.zeros(znode.shape)
 
+        towerBeginID = baseEndID
+        myz = np.zeros(len(z_tower)-1)
+        xnode = np.append(xnode, myz)
+        ynode = np.append(ynode, myz)
+        znode = np.append(znode, z_tower[1:] + freeboard )
+        towerEndID = xnode.size
+        
         # Get x and y positions of surrounding ballast columns
         ballastLowerID = []
         ballastUpperID = []
@@ -278,13 +285,6 @@ class FloatingFrame(Component):
             #ynode = np.append(ynode, crossy)
             #znode = np.append(znode, z_ballast[-1]*np.ones(ncolumn))
 
-        towerBeginID = xnode.size + 1
-        myz = np.zeros(z_tower.shape)
-        xnode = np.append(xnode, myz)
-        ynode = np.append(ynode, myz)
-        znode = np.append(znode, z_tower + freeboard + eps )
-        towerEndID = xnode.size
-        
         # Create Node Data object
         nnode = 1 + np.arange(xnode.size)
         rnode = np.zeros(xnode.shape)
@@ -296,7 +296,7 @@ class FloatingFrame(Component):
         # Free=0, Rigid=1
         rid = np.array( fairleadID )
         Rx = Ry = Rz = Rxx = Ryy = Rzz = np.ones(rid.shape)
-        if ncolumn > 0: # Need a few more reactions
+        if ncolumn > 0:
             Rxx[1:] = Ryy[1:] = Rzz[1:] = 0.0
         # First approach
         # Pinned windward column lower node (first ballastLowerID)
@@ -403,21 +403,6 @@ class FloatingFrame(Component):
         roll = np.append(roll, np.zeros(myones.shape) )
         dens = np.append(dens, mydens )
 
-        # Connect tower
-        mytube  = Tube(2.0*R_od_tower, t_wall_tower)
-        N1   = np.append(N1  , baseEndID    )
-        N2   = np.append(N2  , towerBeginID )
-        Ax   = np.append(Ax  , mytube.Area[0] )
-        As   = np.append(As  , mytube.Asx[0] )
-        Jx   = np.append(Jx  , mytube.J0[0] )
-        I    = np.append(I   , mytube.Jxx[0] )
-        S    = np.append(S   , mytube.S[0] )
-        C    = np.append(C   , mytube.C[0] )
-        modE = np.append(modE, E )
-        modG = np.append(modG, G )
-        roll = np.append(roll, 0.0 )
-        dens = np.append(dens, eps )
-
         # Rest of tower
         towerEID = N1.size + 1
         myrange = np.arange(R_od_tower.size)
@@ -462,11 +447,19 @@ class FloatingFrame(Component):
         nelem    = 1 + np.arange(N1.size)
         elements = frame3dd.ElementData(nelem, N1, N2, Ax, As, As, Jx, I, I, modE, modG, roll, dens)
 
+        # Store data for plotting, also handy for operations below
+        plotMat = np.zeros((nelem.size, 3, 2))
+        plotMat[:,:,0] = np.c_[xnode[N1-1], ynode[N1-1], znode[N1-1]]
+        plotMat[:,:,1] = np.c_[xnode[N2-1], ynode[N2-1], znode[N2-1]]
         
+        # Compute length and center of gravity for each element for use below
+        elemL   = np.sqrt( np.sum( np.diff(plotMat, axis=2)**2.0, axis=1) ).flatten()
+        elemCoG = 0.5*np.sum(plotMat, axis=2)
+
         # ---Options object---
         shear = True               # 1: include shear deformation
-        geom = False                # 1: include geometric stiffness
-        dx = 1.0              # x-axis increment for internal forces
+        geom = False               # 1: include geometric stiffness
+        dx = 0.5*elemL.min()       # x-axis increment for internal forces
         other = frame3dd.Options(shear, geom, dx)
 
         # Initialize frame3dd object
@@ -485,15 +478,6 @@ class FloatingFrame(Component):
         rhoy = np.array([ cg_rna[1] ])
         rhoz = np.array([ cg_rna[2] ])
         myframe.changeExtraNodeMass(inode, m_extra, Ixx, Iyy, Izz, Ixy, Ixz, Iyz, rhox, rhoy, rhoz, True)
-
-        # Store data for plotting, also handy for operations below
-        plotMat = np.zeros((nelem.size, 3, 2))
-        plotMat[:,:,0] = np.c_[xnode[N1-1], ynode[N1-1], znode[N1-1]]
-        plotMat[:,:,1] = np.c_[xnode[N2-1], ynode[N2-1], znode[N2-1]]
-        
-        # Compute length and center of gravity for each element for use below
-        elemL   = np.sqrt( np.sum( np.diff(plotMat, axis=2)**2.0, axis=1) ).flatten()
-        elemCoG = 0.5*np.sum(plotMat, axis=2)
 
         # ---LOAD CASES---
         # Extreme loading
@@ -624,16 +608,17 @@ class FloatingFrame(Component):
 
 
         # ---DYNAMIC ANALYSIS---
-        nM = 2              # number of desired dynamic modes of vibration
-        Mmethod = 2         # 1: subspace Jacobi     2: Stodola
+        nM = 6              # number of desired dynamic modes of vibration
+        Mmethod = 1         # 1: subspace Jacobi     2: Stodola
         lump = 0            # 0: consistent mass ... 1: lumped mass matrix
-        tol = 1e-4          # mode shape tolerance
+        tol = 1e-7          # mode shape tolerance
         shift = 0.0         # shift value ... for unrestrained structures
         
         myframe.enableDynamics(nM, Mmethod, lump, tol, shift)
 
 
         # ---RUN ANALYSIS---
+        #myframe.write('test.3dd') # For debugging
         displacements, forces, reactions, internalForces, mass, modal = myframe.run()
         
         # --OUTPUTS--
@@ -655,7 +640,7 @@ class FloatingFrame(Component):
             m_pontoon = m_total.sum() #mass.struct_mass
             cg_pontoon = np.sum( m_total[:,np.newaxis] * elemCoG[:ind,:], axis=0 ) / m_total.sum()
             unknowns['pontoon_mass'] = m_pontoon
-            unknowns['pontoon_cost'] = coeff * m_total.sum()
+            unknowns['pontoon_cost'] = coeff * m_pontoon
             unknowns['pontoon_center_of_mass'] = cg_pontoon[-1]
         else:
             V_pontoon = z_cb = m_pontoon = 0.0
