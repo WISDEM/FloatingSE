@@ -459,7 +459,7 @@ class FloatingFrame(Component):
         # ---Options object---
         shear = True               # 1: include shear deformation
         geom = False               # 1: include geometric stiffness
-        dx = 0.5*elemL.min()       # x-axis increment for internal forces
+        dx = -1                    # x-axis increment for internal forces, -1 to skip
         other = frame3dd.Options(shear, geom, dx)
 
         # Initialize frame3dd object
@@ -608,8 +608,8 @@ class FloatingFrame(Component):
 
 
         # ---DYNAMIC ANALYSIS---
-        nM = 6              # number of desired dynamic modes of vibration
-        Mmethod = 1         # 1: subspace Jacobi     2: Stodola
+        nM = 3              # number of desired dynamic modes of vibration
+        Mmethod = 2         # 1: subspace Jacobi     2: Stodola
         lump = 0            # 0: consistent mass ... 1: lumped mass matrix
         tol = 1e-7          # mode shape tolerance
         shift = 0.0         # shift value ... for unrestrained structures
@@ -680,16 +680,18 @@ class FloatingFrame(Component):
         unknowns['total_force'] = -1.0 * np.array([reactions.Fx.sum(), reactions.Fy.sum(), reactions.Fz.sum()])
         unknowns['total_moment'] = -1.0 * np.array([reactions.Mxx.sum(), reactions.Myy.sum(), reactions.Mzz.sum()])
 
+        # shear and bending (convert from local to global c.s.)
+        Nx = forces.Nx[iCase, 1::2]
+        Vy = forces.Vy[iCase, 1::2]
+        Vz = forces.Vz[iCase, 1::2]
+
+        Tx = forces.Txx[iCase, 1::2]
+        My = forces.Myy[iCase, 1::2]
+        Mz = forces.Mzz[iCase, 1::2]
+
         # Compute axial and shear stresses in elements given Frame3DD outputs and some geomtry data
         # Method comes from Section 7.14 of Frame3DD documentation
         # http://svn.code.sourceforge.net/p/frame3dd/code/trunk/doc/Frame3DD-manual.html#structuralmodeling
-        Nx = np.array( [m.Nx[iCase, 0] for m in internalForces] )
-        Vy = np.array( [m.Vy[iCase, 0] for m in internalForces] )
-        Vz = np.array( [m.Vz[iCase, 0] for m in internalForces] )
-        Tx = np.array( [m.Tx[iCase, 0] for m in internalForces] )
-        My = np.array( [m.My[iCase, 0] for m in internalForces] )
-        Mz = np.array( [m.Mz[iCase, 0] for m in internalForces] )
-            
         M = np.sqrt(My*My + Mz*Mz)
         sigma_ax = Nx/Ax - M/S
         sigma_sh = np.sqrt(Vy*Vy + Vz*Vz)/As + Tx/C
