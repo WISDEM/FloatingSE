@@ -3,8 +3,8 @@
 % ---------------
 % PREAMBLE
 % ---------------
-%\documentclass[tagged]{NRELreport}
-\documentclass[tagged,10pt]{NRELarticle}
+\documentclass[tagged]{NRELreport}
+%\documentclass[tagged,10pt]{NRELarticle}
 \usepackage{hyperref}
 \usepackage{tabularx}
 \usepackage{units}
@@ -22,6 +22,7 @@
 % CUSTOMIZATIONS
 % -------------------------------------
 
+\newcommand{\mytt}[1]{\texttt{\scriptsize #1}}
 \newcommand{\mbb}[1]{\mathbb{#1}}
 \newcommand{\mbf}[1]{\mathbf{#1}}
 \newcommand{\sbf}[1]{\boldsymbol{#1}}
@@ -36,7 +37,7 @@
 % -------------------------------------
 % DOCUMENT STARTS HERE
 % -------------------------------------
-\lstset{language=Python,columns=fullflexible,keepspaces=true,breaklines=true,basicstyle=\footnotesize\ttfamily,mathescape=true}
+\lstset{language=Python,columns=fullflexible,keepspaces=true,breaklines=true,basicstyle=\scriptsize\ttfamily,mathescape=true,aboveskip=-6pt,belowskip=0pt}
 \setcounter{tocdepth}{2}
 \begin{document}
 
@@ -46,8 +47,8 @@
 
 %\mainmatter
 \tableofcontents
-%\listoffigures
-%\listoftables
+\listoffigures
+\listoftables
 
 \newpage
 \input{introduction}

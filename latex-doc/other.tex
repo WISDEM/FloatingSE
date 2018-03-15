@@ -1,14 +1,15 @@
 
-\section{WISDEM Floating Turbine Analysis}
+\chapter{WISDEM Floating Turbine Analysis}
+\label{sec:other}
 Direct WISDEM dependencies to \textit{CommonSE} and \textit{TowerSE}, as well as some of the
 supporting utilities housed under the WISDEM umbrella, were mentioned in
 Section \ref{sec:package}.  There are other inputs into \textit{FloatingSE} that
 are outputs of other WISDEM modules.  For example force, moment, and
 mass properties of the RNA.  An OpenMDAO Group that links these other
 modules together to form a virtual floating turbine does not explicitly
-fit within the conceptual boundaries of the \texttt{floatingse} package.
+fit within the conceptual boundaries of the \texttt{src/floatingse} package.
 However, two other files within the \textit{FloatingSE} \texttt{src}-directory
-(but outside the \texttt{floatingse} package) do assemble the virtual
+(but outside the \texttt{src/floatingse} package) do assemble the virtual
 floating turbine Group,
 
 {\small
@@ -20,8 +21,10 @@ floating turbine Group,
 
 \begin{figure}
   \begin{center}
-    \includegraphics[width=5in]{figs/new_wisdem}
-    \caption{Conceptual diagram of \textit{FloatingSE} execution.}
+    \includegraphics[width=6in]{figs/new_wisdem.pdf}
+    \caption{Conceptual diagram of WISDEM following the addition of
+      \textit{FloatingSE} and other modules to support offshore floating
+      wind turbines.}
     \label{fig:new_wisdem}
   \end{center}
 \end{figure}
@@ -38,7 +41,8 @@ of interest to the virtual floating turbine simulation.
   utilities, structural code compliance checks, and RNA aggregator.
 \item[OffshoreBOS\_SE]: Capital costs for wind plant items aside from the
   turbine, such as cabling and substations.  Assembly, installation,
-  commissioning, decommissioning, and financing costs for all components.
+  commissioning, decommissioning, and financing costs for all
+  components. See \citep{obos}.
 \item[FloatingSE]: Floating substructure, including mooring and anchors, and
   static stability calculations.
 \item[TurbineCostsSE (2015)]: Capital costs for all turbine components
@@ -46,8 +50,8 @@ of interest to the virtual floating turbine simulation.
 \item[PlantFinanceSE]: Roll-up of capital costs, balance of station
   costs, operational costs, financing rates, and net energy production
   into the levelized cost of energy (LCOE).
-\item[DriveSE]: Analysis of drive shaft, bearings, and gearbox.  NOT YET
-  IMPLEMENTED.
+\item[DriveSE]: Analysis of drive shaft, bearings, and gearbox.  See
+  \citep{DriveSE}. NOT YET IMPLEMENTED.
 \item[Offshore\_OandM\_SE]: Operational and maintenance costs.  NOT YET
     DEVELOPED.
 \end{description}
@@ -66,5 +70,5 @@ inputs to one of these other modules.  As with the constraints, the
 documentation of these design variables is best found in their home
 modules.
 
-\subsection{Example}
+\section{Example}
 TODO

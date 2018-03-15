@@ -1,7 +1,7 @@
-\section{Optimization}
+\chapter{Optimization}
 \label{sec:opt}
-Executing \textit{FloatingSE} is sufficient to explore some simple
-one-off or comparison analyses between a handful of runs.  OpenMDAO
+Executing \textit{FloatingSE} by hand is sufficient to explore some simple
+one-off or comparison analyses between a few runs.  OpenMDAO
 provides extensive optimization capability, which can give yield richer
 and more insightful analyses.  Beyond setting initial conditions for all
 of the input variables, the user must also specify,
@@ -15,7 +15,7 @@ of the input variables, the user must also specify,
   design variable values.
 \end{description}
 
-\subsection{Design Variables}
+\section{Design Variables}
 OpenMDAO currently only supports continuous design variables, those that
 can take on any decimal value, because gradients with respect to the
 objective function can be obtained.  Mixed-integer optimization drivers,
@@ -34,54 +34,54 @@ The standard list of design variables in \textit{FloatingSE} given in
 the examples are the continuous variables that parametrically describe
 the geometry of the substructure listed in Section \ref{sec:geom},
 
+\begin{table}[htbp] \begin{center}
+    \caption{Standard design variables used for optimization in \textit{FloatingSE}.}
+    \label{tbl:designvar}
 {\footnotesize
-  \begin{tabularx}{\linewidth}{ l l X }
-    \textbf{Variable} & \textbf{Type} & \textbf{Description \& units} \\
-    \texttt{base\_section\_height} & Float array ($nSection$) & Height of each section [$m$]\\
-    \texttt{base\_outer\_diameter} & Float array ($nSection+1$) & Diameter at each section node (linear lofting between) [$m$] \\
-    \texttt{base\_wall\_thickness} & Float array ($nSection+1$) & Wall thickness at each section node (linear lofting between) [$m$] \\
-    \texttt{base\_freeboard} & Float scalar & Design height above waterline [$m$]\\
-
-    \texttt{base\_stiffener\_web\_height} & Float array ($nSection$) & Stiffener web height for each section [$m$]\\
-    \texttt{base\_stiffener\_web\_thickness} & Float array ($nSection$) & Stiffener web thickness for each section [$m$]\\
-    \texttt{base\_stiffener\_flange\_width} & Float array ($nSection$) & Stiffener flange width for each section [$m$]\\
-    \texttt{base\_stiffener\_flange\_thickness} & Float array ($nSection$) & Stiffener flange thickness for each section [$m$]\\
-    \texttt{base\_stiffener\_spacing} & Float array ($nSection$) &
-    Stiffener spacing for each section [$m$]\\
-    
-    \texttt{auxiliary\_section\_height} & Float array ($nSection$) & Height of each section [$m$]\\
-    \texttt{auxiliary\_outer\_diameter} & Float array ($nSection+1$) & Diameter at each section node (linear lofting between) [$m$] \\
-    \texttt{auxiliary\_wall\_thickness} & Float array ($nSection+1$) & Wall thickness at each section node (linear lofting between) [$m$] \\
-    \texttt{auxiliary\_freeboard} & Float scalar & Design height above waterline [$m$]\\
-
-    \texttt{auxiliary\_stiffener\_web\_height} & Float array ($nSection$) & Stiffener web height for each section [$m$]\\
-    \texttt{auxiliary\_stiffener\_web\_thickness} & Float array ($nSection$) & Stiffener web thickness for each section [$m$]\\
-    \texttt{auxiliary\_stiffener\_flange\_width} & Float array ($nSection$) & Stiffener flange width for each section [$m$]\\
-    \texttt{auxiliary\_stiffener\_flange\_thickness} & Float array ($nSection$) & Stiffener flange thickness for each section [$m$]\\
-    \texttt{auxiliary\_stiffener\_spacing} & Float array ($nSection$) & Stiffener spacing for each section [$m$]\\
-    \texttt{radius\_to\_auxiliary\_column} & Float scalar & Centerline of base column to centerline of auxiliary column [$m$]\\
-    \texttt{permanent\_ballast\_density} & Float scalar & Mass density of ballast material [$kg/m^3$]\\
-    \texttt{base\_permanent\_ballast\_height} & Float scalar & Height above keel for permanent ballast [$m$]\\
-    \texttt{pontoon\_outer\_diameter} & Float scalar & Diameter of all pontoon/truss elements [$m$]\\
-    \texttt{pontoon\_wall\_thickness} & Float scalar & Thickness of all pontoon/truss elements [$m$]\\
-    \texttt{base\_pontoon\_attach\_lower} & Float scalar & Lower z-coordinate on base where truss attaches [$m$]\\
-    \texttt{base\_pontoon\_attach\_upper} & Float scalar & Upper z-coordinate on base where truss attaches [$m$]\\
-    \texttt{mooring\_diameter} & Float scalar & Diameter of mooring line/chain [$m$]\\
-    \texttt{fairlead} & Float scalar & Distance below waterline for attachment [$m$]\\
-    \texttt{fairlead\_offset\_from\_shell} & Float scalar & Offset from shell surface for mooring attachment [$m$] \\
-    \texttt{scope\_ratio} & Float scalar & Ratio of line length to distance to sea floor (from fairlead)\\
-    \texttt{anchor\_radius} & Float scalar & Distance from centerline to sea floor landing [$m$]\\
-  \end{tabularx}
+  \begin{tabularx}{\linewidth}{ l l c c X } \hline
+    \textbf{Variable} & \textbf{Type} & \textbf{Units} & \textbf{Bounds} &\textbf{Description} \\ \hline \hline
+    \mytt{base\_section\_height} & Float array ($n_s$) & $m$& 0.1--100&Height of each section \\
+    \mytt{base\_outer\_diameter} & Float array ($n_s+1$) & $m$& 1.1--40&Diameter at each section node (linear lofting between)\\
+    \mytt{base\_wall\_thickness} & Float array ($n_s+1$)  & $m$& 0.005--1&Wall thickness at each section node (linear lofting between) \\
+    \mytt{base\_freeboard} & Float scalar & $m$&0--50 &Design height above waterline\\
+    \mytt{base\_stiffener\_web\_height} & Float array ($n_s$) & $m$& 0.01--1&Stiffener web height for each section \\
+    \mytt{base\_stiffener\_web\_thickness} & Float array ($n_s$) & $m$& 0.001--0.5&Stiffener web thickness for each section \\
+    \mytt{base\_stiffener\_flange\_width} & Float array ($n_s$) & $m$& 0.01--5&Stiffener flange width for each section \\
+    \mytt{base\_stiffener\_flange\_thickness} & Float array ($n_s$) & $m$& 0.001--0.5&Stiffener flange thickness for each section\\
+    \mytt{base\_stiffener\_spacing} & Float array ($n_s$) & $m$& 0.01--10&Stiffener spacing for each section \\
+    \mytt{auxiliary\_section\_height} & Float array ($n_s$) & $m$& 0.1--100&Height of each section \\
+    \mytt{auxiliary\_outer\_diameter} & Float array ($n_s+1$)&$m$& 1.1--40&Diameter at each section node (linear lofting between)\\
+    \mytt{auxiliary\_wall\_thickness} &Float array ($n_s+1$) &$m$& 0.005--1&Wall thickness at each section node (linear lofting between)\\
+    \mytt{auxiliary\_freeboard} & Float scalar & $m$& 0--50 &Design height above waterline \\
+    \mytt{auxiliary\_stiffener\_web\_height} & Float array ($n_s$) & $m$& 0.01--1&Stiffener web height for each section \\
+    \mytt{auxiliary\_stiffener\_web\_thickness} & Float array ($n_s$) &$m$& 0.001--0.5&Stiffener web thickness for each section\\
+    \mytt{auxiliary\_stiffener\_flange\_width} & Float array ($n_s$) &$m$& 0.01--5&Stiffener flange width for each section\\
+    \mytt{auxiliary\_stiffener\_flange\_thickness} & Float array ($n_s$) &$m$& 0.001--0.5&Stiffener flange thickness for each section\\
+    \mytt{auxiliary\_stiffener\_spacing} & Float array ($n_s$) & $m$& 0.01--10&SStiffener spacing for each section \\
+    \mytt{radius\_to\_auxiliary\_column} & Float scalar &$m$& 0--40&Centerline of base column to centerline of auxiliary column\\
+    \mytt{base\_permanent\_ballast\_height} & Float scalar & $m$& 0.1--50&Height above keel for permanent ballast \\
+    \mytt{auxiliary\_permanent\_ballast\_height} & Float scalar & $m$& 0.1--50&Height above keel for permanent ballast \\
+    \mytt{pontoon\_outer\_diameter} & Float scalar & $m$& 0.1--3&Diameter of all pontoon/truss elements \\
+    \mytt{pontoon\_wall\_thickness} & Float scalar & $m$& 0.005--0.1&Thickness of all pontoon/truss elements \\
+    \mytt{base\_pontoon\_attach\_lower} & Float scalar & $m$& -100--100&Lower z-coordinate on base where truss attaches \\
+    \mytt{base\_pontoon\_attach\_upper} & Float scalar & $m$& -100--100&Upper z-coordinate on base where truss attaches \\
+    \mytt{mooring\_diameter} & Float scalar & $m$& 0.05--1&Diameter of mooring line/chain \\
+    \mytt{fairlead} & Float scalar & $m$& 0--200&Distance below waterline for attachment \\
+    \mytt{fairlead\_offset\_from\_shell} & Float scalar & $m$ & 0--5& Offset from shell surface for mooring attachment \\
+    \mytt{scope\_ratio} & Float scalar && 1--5&Ratio of line length to distance to sea floor (from fairlead)\\
+    \mytt{anchor\_radius} & Float scalar & $m$& 1--1000&Distance from centerline to sea floor landing \\
+  \hline \end{tabularx}
 }
+\end{center} \end{table}
 
 
-\subsection{Constraints}
+\section{Constraints}
 Due to the many design variables, permutations of settings, and applied
 physics, there are many constraints that must be applied for an
 optimization to close.  These constraints can be tuned with user inputs
 and/or user-defined limits for the constraints in the optimization problem set-up.
 
-\subsubsection{Geometry Constraints}
+\subsection{Geometry Constraints}
 The user inputs the desired freeboard, fairlead, sea level depth, column
 spacing, and initial section heights of the submerged columns.  The
 constraints that ensures that the draft of the submerged columns does
@@ -153,7 +153,7 @@ mm.mooring_length_max $\leq$ 1.0
 \end{lstlisting}
 
 
-\subsubsection{Manufacturing Constraints}
+\subsection{Manufacturing Constraints}
 Manufacturing steel frustum shells requires rolling steel plates into
 shape and welding along a seam to close the section.  To accommodate
 traditional rolling and welding practices, both the diameter taper over
@@ -163,14 +163,19 @@ semisubmersible pontoons to the columns, constraints regarding the radio
 of diameters between the two are enforced. These limits are determined
 by user parameters and constraints,
 
+\begin{table}[htbp] \begin{center}
+    \caption{Constraint variables for the manufacturability in \textit{FloatingSE}.}
+    \label{tbl:manconvar}
 {\footnotesize
-  \begin{tabularx}{\linewidth}{ l l X }
-    \textbf{Variable} & \textbf{Type} & \textbf{Description \& units} \\
-    \texttt{min\_taper\_ratio} & Float scalar & For manufacturability of rolling steel\\
-    \texttt{min\_diameter\_thickness\_ratio} & Float scalar & For weld-ability\\
-    \texttt{connection\_ratio\_max} & Float scalar & For welding pontoons to columns\\
-  \end{tabularx}
+  \begin{tabular}{l l l } \hline
+    \textbf{Variable} & \textbf{Type} & \textbf{Description} \\
+    \mytt{min\_taper\_ratio} & Float scalar & For manufacturability of rolling steel\\
+    \mytt{min\_diameter\_thickness\_ratio} & Float scalar & For weld-ability\\
+    \mytt{connection\_ratio\_max} & Float scalar & For welding pontoons to columns\\
+  \hline \end{tabular}
 }
+\end{center} \end{table}
+
 \begin{lstlisting}
 base.manufacturability $\leq$ 0.0
 base.weldability $\leq$ 0.0
@@ -182,22 +187,25 @@ load.base_connection_ratio $\geq$ 0.0
 load.auxiliary_connection_ratio $\geq$ 0.0
 \end{lstlisting}
 
-\subsubsection{Stress Limits and Code Compliance}
-The stress and buckling code compliance constraints are formulated as
-ratios with allowance for a safety factor.  Thus, the constraints are
-enforced as utilizations, such that a quantity that must be greater-than
-or less-than one.  The safety factor parameters are,
+\subsection{Stress Limits and Code Compliance}
+The stress and buckling code compliance constraints are formulated with
+a safety factor as utilization ratios (ratio of actual to maximum
+values), which must be less than one. The safety factor parameters are,
 
+\begin{table}[htbp] \begin{center}
+    \caption{Variables specifying the factors of safety within \textit{FloatingSE}.}
+    \label{tbl:safetyvar}
 {\footnotesize
-  \begin{tabularx}{\linewidth}{ l l X }
-    \textbf{Variable} & \textbf{Type} & \textbf{Description \& units} \\
-    \texttt{gamma\_f} & Float scalar & Safety factor on loads\\
-    \texttt{gamma\_b} & Float scalar & Safety factor on buckling\\
-    \texttt{gamma\_m} & Float scalar & Safety factor on materials\\
-    \texttt{gamma\_n} & Float scalar & Safety factor on consequence of failure\\
-    \texttt{gamma\_fatigue} & Float scalar & Not currently used\\
-  \end{tabularx}
+  \begin{tabular}{ l l l } \hline
+    \textbf{Variable} & \textbf{Type} & \textbf{Description} \\
+    \mytt{gamma\_f} & Float scalar & Safety factor on loads\\
+    \mytt{gamma\_b} & Float scalar & Safety factor on buckling\\
+    \mytt{gamma\_m} & Float scalar & Safety factor on materials\\
+    \mytt{gamma\_n} & Float scalar & Safety factor on consequence of failure\\
+    \mytt{gamma\_fatigue} & Float scalar & Not currently used\\
+  \hline \end{tabular}
 }
+\end{center} \end{table}
 
 For the ring stiffeners, there are ``compactness'' utilizations that
 compare the geometry to the Young's modulus and yeild stress,
@@ -242,7 +250,7 @@ the diameter) and a safety factor
 0.0 $\leq$ mm.axial_unity $\leq$ 1.0
 \end{lstlisting}
             
-\subsubsection{Stability}
+\subsection{Stability}
 Neutral buoyancy is checked by ensuring that the variable ballast mass
 required is positive and that there is enough payload capacity within
 the column to hold the water,
@@ -252,8 +260,8 @@ sm.variable_ballast_mass $\geq$ 0.0
 \end{lstlisting}
 
 Static stability is enforced by constraining the metacentric height to
-be positive and, similarly, that the center of buoyancy be located above
-the center of gravity,
+be positive and, similarly, that the center of gravity be located above
+the center of buoyancy,
 \begin{lstlisting}
 sm.metacentric_height $\geq$ 0.1
 sm.static_stability $\geq$ 0.1
@@ -266,24 +274,29 @@ system, buoyancy, or other sources at the maximum allowable point of
 displacement.  These constraints are formulated as ratios with the user
 specifying the maximum allowable limits,
 
+\begin{table}[htbp] \begin{center}
+    \caption{Constraint variables for the mooring system in \textit{FloatingSE}.}
+    \label{tbl:moorcon}
 {\footnotesize
-  \begin{tabularx}{\linewidth}{ l l X }
-    \textbf{Variable} & \textbf{Type} & \textbf{Description \& units} \\
-    \texttt{mooring\_max\_offset} & Float scalar & Max surge/sway offset [$m$]\\
-    \texttt{mooring\_max\_heel}   & Float scalar & Max heel (pitching) angle [$deg$]\\
-  \end{tabularx}
+  \begin{tabular}{ l l c l } \hline
+    \textbf{Variable} & \textbf{Type} & \textbf{Units} & \textbf{Description} \\
+    \mytt{mooring\_max\_offset} & Float scalar & Max surge/sway offset & $m$\\
+    \mytt{mooring\_max\_heel}   & Float scalar & Max heel (pitching) angle & $deg$\\
+  \hline \end{tabular}
 }
+\end{center} \end{table}
+
 \begin{lstlisting}
 sm.offset_force_ratio $\leq$ 1.0
 sm.heel_moment_ratio $\leq$ 1.0
 \end{lstlisting}
 
-\subsection{Objectives}
+\section{Objectives}
 Different anaylses will emphasize different metrics, requiring different
 objective functions.  Under the default assumption that the user wishes
 to minimize cost and adhere to stability constraints, the objective
 function would be total substructure cost (variable name,
 \texttt{total\_cost}) or mass (variable name, \texttt{total\_mass}).
 
-\subsection{Example}
+\section{Example}
 TODO

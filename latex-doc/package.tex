@@ -1,52 +1,53 @@
-\section{Package Documentation}
+\chapter{Package Documentation}
 \label{sec:package}
 The open-source GitHub repository for \textit{FloatingSE} is located at
 \url{https://github.com/WISDEM/FloatingSE}.  \textit{FloatingSE} is one of many
 modules in the larger WISDEM project and developed primarily by
 engineers at the National Renewable Energy Laboratory (NREL).
 
-\subsection{Package Files}
+\section{Package Files}
 The files that comprise the \textit{FloatingSE} package are found in the
 \texttt{src/floatingse} directory in accordance with standard Python
-package conventions.  The main \textit{FloatingSE} files are,
+package conventions.  In addition to the individual files that comprise the package, there are
+also unit tests that probe the behavior of individual functions.  These
+are located in the \texttt{test} sub-directory.  A summary of all
+package files is included in Table \ref{tbl:package}.
 
-{\small
-  \begin{tabularx}{\linewidth}{ l X }
-    \textbf{File name} & \textbf{Description} \\
-\texttt{\_\_init\_\_.py} & Generic python package file.\\
-\texttt{column.py} & OpenMDAO Components and Group calculating
-  mass, buoyancy, and static stability of frustum columns.\\
-\texttt{floating.py} & Top level \textit{FloatingSE} OpenMDAO Group.\\
-\texttt{floatingInstance.py} & Parent class controlling
+\begin{table}[htbp] \begin{center}
+    \caption{File contents of the \texttt{src/floatingse} Python package
+      within \textit{FloatingSE}.}
+    \label{tbl:package}
+{\footnotesize
+  \begin{tabularx}{\linewidth}{ l l X } \hline
+    \textbf{File name} & \textbf{Unit test file} & \textbf{Description} \\ \hline \hline
+\mytt{\_\_init\_\_.py} && Generic python package file.\\
+\mytt{column.py} & \mytt{column\_PyU.py} & OpenMDAO Components and Group calculating
+  mass, buoyancy, and static stability of vertical frustum columns.\\
+\mytt{floating.py} && Top level \textit{FloatingSE} OpenMDAO Group.\\
+\mytt{floatingInstance.py} && Parent class controlling
   optimization drivers, constraints, and visualization. \\
-\texttt{floating\_loading.py} & OpenMDAO Components and Group for
+\mytt{floating\_loading.py} & \mytt{floating\_loading\_PyU.py} &OpenMDAO Components and Group for
   Frame3DD analysis of complete turbine structure and final summation of
   mass and displacement.\\
-\texttt{mapMooring.py} & Mooring analysis.\\
-\texttt{semiInstance.py} & Semisubmersible example implementing
+\mytt{mapMooring.py} & \mytt{mapMooring\_PyU.py} &Mooring analysis.\\
+\mytt{semiInstance.py} && Semisubmersible example implementing
   OC4 design parameters, optimization, and visualization.\\
-\texttt{sparInstance.py} & Spar example implementing OC3 design
+\mytt{sparInstance.py} && Spar example implementing OC3 design
   parameters, optimization, and visualization.\\
-\texttt{substructure.py} & Final buoyancy and stability checks of
+\mytt{substructure.py} & \mytt{substructure\_PyU.py} &Final buoyancy and stability checks of
   the substructure.\\
-\end{tabularx}
+&\mytt{package\_PyU.py} & Convenience aggregator of all unit test files.\\
+\hline \end{tabularx}
 }
+\end{center} \end{table}
 
-In addition to the individual files that comprise the package, there are
-also unit tests that probe the behavior of individual functions.  These
-are located in the \texttt{test} sub-directory.  These files are,
-
-{\small
-  \begin{tabularx}{\linewidth}{ l X }
-    \textbf{File name} & \textbf{Description} \\
-\texttt{\_\_init\_\_.py} & Generic python package file.\\
-\texttt{column\_PyU.py} & Tests for \texttt{column.py}.\\
-\texttt{floating\_loading\_PyU.py} & Tests for \texttt{floating\_loading.py}.\\
-\texttt{mapMooring\_PyU.py} & Tests for \texttt{mapMooring.py}.\\
-\texttt{package\_PyU.py} & Convenience aggregator of all unit test files.\\
-\texttt{substructure\_PyU.py} & Tests for \texttt{substructure.py}.\\
-\end{tabularx}
-}
+\section{Dependencies}
+\subsection{Python Dependencies}
+The \textit{FloatingSE} directly loads python modules from NumPy, SciPy,
+OpenMDAO, and other WISDEM modules.  Each of these packages have
+dependencies in their own right.  For visualization, there are optional
+calls to Matplotlib and Mayavi.  All of the python dependencies are free
+and open-source.
 
 \subsection{WISDEM Dependencies}
 The basic functioning of \textit{FloatingSE} relies heavily on \textit{CommonSE}, another
@@ -55,4 +56,5 @@ suite.  To do a structural analysis on the entire floating turbine
 structure, some OpenMDAO Components from \textit{TowerSE} are also called
 directly.  In turn, other utilities managed within WISDEM are also
 called, such as \textit{Akima} (for differentiable splines), and \textit{pyFrame3DD} (for
-structural analysis)
+structural analysis).  Note that for these other WISDEM modules,
+additional Python packages are required, as well as C and Fortran compilers.

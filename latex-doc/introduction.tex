@@ -1,14 +1,58 @@
-\section{Introduction}
+\chapter{Introduction}
 \label{sec:intro}
+The U.S. offshore wind gross resource potential is vast, and often in
+close proximity to densely-populated coastal load centers. In many
+U.S. coastal areas, particularly in California and Hawaii, water depths
+favor the deployment of floating over fixed-bottom offshore wind
+technology. However, floating offshore wind technology is at a nascent
+stage of development, and this technological immaturity means that
+current designs are more expensive over their lifetime than their
+fixed-bottom or land-based counterparts.
+
+The first phase of floating offshore turbine designs married offshore
+drilling platform substructures with derivative versions of on-shore
+turbines and minor controller modifications to ensure operational
+viability.  Since these designs were not engineered or optimized from a
+systems or lifetime cost perspective, continuing this approach for the
+next generation is not likely to provide a path to achieve cost
+competitiveness. Nevertheless, prior analysis suggests that floating
+wind turbines could eventually achieve cost competitiveness due to
+better mass production opportunities, near-shore assembly to avoid heavy
+lift installation vessels, and better wind resources in deeper
+waters. The complexities of the physics, manufacturing, installation,
+and operation of floating wind turbines all require a fully integrated
+systems-engineering and techno-economic optimization framework for an
+offshore floating wind plant.
+
 This document serves as both a User Manual and Theory Guide for
-\textit{FloatingSE}, one of multiple modules within the Wind-Plant Integrated
-System Design and Engineering Model (WISDEM).  WISDEM is a set of
-integrated modules that creates a virtual, vertically integrated wind
-plant. The models use engineering principles for conceptual design and
-preliminary analysis, and link to financial modules for LCOE estimation.
-The WISDEM modules, including \textit{FloatingSE}, are built around the OpenMDAO
-library, an open-source high-performance computing platform for systems
-analysis and multidisciplinary optimization, written in Python
-\citep{openmdao}.  This allows for the modules to be exercised
-individually for component analysis or in unison for turbine or plant
-level studies.
+\textit{FloatingSE}, a key ingredient in realizing a system engineering
+framework for floating offshore wind energy. \textit{FloatingSE} is one
+of multiple modules within the Wind-Plant Integrated System Design and
+Engineering Model (WISDEM).  WISDEM is a set of integrated modules that
+creates a virtual, vertically integrated wind plant. The models use
+engineering principles for conceptual design and preliminary analysis,
+and link to financial modules for LCOE estimation.  The WISDEM modules,
+including \textit{FloatingSE}, are built around the OpenMDAO library, an
+open-source high-performance computing platform for systems analysis and
+multidisciplinary optimization, written in Python \citep{openmdao}.
+
+Due to the structure of OpenMDAO and modular design of WISDEM, individual
+modules can be exercised individually or in unison for turbine or plant
+level studies.  This feature also applies to \textit{FloatingSE}, in
+that module-specific optimizations of a floating substructure and its
+anchoring and mooring systems can be executed while considering the rest
+of the turbine, plant, and operational strategy as static.
+Alternatively, \textit{FloatingSE} can be linked to other WISDEM modules
+to execute turbine-level and/or plant-level studies.
+
+This document presents an overview of the contents in
+\textit{FloatingSE} in Section \ref{sec:package} and of the
+parameterization of the substructure geometry in Section
+\ref{sec:geom}.  With this foundation, the underlying theory of
+\textit{FloatingSE's} methodology is explained in Section
+\ref{sec:theory}.  This helps to understand the analysis execution flow
+described in Section \ref{sec:exec} and the setup of design variables
+and constraints for optimization problems in Section \ref{sec:opt}.
+Finally, some discussion of how \textit{FloatingSE} can be linked to
+other WISDEM modules via a high-level OpenMDAO Group is described in
+Section \ref{sec:other}.
