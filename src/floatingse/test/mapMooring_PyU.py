@@ -3,6 +3,7 @@ import numpy.testing as npt
 import unittest
 import floatingse.mapMooring as mapMooring
 from floatingse.column import ColumnGeometry
+from floatingse.mapapi import *
 
 from commonse import gravity as g
 
@@ -14,40 +15,41 @@ def myisnumber(instr):
     return True
 
 myones = np.ones((100,))
-truth='---------------------- LINE DICTIONARY ---------------------------------------\n' + \
-'LineType  Diam      MassDenInAir   EA            CB   CIntDamp  Ca   Cdn    Cdt\n' + \
-'(-)       (m)       (kg/m)        (N)           (-)   (Pa-s)    (-)  (-)    (-)\n' + \
-'chain   0.05   53.77517   213500000.0   0.65   1.0E8   0.6   -1.0   0.05\n' + \
-'---------------------- NODE PROPERTIES ---------------------------------------\n' + \
-'Node Type X     Y    Z   M     V FX FY FZ\n' + \
-'(-)  (-) (m)   (m)  (m) (kg) (m^3) (kN) (kN) (kN)\n' + \
-'1   FIX   175.0   0.0   depth   0.0   0.0   #   #   #\n' + \
-'2   VESSEL   11.0   0.0   -10.0   0.0   0.0   #   #   #\n' + \
-'---------------------- LINE PROPERTIES ---------------------------------------\n' + \
-'Line    LineType  UnstrLen  NodeAnch  NodeFair  Flags\n' + \
-'(-)      (-)       (m)       (-)       (-)       (-)\n' + \
-'1   chain   416.0   1   2\n' + \
-'---------------------- SOLVER OPTIONS-----------------------------------------\n' + \
-'Option\n' + \
-'(-)\n' + \
-'help\n' + \
-' integration_dt 0\n' + \
-' kb_default 3.0e6\n' + \
-' cb_default 3.0e5\n' + \
-' wave_kinematics\n' + \
-'inner_ftol 1e-5\n' + \
-'inner_gtol 1e-5\n' + \
-'inner_xtol 1e-5\n' + \
-'outer_tol 1e-3\n' + \
-' pg_cooked 10000 1\n' + \
-' outer_fd\n' + \
-' outer_bd\n' + \
-' outer_cd\n' + \
-' inner_max_its 200\n' + \
-' outer_max_its 600\n' + \
-'repeat 120 240\n' + \
-' krylov_accelerator 3\n' + \
-' ref_position 0.0 0.0 0.0\n'
+truth=['---------------------- LINE DICTIONARY ---------------------------------------',
+'LineType  Diam      MassDenInAir   EA            CB   CIntDamp  Ca   Cdn    Cdt',
+'(-)       (m)       (kg/m)        (N)           (-)   (Pa-s)    (-)  (-)    (-)',
+'chain   0.05   53.77517   213500000.0   0.65   1.0E8   0.6   -1.0   0.05',
+'---------------------- NODE PROPERTIES ---------------------------------------',
+'Node Type X     Y    Z   M     V FX FY FZ',
+'(-)  (-) (m)   (m)  (m) (kg) (m^3) (kN) (kN) (kN)',
+'1   FIX   175.0   0.0   depth   0.0   0.0   #   #   #',
+'2   VESSEL   11.0   0.0   -10.0   0.0   0.0   #   #   #',
+'---------------------- LINE PROPERTIES ---------------------------------------',
+'Line    LineType  UnstrLen  NodeAnch  NodeFair  Flags',
+'(-)      (-)       (m)       (-)       (-)       (-)',
+'1   chain   416.0   1   2',
+'---------------------- SOLVER OPTIONS-----------------------------------------',
+'Option',
+'(-)',
+'help',
+' integration_dt 0',
+' kb_default 3.0e6',
+' cb_default 3.0e5',
+' wave_kinematics',
+'inner_ftol 1e-5',
+'inner_gtol 1e-5',
+'inner_xtol 1e-5',
+'outer_tol 1e-3',
+' pg_cooked 10000 1',
+' outer_fd',
+' outer_bd',
+' outer_cd',
+' inner_max_its 200',
+' outer_max_its 600',
+'repeat 120 240',
+' krylov_accelerator 3',
+' ref_position 0.0 0.0 0.0']
+
 
 class TestMapMooring(unittest.TestCase):
     
@@ -88,10 +90,10 @@ class TestMapMooring(unittest.TestCase):
         self.mymap = mapMooring.MapMooring()
         self.mymap.set_properties(self.params)
         self.mymap.set_geometry(self.params, self.unknowns)
-        self.mymap.finput = open(mapMooring.FINPUTSTR, 'wb')
+        #self.mymap.finput = open(mapMooring.FINPUTSTR, 'wb')
         
-    def tearDown(self):
-        self.mymap.finput.close()
+    #def tearDown(self):
+        #self.mymap.finput.close()
         
     def set_geometry(self):
         geom = ColumnGeometry(2, 3)
@@ -100,13 +102,6 @@ class TestMapMooring(unittest.TestCase):
         for pairs in tempUnknowns.items():
             self.params[pairs[0]] = pairs[1]
 
-    def read_input(self):
-        self.mymap.finput.close()
-        myfile = open(mapMooring.FINPUTSTR, 'rb')
-        dat = myfile.read()
-        myfile.close()
-        return dat
-        
     def testSetProperties(self):
         pass
     '''
@@ -134,14 +129,20 @@ class TestMapMooring(unittest.TestCase):
     '''
     def testWriteInputAll(self):
         self.mymap.write_input_file(self.params)
-        self.mymap.finput.close()
-        actual = self.read_input().split()
-        expect = truth.split()
-        for k in xrange(len(actual)):
-            if myisnumber(actual[k]):
-                self.assertEqual( float(actual[k]), float(expect[k]) )
-            else:
-                self.assertEqual( actual[k], expect[k] )
+        actual = self.mymap.finput[:]
+        expect = truth[:]
+        self.assertEqual(len(expect), len(actual))
+        
+        for n in xrange(len(actual)):
+            actualTok = actual[n].split()
+            expectTok = expect[n].split()
+            self.assertEqual(len(expectTok), len(actualTok))
+            
+            for k in xrange(len(actualTok)):
+                if myisnumber(actualTok[k]):
+                    self.assertEqual( float(actualTok[k]), float(expectTok[k]) )
+                else:
+                    self.assertEqual( actualTok[k], expectTok[k] )
             
     def testRunMap(self):
         self.mymap.runMAP(self.params, self.unknowns)
@@ -149,6 +150,19 @@ class TestMapMooring(unittest.TestCase):
     def testCost(self):
         self.mymap.compute_cost(self.params, self.unknowns)
     
+    def testListEntry(self):
+        # Initiate MAP++ for this design
+        mymap = MapAPI( )
+        #mymap.ierr = 0
+        mymap.map_set_sea_depth(self.params['water_depth'])
+        mymap.map_set_gravity(g)
+        mymap.map_set_sea_density(self.params['water_density'])
+        mymap.read_list_input(truth)
+        mymap.init( )
+        mymap.displace_vessel(0, 0, 0, 0, 10, 0)
+        mymap.update_states(0.0, 0)
+        mymap.end()
+        
         
 def suite():
     suite = unittest.TestSuite()

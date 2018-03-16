@@ -7,7 +7,6 @@ from mapapi import *
 from commonse import gravity
 from commonse import Enum
 
-FINPUTSTR = os.path.abspath('input.map')
 Anchor    = Enum('DRAGEMBEDMENT SUCTIONPILE')
 
 class MapMooring(Component):
@@ -26,6 +25,7 @@ class MapMooring(Component):
         self.axial_stiffness     = None
         self.area                = None
         self.cost_per_length     = None
+        self.finput              = None
 
         # Environment
         self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
@@ -209,10 +209,10 @@ class MapMooring(Component):
         Dmooring = params['mooring_diameter']
         
         air_mass_density = self.wet_mass_per_length + (rhoWater*self.area)
-        self.finput.write('---------------------- LINE DICTIONARY ---------------------------------------\n')
-        self.finput.write('LineType  Diam      MassDenInAir   EA            CB   CIntDamp  Ca   Cdn    Cdt\n')
-        self.finput.write('(-)       (m)       (kg/m)        (N)           (-)   (Pa-s)    (-)  (-)    (-)\n')
-        self.finput.write('%s   %.5f   %.5f   %.5f   %.5f   1.0E8   0.6   -1.0   0.05\n' %
+        self.finput.append('---------------------- LINE DICTIONARY ---------------------------------------')
+        self.finput.append('LineType  Diam      MassDenInAir   EA            CB   CIntDamp  Ca   Cdn    Cdt')
+        self.finput.append('(-)       (m)       (kg/m)        (N)           (-)   (Pa-s)    (-)  (-)    (-)')
+        self.finput.append('%s   %.5f   %.5f   %.5f   %.5f   1.0E8   0.6   -1.0   0.05' %
                           (lineType, Dmooring, air_mass_density, self.axial_stiffness, cable_sea_friction_coefficient) )
 
         
@@ -224,12 +224,12 @@ class MapMooring(Component):
         
         OUTPUTS  : none
         """
-        self.finput.write('---------------------- NODE PROPERTIES ---------------------------------------\n')
+        self.finput.append('---------------------- NODE PROPERTIES ---------------------------------------')
         # Doesn't like some weird character here somewhere
-        #self.finput.write('Node  Type       X       Y       Z      M     B     FX      FY      FZ\n')
-        #self.finput.write('(-)   (-)       (m)     (m)     (m)    (kg)  (m^3)  (N)     (N)     (N)\n')
-        self.finput.write('Node Type X     Y    Z   M     V FX FY FZ\n')
-        self.finput.write('(-)  (-) (m)   (m)  (m) (kg) (m^3) (kN) (kN) (kN)\n')
+        #self.finput.append('Node  Type       X       Y       Z      M     B     FX      FY      FZ')
+        #self.finput.append('(-)   (-)       (m)     (m)     (m)    (kg)  (m^3)  (N)     (N)     (N)')
+        self.finput.append('Node Type X     Y    Z   M     V FX FY FZ')
+        self.finput.append('(-)  (-) (m)   (m)  (m) (kg) (m^3) (kN) (kN) (kN)')
 
 
 
@@ -266,23 +266,22 @@ class MapMooring(Component):
         # Set location strings
         forceStr = '#   #   #' 
         if nodeStr == 'connect':
-            forceStr = '%.5f   %.5f   %.5f\n' % (x_force, y_force, z_force)
-            posStr   = '#%.5f   #%.5f   #%.5f   ' % (x_pos, y_pos, z_pos)
+            forceStr = '%f   %f   %f' % (x_force, y_force, z_force)
+            posStr   = '#%f   #%f   #%f   ' % (x_pos, y_pos, z_pos)
         elif nodeStr == 'fix':
-            posStr   = '%.5f   %.5f   depth   ' % (x_pos, y_pos)
+            posStr   = '%f   %f   depth   ' % (x_pos, y_pos)
         elif nodeStr == 'vessel':
-            posStr   = '%.5f   %.5f   %.5f   ' % (x_pos, y_pos, z_pos)
+            posStr   = '%f   %f   %f   ' % (x_pos, y_pos, z_pos)
 
         # Write the connection line
-        self.finput.write('%d   ' % number)
-        self.finput.write('%s   ' % node_type)
-        self.finput.write(posStr)
-        self.finput.write('%.5f   %.5f   ' % (point_mass, displaced_volume) )
-        self.finput.write(forceStr)
-        self.finput.write('\n')
+        line = ('%d   ' % number)
+        line += ('%s   ' % node_type)
+        line += (posStr)
+        line += ('%f   %f   ' % (point_mass, displaced_volume) )
+        line += (forceStr)
+        self.finput.append(line)
 
-
-    def write_line_properties(self, params, line_number=1, anchor_node=1, fairlead_node=2, flags=' '):
+    def write_line_properties(self, params, line_number=1, anchor_node=1, fairlead_node=2, flags=''):
         """Writes LINE PROPERTIES section of input.map file that connects multiple nodes
         
         INPUTS:
@@ -295,10 +294,10 @@ class MapMooring(Component):
         
         OUTPUTS  : none
         """
-        self.finput.write('---------------------- LINE PROPERTIES ---------------------------------------\n')
-        self.finput.write('Line    LineType  UnstrLen  NodeAnch  NodeFair  Flags\n')
-        self.finput.write('(-)      (-)       (m)       (-)       (-)       (-)\n')
-        self.finput.write('%d   %s   %.5f   %d   %d   %s\n' %
+        self.finput.append('---------------------- LINE PROPERTIES ---------------------------------------')
+        self.finput.append('Line    LineType  UnstrLen  NodeAnch  NodeFair  Flags')
+        self.finput.append('(-)      (-)       (m)       (-)       (-)       (-)')
+        self.finput.append('%d   %s   %f   %d   %d   %s' %
                           (line_number, params['mooring_type'], self.scope, anchor_node, fairlead_node, flags) )
 
         
@@ -315,34 +314,34 @@ class MapMooring(Component):
         # Unpack variables
         nlines = params['number_of_mooring_lines']
         
-        self.finput.write('---------------------- SOLVER OPTIONS-----------------------------------------\n')
-        self.finput.write('Option\n')
-        self.finput.write('(-)\n')
-        self.finput.write('help\n')
-        self.finput.write(' integration_dt 0\n')
-        self.finput.write(' kb_default 3.0e6\n')
-        self.finput.write(' cb_default 3.0e5\n')
-        self.finput.write(' wave_kinematics \n')
-        self.finput.write('inner_ftol 1e-5\n')
-        self.finput.write('inner_gtol 1e-5\n')
-        self.finput.write('inner_xtol 1e-5\n')
-        self.finput.write('outer_tol 1e-3\n')
-        self.finput.write(' pg_cooked 10000 1\n')
-        self.finput.write(' outer_fd \n')
-        self.finput.write(' outer_bd \n')
-        self.finput.write(' outer_cd\n')
-        self.finput.write(' inner_max_its 200\n')
-        self.finput.write(' outer_max_its 600\n')
+        self.finput.append('---------------------- SOLVER OPTIONS-----------------------------------------')
+        self.finput.append('Option')
+        self.finput.append('(-)')
+        self.finput.append('help')
+        self.finput.append(' integration_dt 0')
+        self.finput.append(' kb_default 3.0e6')
+        self.finput.append(' cb_default 3.0e5')
+        self.finput.append(' wave_kinematics ')
+        self.finput.append('inner_ftol 1e-5')
+        self.finput.append('inner_gtol 1e-5')
+        self.finput.append('inner_xtol 1e-5')
+        self.finput.append('outer_tol 1e-3')
+        self.finput.append(' pg_cooked 10000 1')
+        self.finput.append(' outer_fd')
+        self.finput.append(' outer_bd')
+        self.finput.append(' outer_cd')
+        self.finput.append(' inner_max_its 200')
+        self.finput.append(' outer_max_its 600')
         # Repeat the details for the one mooring line multiple times
-        self.finput.write('repeat ')
         n = 360.0/nlines
         degree = n
+        line = 'repeat'
         while degree + n <= 360:
-            self.finput.write('%d ' % degree)
+            line += (' %d' % degree)
             degree += n
-        self.finput.write('\n')
-        self.finput.write(' krylov_accelerator 3\n')
-        self.finput.write(' ref_position 0.0 0.0 0.0\n')
+        self.finput.append(line)
+        self.finput.append(' krylov_accelerator 3')
+        self.finput.append(' ref_position 0.0 0.0 0.0')
 
         
     def write_input_file(self, params):
@@ -361,7 +360,7 @@ class MapMooring(Component):
         R_anchor      = params['anchor_radius']
 
         # Open the map input file
-        self.finput = open(FINPUTSTR, 'wb')
+        self.finput = []
 
         # Write the "Line Dictionary" section
         self.write_line_dictionary(params)
@@ -377,9 +376,6 @@ class MapMooring(Component):
 
         # Write the "Solve Options" section
         self.write_solver_options(params)
-
-        # Close the input file
-        self.finput.close()
         
         
     def runMAP(self, params, unknowns):
@@ -412,7 +408,7 @@ class MapMooring(Component):
         mymap.map_set_sea_depth(waterDepth)
         mymap.map_set_gravity(gravity)
         mymap.map_set_sea_density(rhoWater)
-        mymap.read_file(FINPUTSTR)
+        mymap.read_list_input(self.finput)
         mymap.init( )
 
         # Get the vertical load on the spar and plotting data

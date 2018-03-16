@@ -626,3 +626,51 @@ class MapAPI(object):
             else:
                 self.f_type_init.contents.optionInputLine = line+'\0'
                 MapAPI.lib.map_add_options_input_text(self.f_type_init)            
+
+                    
+    def read_list_input(self, listIn):
+        assert isinstance(listIn, list), 'Must input a python list of strings'
+        assert len(listIn) >= 8, 'Must have at least 4 sections, 3 lines per section'
+        assert type(listIn[0]) == type(''), 'List elements must be strings'
+        charptr     = POINTER(c_char)
+
+        dictFlag = nodeFlag = propFlag = solvFlag = False
+        listIter = iter(listIn)
+        for line in listIter:
+            if "LINE DICTIONARY" in line.upper():
+                dictFlag = True
+                nodeFlag = propFlag = solvFlag = False
+                for _ in xrange(2): next(listIter) # Process header
+                continue;
+            elif "NODE PROPERTIES" in line.upper():
+                nodeFlag = True
+                dictFlag = propFlag = solvFlag = False
+                for _ in xrange(2): next(listIter) # Process header
+                continue;
+            elif "LINE PROPERTIES" in line.upper():
+                propFlag = True
+                dictFlag = nodeFlag = solvFlag = False
+                for _ in xrange(2): next(listIter) # Process header
+                continue;
+            elif "SOLVER OPTIONS" in line.upper():
+                solvFlag = True
+                dictFlag = nodeFlag = propFlag = False
+                for _ in xrange(2): next(listIter) # Process header
+                continue;
+
+            if dictFlag:
+                self.f_type_init.contents.libraryInputLine =  line+'\n\0'
+                MapAPI.lib.map_add_cable_library_input_text(self.f_type_init)                    
+
+            if nodeFlag:
+                self.f_type_init.contents.nodeInputLine = line+'\n\0'
+                MapAPI.lib.map_add_node_input_text(self.f_type_init)
+
+            if propFlag:
+                self.f_type_init.contents.elementInputLine = line+'\n\0'
+                MapAPI.lib.map_add_line_input_text(self.f_type_init)
+
+            if solvFlag:
+                self.f_type_init.contents.optionInputLine = line+'\n\0'
+                MapAPI.lib.map_add_options_input_text(self.f_type_init)            
+                
