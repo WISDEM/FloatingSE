@@ -58,7 +58,7 @@ class BulkheadMass(Component):
         #m_bulk[np.logical_not(self.bulk_full)] = 0.0
 
         unknowns['bulkhead_mass'] = m_bulk
-    '''
+
     def list_deriv_vars(self):
         inputs = ('d_full','t_full')
         outputs = ('bulkhead_mass',)
@@ -76,7 +76,7 @@ class BulkheadMass(Component):
         J['bulkhead_mass','d_full'] = coeff * np.diag(dVdR*myones) * 0.5 # 0.5 for d->r
         J['bulkhead_mass','t_full'] = coeff * np.diag(dVdt*myones)
         return J
-    '''
+
     
 
 class StiffenerMass(Component):

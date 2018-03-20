@@ -250,6 +250,13 @@ class FloatingFrame(Component):
         ynode = np.append(ynode, myz)
         znode = np.append(znode, z_tower[1:] + freeboard )
         towerEndID = xnode.size
+
+        # Create dummy node so that the tower isn't the last in a chain.
+        # This avoids a Frame3DD bug
+        dummyID = xnode.size + 1
+        xnode = np.append(xnode, 0.0)
+        ynode = np.append(ynode, 0.0)
+        znode = np.append(znode, znode[-1]+1.0 )
         
         # Get x and y positions of surrounding ballast columns
         ballastLowerID = []
@@ -294,10 +301,10 @@ class FloatingFrame(Component):
         # ---REACTIONS---
         # Pin (3DOF) the nodes at the mooring connections.  Otherwise free
         # Free=0, Rigid=1
-        rid = np.array( fairleadID )
+        rid = np.array([ fairleadID[0] ])
         Rx = Ry = Rz = Rxx = Ryy = Rzz = np.ones(rid.shape)
-        if ncolumn > 0:
-            Rxx[1:] = Ryy[1:] = Rzz[1:] = 0.0
+        #if ncolumn > 0:
+        #    Rxx[1:] = Ryy[1:] = Rzz[1:] = 0.0
         # First approach
         # Pinned windward column lower node (first ballastLowerID)
         #rid = ballastLowerID[0]
@@ -421,6 +428,21 @@ class FloatingFrame(Component):
         roll = np.append(roll, np.zeros(myones.shape) )
         dens = np.append(dens, mydens ) 
 
+        # Dummy element
+        dummyEID = N1.size + 1
+        N1   = np.append(N1  , towerEndID )
+        N2   = np.append(N2  , dummyID )
+        Ax   = np.append(Ax  , Ax[-1] )
+        As   = np.append(As  , As[-1] )
+        Jx   = np.append(Jx  , Jx[-1] )
+        I    = np.append(I   , I[-1] )
+        S    = np.append(S   , S[-1] )
+        C    = np.append(C   , C[-1] )
+        modE = np.append(modE, 1e20 )
+        modG = np.append(modG, 1e20 )
+        roll = np.append(roll, 0.0 )
+        dens = np.append(dens, 1e-6 ) 
+        
         ballastEID = []
         mytube     = Tube(2.0*R_od_ballast, t_wall_ballast)
         myrange    = np.arange(R_od_ballast.size)
@@ -609,7 +631,7 @@ class FloatingFrame(Component):
 
         # ---DYNAMIC ANALYSIS---
         nM = 3              # number of desired dynamic modes of vibration
-        Mmethod = 2         # 1: subspace Jacobi     2: Stodola
+        Mmethod = 1         # 1: subspace Jacobi     2: Stodola
         lump = 0            # 0: consistent mass ... 1: lumped mass matrix
         tol = 1e-7          # mode shape tolerance
         shift = 0.0         # shift value ... for unrestrained structures

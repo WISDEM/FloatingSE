@@ -256,7 +256,7 @@ class TestFrame(unittest.TestCase):
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         m = NSECTIONS*2 + 1
-        self.assertAlmostEqual(self.unknowns['structural_mass'], m, 5)
+        self.assertAlmostEqual(self.unknowns['structural_mass'], m, 4)
         self.assertAlmostEqual(self.unknowns['substructure_mass'], NSECTIONS, 5)
         npt.assert_almost_equal(self.unknowns['total_force'], np.array([10.0, 10.0, 10-m*g]), decimal=1)
         npt.assert_almost_equal(self.unknowns['total_moment'], np.array([20.0, 20.0, 20.0]), decimal=2)

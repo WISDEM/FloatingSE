@@ -1,21 +1,38 @@
-from openmdao.api import Group, IndepVarComp
+from openmdao.api import Group, IndepVarComp, Problem, Component
 from column import Column, ColumnGeometry
 from substructure import SemiStable, SubstructureGeometry
 from floating_loading import FloatingLoading
 from mapMooring import MapMooring
 from towerse.tower import TowerLeanSE
 import numpy as np
-        
 
+# Modify tower height to account for freeboard and still reach desired hub height
+class NewHubHeight(Component):
+    def __init__(self):
+        super(NewHubHeight,self).__init__()
+        self.add_param('base_freeboard', val=0.0, units='m', desc='Length of spar above water line')
+        self.add_param('hub_height', val=0.0, units='m', desc='Height of tower above water line')
+        self.add_output('tower_height', val=0.0, units='m', desc='Height of tower above water line minus freeboard')
+    def solve_nonlinear(self, params, unknowns, resids):
+        unknowns['tower_height'] = params['hub_height'] - params['base_freeboard']
+    def linearization(self, params, unknowns, resids):
+        J = {}
+        J['tower_height','hub_height'] = 1.0
+        J['tower_height','base_freeboard'] = -1.0
+        return J
+
+    
 class FloatingSE(Group):
 
     def __init__(self, nSection):
         super(FloatingSE, self).__init__()
 
         #self.add('geomsys', SubstructureDiscretization(nSection), promotes=['z_system'])
-        nFull = 5*nSection+1
+        nFull = 3*nSection+1
 
-        self.add('tow', TowerLeanSE(nSection+1,nFull), promotes=['material_density','hub_height','tower_section_height',
+        self.add('hub', NewHubHeight(), promotes=['*'])
+
+        self.add('tow', TowerLeanSE(nSection+1,nFull), promotes=['material_density','tower_section_height',
                                                                  'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
                                                                  'tower_buckling_length','min_taper','min_d_to_t','rna_mass','rna_cg','rna_I','tower_mass'])
         
@@ -117,6 +134,7 @@ class FloatingSE(Group):
         # Connect all input variables from all models
         self.connect('radius_to_auxiliary_column', ['sg.radius_to_auxiliary_column', 'load.radius_to_auxiliary_column', 'stab.radius_to_auxiliary_column'])
 
+        self.connect('tower_height','tow.hub_height')
         self.connect('base_freeboard', ['base.freeboard', 'stab.base_freeboard'])
         self.connect('base_section_height', 'base.section_height')
         self.connect('base_outer_diameter', 'base.diameter')
@@ -550,14 +568,11 @@ def semiExample():
                 print k
     '''
 
-
-
-    
 if __name__ == "__main__":
     from openmdao.api import Problem
     import sys
 
-    if sys.argv[1].lower() in ['spar','column','col','oc3']:
+    if len(sys.argv) > 1 and sys.argv[1].lower() in ['spar','column','col','oc3']:
         sparExample()
     else:
         semiExample()

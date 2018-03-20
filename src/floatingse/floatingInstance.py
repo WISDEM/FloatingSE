@@ -122,17 +122,21 @@ class FloatingInstance(object):
         self.params['pontoon_cost_rate'] = 6.250
 
         # OC4 Tower TODO: CHECK
-        self.params['hub_height'] = 87.6
-        self.params['tower_outer_diameter']    = vecOption(6.5, NSECTIONS+1)
-        self.params['tower_section_height']    = vecOption(87.6/NSECTIONS, NSECTIONS)
-        self.params['tower_wall_thickness']    = vecOption(0.05, NSECTIONS+1)
+        self.params['hub_height'] = 77.6
+        self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
+        self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
+        self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
         self.params['tower_buckling_length']   = 30.0
         self.params['tower_outfitting_factor'] = 1.07
-        self.params['rna_mass'] = 285598.8
+        self.params['rna_mass'] = 350e3 #285598.8
         self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
         self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
-        self.params['rna_force']  = np.array([1284744.196, 0, -2914124.844])
-        self.params['rna_moment'] = np.array([3963732.762, -2275104.794, -346781.682])
+        # Max thrust
+        self.params['rna_force']  = np.array([1284744.196, 0.0,  -112400.5527])
+        self.params['rna_moment'] = np.array([3963732.762, 896380.8464,  -346781.6819])
+        # Max wind speed
+        #self.params['rna_force']  = np.array([188038.8045, 0,  -16451.2637])
+        #self.params['rna_moment'] = np.array([0.0, 131196.8431,  0.0])
         
         # Typically design (start at OC4 semi)
         self.params['radius_to_auxiliary_column'] = 28.867513459481287
@@ -144,7 +148,7 @@ class FloatingInstance(object):
         self.params['base_outer_diameter'] = 6.5
         self.params['base_wall_thickness'] = 0.03
         self.params['auxiliary_wall_thickness'] = 0.06
-        self.params['base_permanent_ballast_height'] = 10.0
+        self.params['base_permanent_ballast_height'] = 1.0
         self.params['base_stiffener_web_height'] = 0.1
         self.params['base_stiffener_web_thickness'] = 0.04
         self.params['base_stiffener_flange_width'] = 0.1
@@ -163,7 +167,7 @@ class FloatingInstance(object):
         self.params['base_pontoon_attach_upper'] = 10.0
         
         self.set_length_base( 30.0 )
-        self.set_length_ballast( 32.0 )
+        self.set_length_aux( 32.0 )
 
         self.params['auxiliary_section_height'] = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
         self.params['auxiliary_outer_diameter'] = 2*np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
@@ -175,7 +179,7 @@ class FloatingInstance(object):
     def set_length_base(self, inval):
         self.params['base_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
         
-    def set_length_ballast(self, inval):
+    def set_length_aux(self, inval):
         self.params['auxiliary_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
         
     def check_vectors(self):
@@ -230,13 +234,13 @@ class FloatingInstance(object):
         if optimizer.upper() == 'CONMIN':
             self.prob.driver.opt_settings['ITMAX'] = 1000
         elif optimizer.upper() in ['PSQP']:
-            self.prob.driver.opt_settings['MIT'] = 2000
+            self.prob.driver.opt_settings['MIT'] = 1000
         elif optimizer.upper() in ['NSGA2']:
             self.prob.driver.opt_settings['PopSize'] = 200
             self.prob.driver.opt_settings['maxGen'] = 2000
         elif optimizer.upper() in ['SNOPT']:
-            self.prob.driver.opt_settings['Major iterations limit'] = 10000
-            self.prob.driver.opt_settings['Minor iterations limit'] = 1000
+            self.prob.driver.opt_settings['Major iterations limit'] = 500
+            self.prob.driver.opt_settings['Minor iterations limit'] = 250
             #self.prob.driver.opt_settings['Major optimality tolerance'] = 1e-5
             #self.prob.driver.opt_settings['Major feasibility tolerance'] = 1e-6
             #self.prob.driver.opt_settings['Minor feasibility tolerance'] = 1e-6
@@ -322,7 +326,8 @@ class FloatingInstance(object):
             self.prob[ivar] = ival
             if selfvar in localnames:
                 self.params[ivar] = ival
-                print ivar, '=', ival
+                ivalstr = 'np.array( '+str(ival.tolist())+' )' if type(ival)==type(np.array([])) else str(ival)
+                print ivar, '=', ivalstr
                 
     def init_problem(self, optimizer=None):
         self.prob = Problem()
@@ -337,10 +342,10 @@ class FloatingInstance(object):
         self.add_objective()
 
         # Recorder
-        #recorder = DumpRecorder('floatingOpt.dat')
+        #recorder = DumpRecorder('floatingOptimization.dat')
         #recorder.options['record_params'] = True
         #recorder.options['record_metadata'] = False
-        #recorder.options['record_derivatives'] = False
+        #recorder.options['record_derivs'] = False
         #self.prob.driver.add_recorder(recorder)
         
         # Note this command must be done after the constraints, design variables, and objective have been set,

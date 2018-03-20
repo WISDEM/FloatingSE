@@ -36,6 +36,8 @@ class TestSubs(unittest.TestCase):
         self.params['base_column_Iwaterplane'] = 150.0
         self.params['base_column_cost'] = 32.0
         self.params['base_freeboard'] = 10.0
+
+        self.params['tower_base'] = 8.0
         
         self.params['auxiliary_column_Iwaterplane'] = 50.0
         self.params['auxiliary_column_Awaterplane'] = 9.0
@@ -54,16 +56,27 @@ class TestSubs(unittest.TestCase):
 
         
     def testSetGeometry(self):
+        self.params['number_of_auxiliary_columns'] = 3
         self.params['base_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['auxiliary_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['auxiliary_z_nodes'] = np.array([-35.0, -15.0, 15.0])
+        self.params['base_z_nodes'] = np.array([-35.0, -15.0, 15.0])
         self.params['radius_to_auxiliary_column'] = 25.0
         self.params['fairlead'] = 10.0
         self.params['fairlead_offset_from_shell'] = 1.0
         self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
-        
+
+        # Semi
         self.assertEqual(self.unknowns['fairlead_radius'], 11.0+25.0)
         self.assertEqual(self.unknowns['base_auxiliary_spacing'], 20.0/25.0)
+        self.assertEqual(self.unknowns['transition_buffer'], 10-0.5*8)
+
+        # Spar
+        self.params['number_of_auxiliary_columns'] = 0
+        self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
+        self.assertEqual(self.unknowns['fairlead_radius'], 11.0)
+        self.assertEqual(self.unknowns['base_auxiliary_spacing'], 20.0/25.0)
+        self.assertEqual(self.unknowns['transition_buffer'], 10-0.5*8)
 
         
     def testBalance(self):
@@ -91,9 +104,9 @@ class TestSubs(unittest.TestCase):
         self.mysemi.compute_stability(self.params, self.unknowns)
 
         I_expect = 150.0 + (50.0 + 9.0*(20.0*np.cos(np.deg2rad(np.array([0.0, 120., 240.0]))) )**2).sum()
-        static_expect = -2.0 + 1.0
-        meta_expect = static_expect + I_expect/1e4
-        self.assertEqual(self.unknowns['static_stability'], static_expect)
+        static_expect = -1.0 + 2.0
+        meta_expect = I_expect/1e4 - static_expect
+        self.assertEqual(self.unknowns['buoyancy_to_gravity'], static_expect)
         self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
         self.assertEqual(self.unknowns['offset_force_ratio'], 26.0/1e2)
         self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (5e4)/(1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))
@@ -102,9 +115,8 @@ class TestSubs(unittest.TestCase):
         self.mysemi.compute_stability(self.params, self.unknowns)
 
         I_expect = 150.0
-        static_expect = -2.0 + 1.0
-        meta_expect = static_expect + I_expect/1e4
-        self.assertEqual(self.unknowns['static_stability'], static_expect)
+        meta_expect = I_expect/1e4 - static_expect
+        self.assertEqual(self.unknowns['buoyancy_to_gravity'], static_expect)
         self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
         self.assertEqual(self.unknowns['offset_force_ratio'], 26.0/1e2)
         self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (5e4)/(1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))

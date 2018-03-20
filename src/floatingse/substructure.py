@@ -39,7 +39,7 @@ class SubstructureBase(Component):
         self.add_output('total_mass', val=0.0, units='kg', desc='total mass of spar and moorings')
         self.add_output('total_cost', val=0.0, units='USD', desc='total cost of spar and moorings')
         self.add_output('metacentric_height', val=0.0, units='m', desc='measure of static overturning stability')
-        self.add_output('static_stability', val=0.0, desc='static stability margin based on position of centers of gravity and buoyancy')
+        self.add_output('buoyancy_to_gravity', val=0.0, desc='static stability margin based on position of centers of gravity and buoyancy')
         self.add_output('offset_force_ratio', val=0.0, desc='total surge force divided by restoring force')
         self.add_output('heel_moment_ratio', val=0.0, desc='total pitch moment divided by restoring moment')
 
@@ -246,8 +246,8 @@ class SemiStable(SubstructureBase):
         # 1. Center of buoyancy should be above CG (difference should be positive)
         # 2. Metacentric height should be positive
         buoyancy2metacentre_BM         = Iwater_system / V_system
-        unknowns['static_stability'  ] = z_cb - z_cg
-        unknowns['metacentric_height'] = buoyancy2metacentre_BM + unknowns['static_stability']
+        unknowns['buoyancy_to_gravity'] = z_cg - z_cb
+        unknowns['metacentric_height' ] = buoyancy2metacentre_BM - unknowns['buoyancy_to_gravity']
         
         F_buoy     = V_system * rhoWater * gravity
         M_restore  = unknowns['metacentric_height'] * np.sin(np.deg2rad(max_heel)) * F_buoy 
