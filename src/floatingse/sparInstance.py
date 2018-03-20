@@ -19,7 +19,7 @@ class SparInstance(FloatingInstance):
  
         # Typically design (OC3)
         self.params['base_freeboard'] = 10.0
-        self.params['fairlead'] = 70.0
+        self.params['fairlead'] = 5 #70.0
         self.set_length_base(130.0)
         self.params['base_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])
         self.params['base_outer_diameter'] = 2*np.array([4.7, 4.7, 4.7, 4.7, 3.25, 3.25])
@@ -49,18 +49,15 @@ class SparInstance(FloatingInstance):
     def get_design_variables(self):
         # Make a neat list of design variables, lower bound, upper bound, scalar
         desvarList = [('fairlead',0.0, 100.0, 1.0),
-                      ('fairlead_offset_from_shell',0.0, 5.0, 1e2),
+                      #('fairlead_offset_from_shell',0.0, 5.0, 1e2),
                       ('base_freeboard',0.0, 50.0, 1.0),
                       ('base_section_height',1e-1, 100.0, 1e1),
                       ('base_outer_diameter',1.1, 40.0, 10.0),
                       ('base_wall_thickness',5e-3, 1.0, 1e3),
-                      ('pontoon_outer_diameter', 1e-1, 3.0, 10.0),
-                      ('pontoon_wall_thickness', 5e-3, 1e-1, 100.0),
-                      ('base_pontoon_attach_lower',-1e2, 1e2, 1.0),
-                      ('base_pontoon_attach_upper',-1e2, 1e2, 1.0),
                       ('scope_ratio', 1.0, 5.0, 1.0),
                       ('anchor_radius', 1.0, 1e3, 1e-2),
                       ('mooring_diameter', 0.05, 1.0, 1e1),
+                      ('base_permanent_ballast_height', 1e-1, 50.0, 1.0),
                       ('base_stiffener_web_height', 1e-2, 1.0, 1e2),
                       ('base_stiffener_web_thickness', 1e-3, 5e-1, 1e2),
                       ('base_stiffener_flange_width', 1e-2, 5.0, 1e2),
@@ -72,12 +69,6 @@ class SparInstance(FloatingInstance):
         #prob.driver.add_desvar('mooring_type')
         #prob.driver.add_desvar('anchor_type')
         #prob.driver.add_desvar('bulkhead_nodes')
-        #prob.driver.add_desvar('outer_cross_pontoons')
-        #prob.driver.add_desvar('cross_attachment_pontoons')
-        #prob.driver.add_desvar('lower_attachment_pontoons')
-        #prob.driver.add_desvar('upper_attachment_pontoons')
-        #prob.driver.add_desvar('lower_ring_pontoons')
-        #prob.driver.add_desvar('upper_ring_pontoons')
         return desvarList
 
 
@@ -127,7 +118,7 @@ class SparInstance(FloatingInstance):
             ['stab.metacentric_height', 0.1, None, None],
             
             # Center of buoyancy should be above CG (difference should be positive, None],
-            ['stab.static_stability', 0.1, None, None],
+            #['stab.buoyancy_to_gravity', 0.1, None, None],
             
             # Surge restoring force should be greater than wave-wind forces (ratio < 1, None],
             ['stab.offset_force_ratio', None, 1.0, None],
@@ -168,39 +159,36 @@ def example_spar():
     myspar.visualize('spar-initial.jpg')
     return myspar
 
-def optimize_spar(algo='slsqp'):
-    myspar = SparInstance()
+def optimize_spar(algo='slsqp', myspar=None):
+    if myspar is None: myspar = SparInstance()
     myspar.run(algo)
     myspar.visualize('spar-'+algo+'.jpg')
     return myspar
 
-def slsqp_optimal():
-    #OrderedDict([('total_cost', array([1.49600082]))])
+def psqp_optimal():
+    #OrderedDict([('total_cost', array([0.96963594]))])
     myspar = SparInstance()
-
-    mypsar.params['fairlead'] = 36.995002263
-    mypsar.params['fairlead_offset_from_shell'] = 0.381237766438
-    mypsar.params['base_freeboard'] = 2.62142203326
-    mypsar.params['base_section_height'] = np.array([41.89338476, 47.60209766, 43.45997812,  0.18040233, 22.67891054])
-    mypsar.params['base_outer_diameter'] = np.array([ 4.98194059,  1.99138766,  1.90623058, 16.46455641,  6.58582333,  4.5])
-    mypsar.params['base_wall_thickness'] = np.array([0.00895063, 0.01387583, 0.01331409, 0.00842058, 0.01090195, 0.01024931])
-    mypsar.params['pontoon_outer_diameter'] = 3.0
-    mypsar.params['pontoon_wall_thickness'] = 0.0175
-    mypsar.params['base_pontoon_attach_lower'] = -20.0
-    mypsar.params['base_pontoon_attach_upper'] = 10.0
-    mypsar.params['scope_ratio'] = 3.2257803294
-    mypsar.params['anchor_radius'] = 853.319366299
-    mypsar.params['mooring_diameter'] = 0.214794904303
-    mypsar.params['base_stiffener_web_height'] = np.array([0.09628871, 0.06689576, 0.10380069, 0.10227783, 0.08345127])
-    mypsar.params['base_stiffener_web_thickness'] = np.array([0.00399962, 0.00277977, 0.00431121, 0.00424795, 0.00417288])
-    mypsar.params['base_stiffener_flange_width'] = np.array([0.01000001, 0.01 0.01001052, 0.01, 0.01000039])
-    mypsar.params['base_stiffener_flange_thickness'] = np.array([0.07579568, 0.07942766, 0.03561651, 0.07014924, 0.01354831])
-    mypsar.params['base_stiffener_spacing'] = np.array([0.16531022, 1.18355589, 0.31825361, 0.26153587, 0.76595662])
+    myspar.params['fairlead'] = 4.927202945865353
+    myspar.params['base_freeboard'] = 11.51079573762036
+    myspar.params['base_section_height'] = np.array( [35.088858368278935, 34.80895102971842, 34.974929395775014, 7.410687297063525, 12.97158337346268] )
+    myspar.params['base_outer_diameter'] = np.array( [2.8879418373521997, 4.085966179669333, 6.320531864715026, 8.552395763234195, 5.7346457824168215, 5.514680698692207] )
+    myspar.params['base_wall_thickness'] = np.array( [0.007342726623873182, 0.006694729984940154, 0.007245337732535003, 0.009975902410243778, 0.008361582858927942, 0.004999999999999999] )
+    myspar.params['scope_ratio'] = 2.928625620780157
+    myspar.params['anchor_radius'] = 854.1921746988265
+    myspar.params['mooring_diameter'] = 0.1754188030581036
+    myspar.params['base_permanent_ballast_height'] = 7.2250448680480455
+    myspar.params['base_stiffener_web_height'] = np.array( [0.09837247798364428, 0.09371128257530666, 0.08223199234264876, 0.09776803989025877, 0.015962520996266966] )
+    myspar.params['base_stiffener_web_thickness'] = np.array( [0.0040857158653538495, 0.0038921218800465913, 0.0034153511494099662, 0.004060611653939701, 0.000999999999999997] )
+    myspar.params['base_stiffener_flange_width'] = np.array( [0.010000000000000009, 0.00999999999999999, 0.010000000000000016, 0.013266411098100681, 0.015118496561641243] )
+    myspar.params['base_stiffener_flange_thickness'] = np.array( [0.016737403983002403, 0.027319494467725206, 0.02372704545511987, 0.009539323997907077, 0.0010000000000000013] )
+    myspar.params['base_stiffener_spacing'] = np.array( [0.17303295858177742, 0.18691099646865977, 0.2938311789567957, 0.3353137217358804, 0.17675563913173956] )
 
     myspar.evaluate('slsqp')
-    myspar.visualize('spar-slsqp.jpg')
+    #myspar.visualize('spar-psqp.jpg')
     return myspar
         
 if __name__ == '__main__':
-    optimize_spar('psqp')
+    #optimize_spar('psqp')
+    myspar = psqp_optimal()
+    optimize_spar('psqp', myspar)
     #example_spar()

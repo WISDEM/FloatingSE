@@ -121,7 +121,7 @@ class FloatingInstance(object):
         self.params['outer_cross_pontoons'] = True #False
         self.params['pontoon_cost_rate'] = 6.250
 
-        # OC4 Tower TODO: CHECK
+        # OC4 Tower
         self.params['hub_height'] = 77.6
         self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
         self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)

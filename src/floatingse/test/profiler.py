@@ -2,8 +2,10 @@ import cProfile
 import pstats
 
 import floatingse.floating as ff
+import floatingse.semiInstance as se
 
-cProfile.run('ff.semiExample()','profout')
+#cProfile.run('ff.semiExample()','profout')
+cProfile.run('se.psqp_optimal()','profout')
 p = pstats.Stats('profout')
 n = 40
 # Clean up filenames for the report

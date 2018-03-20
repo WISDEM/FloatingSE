@@ -359,19 +359,23 @@ def sparExample():
     prob['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
 
     # Porperties of turbine tower
-    prob['hub_height']              = 87.6                              # Length from tower base to top (not including freeboard) [m]
-    prob['tower_section_height']    = 87.6/nsection * np.ones(nsection) # Length of each tower section [m]
-    prob['tower_outer_diameter']    = 6.50 * np.ones(nsection+1)        # Diameter at each tower section node (linear lofting between) [m]
-    prob['tower_wall_thickness']    = 0.05 * np.ones(nsection+1)        # Diameter at each tower section node (linear lofting between) [m]
+    prob['hub_height']              = 77.6                              # Length from tower base to top (not including freeboard) [m]
+    prob['tower_section_height']    = 77.6/nsection * np.ones(nsection) # Length of each tower section [m]
+    prob['tower_outer_diameter']    = np.linspace(6.5, 3.87, nsection+1) # Diameter at each tower section node (linear lofting between) [m]
+    prob['tower_wall_thickness']    = np.linspace(0.027, 0.019, nsection+1) # Diameter at each tower section node (linear lofting between) [m]
     prob['tower_buckling_length']   = 30.0                              # Tower buckling reinforcement spacing [m]
     prob['tower_outfitting_factor'] = 1.07                              # Scaling for unaccounted tower mass in outfitting
 
     # Properties of rotor-nacelle-assembly (RNA)
-    prob['rna_mass']   = 285598.8 # Mass [kg]
+    prob['rna_mass']   = 350e3 # Mass [kg]
     prob['rna_I']      = 1e5*np.array([1149.307, 220.354, 187.597, 0, 5.037, 0]) # Moment of intertia (xx,yy,zz,xy,xz,yz) [kg/m^2]
     prob['rna_cg']     = np.array([-1.132, 0, 0.509])                       # Offset of RNA center of mass from tower top (x,y,z) [m]
-    prob['rna_force']  = np.array([1284744.196, 0, -2914124.844])           # Net force acting on RNA (x,y,z) [N]
-    prob['rna_moment'] = np.array([3963732.762, -2275104.794, -346781.682]) # Net moment acting on RNA (x,y,z) [N*m]
+    # Max thrust
+    prob['rna_force']  = np.array([1284744.196, 0, -112400.5527])           # Net force acting on RNA (x,y,z) [N]
+    prob['rna_moment'] = np.array([3963732.762, 896380.8464, -346781.682]) # Net moment acting on RNA (x,y,z) [N*m]
+    # Max wind speed
+    #prob['rna_force']  = np.array([188038.8045, 0,  -16451.2637]) # Net force acting on RNA (x,y,z) [N]
+    #prob['rna_moment'] = np.array([0.0, 131196.8431,  0.0]) # Net moment acting on RNA (x,y,z) [N*m]
     
     # Mooring constraints
     prob['mooring_max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
@@ -528,19 +532,23 @@ def semiExample():
     prob['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
 
     # Porperties of turbine tower
-    prob['hub_height']              = 87.6                              # Length from tower base to top (not including freeboard) [m]
-    prob['tower_section_height']    = 87.6/nsection * np.ones(nsection) # Length of each tower section [m]
-    prob['tower_outer_diameter']    = 6.50 * np.ones(nsection+1)        # Diameter at each tower section node (linear lofting between) [m]
-    prob['tower_wall_thickness']    = 0.05 * np.ones(nsection+1)        # Diameter at each tower section node (linear lofting between) [m]
+    prob['hub_height']              = 77.6                              # Length from tower base to top (not including freeboard) [m]
+    prob['tower_section_height']    = 77.6/nsection * np.ones(nsection) # Length of each tower section [m]
+    prob['tower_outer_diameter']    = np.linspace(6.5, 3.87, nsection+1) # Diameter at each tower section node (linear lofting between) [m]
+    prob['tower_wall_thickness']    = np.linspace(0.027, 0.019, nsection+1) # Diameter at each tower section node (linear lofting between) [m]
     prob['tower_buckling_length']   = 30.0                              # Tower buckling reinforcement spacing [m]
     prob['tower_outfitting_factor'] = 1.07                              # Scaling for unaccounted tower mass in outfitting
 
     # Properties of rotor-nacelle-assembly (RNA)
-    prob['rna_mass']   = 285598.8 # Mass [kg]
+    prob['rna_mass']   = 350e3 # Mass [kg]
     prob['rna_I']      = 1e5*np.array([1149.307, 220.354, 187.597, 0, 5.037, 0]) # Moment of intertia (xx,yy,zz,xy,xz,yz) [kg/m^2]
     prob['rna_cg']     = np.array([-1.132, 0, 0.509])                       # Offset of RNA center of mass from tower top (x,y,z) [m]
-    prob['rna_force']  = np.array([1284744.196, 0, -2914124.844])           # Net force acting on RNA (x,y,z) [N]
-    prob['rna_moment'] = np.array([3963732.762, -2275104.794, -346781.682]) # Net moment acting on RNA (x,y,z) [N*m]
+    # Max thrust
+    prob['rna_force']  = np.array([1284744.196, 0, -112400.5527])           # Net force acting on RNA (x,y,z) [N]
+    prob['rna_moment'] = np.array([3963732.762, 896380.8464, -346781.682]) # Net moment acting on RNA (x,y,z) [N*m]
+    # Max wind speed
+    #prob['rna_force']  = np.array([188038.8045, 0,  -16451.2637]) # Net force acting on RNA (x,y,z) [N]
+    #prob['rna_moment'] = np.array([0.0, 131196.8431,  0.0]) # Net moment acting on RNA (x,y,z) [N*m]
     
     # Mooring constraints
     prob['mooring_max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      

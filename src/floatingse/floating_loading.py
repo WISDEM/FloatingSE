@@ -631,7 +631,7 @@ class FloatingFrame(Component):
 
         # ---DYNAMIC ANALYSIS---
         nM = 3              # number of desired dynamic modes of vibration
-        Mmethod = 1         # 1: subspace Jacobi     2: Stodola
+        Mmethod = 2         # 1: subspace Jacobi     2: Stodola
         lump = 0            # 0: consistent mass ... 1: lumped mass matrix
         tol = 1e-7          # mode shape tolerance
         shift = 0.0         # shift value ... for unrestrained structures
