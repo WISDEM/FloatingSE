@@ -1,16 +1,17 @@
 \chapter{Package Documentation}
 \label{sec:package}
-The open-source GitHub repository for \textit{FloatingSE} is located at
-\url{https://github.com/WISDEM/FloatingSE}.  \textit{FloatingSE} is one of many
-modules in the larger WISDEM project and developed primarily by
-engineers at the National Renewable Energy Laboratory (NREL).
+\textit{FloatingSE} is a module within the larger WISDEM project,
+developed primarily by engineers at the National Renewable Energy
+Laboratory (NREL).  \textit{FloatingSE} is open-source and the project
+repository is housed on GitHub at
+\url{https://github.com/WISDEM/FloatingSE}.
 
 \section{Package Files}
 The files that comprise the \textit{FloatingSE} package are found in the
 \texttt{src/floatingse} directory in accordance with standard Python
-package conventions.  In addition to the individual files that comprise the package, there are
-also unit tests that probe the behavior of individual functions.  These
-are located in the \texttt{test} sub-directory.  A summary of all
+package conventions.  In addition to these files, there are also
+affiliated unit tests that probe the behavior of individual functions.
+These are located in the \texttt{test} sub-directory.  A summary of all
 package files is included in Table \ref{tbl:package}.
 
 \begin{table}[htbp] \begin{center}
@@ -18,9 +19,8 @@ package files is included in Table \ref{tbl:package}.
       within \textit{FloatingSE}.}
     \label{tbl:package}
 {\footnotesize
-  \begin{tabularx}{\linewidth}{ l l X } \hline
+  \begin{tabularx}{\textwidth}{ l l X } \hline
     \textbf{File name} & \textbf{Unit test file} & \textbf{Description} \\ \hline \hline
-\mytt{\_\_init\_\_.py} && Generic python package file.\\
 \mytt{column.py} & \mytt{column\_PyU.py} & OpenMDAO Components and Group calculating
   mass, buoyancy, and static stability of vertical frustum columns.\\
 \mytt{floating.py} && Top level \textit{FloatingSE} OpenMDAO Group.\\
@@ -30,6 +30,8 @@ package files is included in Table \ref{tbl:package}.
   Frame3DD analysis of complete turbine structure and final summation of
   mass and displacement.\\
 \mytt{mapMooring.py} & \mytt{mapMooring\_PyU.py} &Mooring analysis.\\
+\mytt{mapapi.py} && Updated python interface to the Mooring Analysis
+Program (MAP++).\\
 \mytt{semiInstance.py} && Semisubmersible example implementing
   OC4 design parameters, optimization, and visualization.\\
 \mytt{sparInstance.py} && Spar example implementing OC3 design
@@ -43,7 +45,7 @@ package files is included in Table \ref{tbl:package}.
 
 \section{Dependencies}
 \subsection{Python Dependencies}
-The \textit{FloatingSE} directly loads python modules from NumPy, SciPy,
+\textit{FloatingSE} directly loads python modules from NumPy, SciPy,
 OpenMDAO, and other WISDEM modules.  Each of these packages have
 dependencies in their own right.  For visualization, there are optional
 calls to Matplotlib and Mayavi.  All of the python dependencies are free

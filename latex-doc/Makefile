@@ -5,10 +5,7 @@ all: pdf
 pdf: main.pdf
 
 main.pdf: $(texfiles) offshore.bib
-	pdflatex main.tex
-	bibtex main
-	pdflatex main.tex
-	pdflatex main.tex
+	latexmk -pdf main.tex
 
 clean:
 	rm -rf auto *.bbl *.blg *.ps *.dvi *.aux *.toc *.spl \

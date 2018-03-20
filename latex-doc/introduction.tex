@@ -19,10 +19,7 @@ competitiveness. Nevertheless, prior analysis suggests that floating
 wind turbines could eventually achieve cost competitiveness due to
 better mass production opportunities, near-shore assembly to avoid heavy
 lift installation vessels, and better wind resources in deeper
-waters. The complexities of the physics, manufacturing, installation,
-and operation of floating wind turbines all require a fully integrated
-systems-engineering and techno-economic optimization framework for an
-offshore floating wind plant.
+waters.
 
 This document serves as both a User Manual and Theory Guide for
 \textit{FloatingSE}, a key ingredient in realizing a system engineering
@@ -36,14 +33,15 @@ including \textit{FloatingSE}, are built around the OpenMDAO library, an
 open-source high-performance computing platform for systems analysis and
 multidisciplinary optimization, written in Python \citep{openmdao}.
 
-Due to the structure of OpenMDAO and modular design of WISDEM, individual
+Due to the structure of OpenMDAO, and modular design of WISDEM, individual
 modules can be exercised individually or in unison for turbine or plant
 level studies.  This feature also applies to \textit{FloatingSE}, in
 that module-specific optimizations of a floating substructure and its
-anchoring and mooring systems can be executed while considering the rest
+anchoring and mooring systems can be executed while treating the rest
 of the turbine, plant, and operational strategy as static.
 Alternatively, \textit{FloatingSE} can be linked to other WISDEM modules
-to execute turbine-level and/or plant-level studies.
+to execute turbine-level and/or plant-level tradeoff and optimization
+studies.
 
 This document presents an overview of the contents in
 \textit{FloatingSE} in Section \ref{sec:package} and of the

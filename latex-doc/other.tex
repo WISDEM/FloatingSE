@@ -13,62 +13,79 @@ However, two other files within the \textit{FloatingSE} \texttt{src}-directory
 floating turbine Group,
 
 {\small
-\begin{tabularx}{\linewidth}{ l X }
+\begin{tabularx}{\textwidth}{ l X }
 \texttt{floating\_turbine\_assembly.py} & OpenMDAO Group that connects  multiple WISDEM modules for a complete floating offshore turbine simulation and optimization.\\
 \texttt{floating\_turbine\_instance.py} & Example implementing the above Group.
 \end{tabularx}
 }
 
-\begin{figure}
+The WISDEM modules that exchange inputs and outputs within this
+high-level assembly to crteate a virtual floating wind turbine are
+listed in Table \ref{tbl:new_wisdem}.  In addition to
+\textit{FloatingSE}, two other new WISDEM modules are also required to
+fully represent a floating offshore wind plant (beyond just a single
+turbine), \textit{OffshoreBOS\_SE} and \textit{Offshore\_OandM\_SE}.
+With these two additions, WISDEM can be diagrammed as shown in Figure
+\ref{fig:new_wisdem}.  While the core development of
+\textit{OffshoreBOS\_SE} is effectively complete,
+\textit{Offshore\_OandM\_SE} has not yet been implemented. Note that as
+of this writing, \textit{DriveSE} is not yet connected to the others,
+but doing so is part of the near-term development plan.
+
+\begin{table}[htbp] \begin{center}
+    \caption{WISDEM modules that comprise a virtual floating offshore
+      wind plant.}
+    \label{tbl:new_wisdem}
+{\footnotesize
+  \begin{tabularx}{\textwidth}{ l X } \hline
+    \textbf{Module} & \textbf{Description} \\
+\textit{RotorSE} & Analysis of aerodynamic and structural loading of rotor
+  blades, determination of turbine power curve, and calculation of
+  annual energy production (AEP)\\
+\textit{CommonSE} & Wind and wave velocity profiles, drag calculations,
+  probabilities distributions, frustum and tubular mass properties, math
+  utilities, structural code compliance checks, and RNA aggregator\\
+\textit{OffshoreBOS\_SE} & Capital costs for wind plant items aside from the
+  turbine, such as cabling and substations.  Assembly, installation,
+  commissioning, decommissioning, and financing costs for all
+  components. See \citep{obos}\\
+\textit{FloatingSE} & Floating substructure, including mooring and anchors, and
+  static stability calculations\\
+\textit{TurbineCostsSE (2015)} & Capital costs for all turbine components
+  above the water line\\
+\textit{PlantFinanceSE} & Roll-up of capital costs, balance of station
+  costs, operational costs, financing rates, and net energy production
+  into the levelized cost of energy (LCOE)\\
+\textit{DriveSE} & Analysis of drive shaft, bearings, and gearbox.  See
+  \citep{DriveSE}. NOT YET IMPLEMENTED\\
+\textit{Offshore\_OandM\_SE} & Operational and maintenance costs.  NOT YET
+    DEVELOPED\\
+  \hline \end{tabularx}
+}
+\end{center} \end{table}
+
+\begin{figure}[htb]
   \begin{center}
     \includegraphics[width=6in]{figs/new_wisdem.pdf}
     \caption{Conceptual diagram of WISDEM following the addition of
-      \textit{FloatingSE} and other modules to support offshore floating
+      \textit{FloatingSE} and other modules (green boxes) to support offshore floating
       wind turbines.}
     \label{fig:new_wisdem}
   \end{center}
 \end{figure}
 
-The WISDEM modules that exchange inputs and outputs within this
-high-level assembly are listed below, as well as the features that are
-of interest to the virtual floating turbine simulation.
-\begin{description}
-\item[RotorSE]: Analysis of aerodynamic and structural loading of rotor
-  blades, determination of turbine power curve, and calculation of
-  annual energy production (AEP).
-\item[CommonSE]: Wind and wave velocity profiles, drag calculations,
-  probabilities distributions, frustum and tubular mass properties, math
-  utilities, structural code compliance checks, and RNA aggregator.
-\item[OffshoreBOS\_SE]: Capital costs for wind plant items aside from the
-  turbine, such as cabling and substations.  Assembly, installation,
-  commissioning, decommissioning, and financing costs for all
-  components. See \citep{obos}.
-\item[FloatingSE]: Floating substructure, including mooring and anchors, and
-  static stability calculations.
-\item[TurbineCostsSE (2015)]: Capital costs for all turbine components
-  above the water line.
-\item[PlantFinanceSE]: Roll-up of capital costs, balance of station
-  costs, operational costs, financing rates, and net energy production
-  into the levelized cost of energy (LCOE).
-\item[DriveSE]: Analysis of drive shaft, bearings, and gearbox.  See
-  \citep{DriveSE}. NOT YET IMPLEMENTED.
-\item[Offshore\_OandM\_SE]: Operational and maintenance costs.  NOT YET
-    DEVELOPED.
-\end{description}
-Note that as of this writing, two modules are not yet connected to the
-others, but doing so is part of the near-term development plan.
 
 With a floating offshore turbine constructed, system-wide optimization
 and sensitivity studies can be conducted.  An obvious objective function
-for these optimizations would be LCOE as output from the PlantFinanceSE
-module.  This optimization would require additional constraints
-pertinent to the other modules to produce relevant results.  These other
-constraints are more suitably discussed within the documentation of
-their home modules.  Depending on the nature of the analysis, the user
-may wish to include other design variables in the optimization that are
-inputs to one of these other modules.  As with the constraints, the
-documentation of these design variables is best found in their home
-modules.
+for these optimizations would be the levelized cost of energy (LCOE) as
+output from the \textit{PlantFinanceSE} module.  This optimization would
+require additional constraints pertinent to the other modules to produce
+relevant results.  These other constraints are more suitably discussed
+within the documentation of their home modules.  Depending on the nature
+of the analysis, the user may wish to include other design variables in
+the optimization that are inputs to one of these other modules.  As with
+the constraints, the documentation of these design variables is best
+found in their home modules.
 
 \section{Example}
 TODO

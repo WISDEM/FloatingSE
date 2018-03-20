@@ -32,13 +32,15 @@ feature of OpenMDAO, where any variable can be a design
 variable, and any output could be a constraint or objective function.
 The standard list of design variables in \textit{FloatingSE} given in
 the examples are the continuous variables that parametrically describe
-the geometry of the substructure listed in Section \ref{sec:geom},
+the geometry of the substructure listed in Section \ref{sec:geom}.  For
+a succinct, central listing, these variables are collected together in
+Table \ref{tbl:designvar}.
 
 \begin{table}[htbp] \begin{center}
     \caption{Standard design variables used for optimization in \textit{FloatingSE}.}
     \label{tbl:designvar}
 {\footnotesize
-  \begin{tabularx}{\linewidth}{ l l c c X } \hline
+  \begin{tabularx}{\textwidth}{ l l c c X } \hline
     \textbf{Variable} & \textbf{Type} & \textbf{Units} & \textbf{Bounds} &\textbf{Description} \\ \hline \hline
     \mytt{base\_section\_height} & Float array ($n_s$) & $m$& 0.1--100&Height of each section \\
     \mytt{base\_outer\_diameter} & Float array ($n_s+1$) & $m$& 1.1--40&Diameter at each section node (linear lofting between)\\
@@ -79,7 +81,42 @@ the geometry of the substructure listed in Section \ref{sec:geom},
 Due to the many design variables, permutations of settings, and applied
 physics, there are many constraints that must be applied for an
 optimization to close.  These constraints can be tuned with user inputs
-and/or user-defined limits for the constraints in the optimization problem set-up.
+and/or user-defined limits for the constraints in the optimization
+problem set-up.  The constraints are described in detail in the
+following sub-sections.  For convenience, all of the constraints, and
+their bounds, are also collected together in Table \ref{tbl:constraints}.
+
+\begin{table}[htbp] \begin{center}
+    \caption{Optimization constraints used in \textit{FloatingSE}.}
+    \label{tbl:constraints}
+    {\footnotesize
+  \begin{tabular}{ r l l |c| r l l} \hline
+    \textbf{Lower} & \textbf{Constraint} & \textbf{Upper} && \textbf{Lower} & \textbf{Constraint} & \textbf{Upper} \\ \hline \hline
+& \mytt{base.draft\_depth\_ratio} & $0.75$ && $1.0$ & \mytt{base.flange\_compactness} &\\
+& \mytt{aux.draft\_depth\_ratio} & $0.75$&& $1.0$ & \mytt{base.web\_compactness} &\\
+& \mytt{aux.fairlead\_draft\_ratio} & $1.0$&& $1.0$ & \mytt{aux.flange\_compactness} &\\
+& \mytt{so.base\_auxiliary\_spacing} & $1.0$&& $1.0$ & \mytt{aux.web\_compactness} &\\
+$\unit[0.0]{m}$ & \mytt{sg.transition\_buffer} & $\unit[2.0]{m}$&& & \mytt{base.axial\_local\_unity} & $1.0$\\
+& \mytt{base.flange\_spacing\_ratio} & $1.0$&& & \mytt{base.axial\_general\_unity} & $1.0$\\ 
+& \mytt{base.web\_radius\_ratio} & $1.0$&& & \mytt{base.external\_local\_unity} & $1.0$\\
+& \mytt{aux.flange\_spacing\_ratio} & $1.0$&& & \mytt{base.external\_general\_unity} & $1.0$\\
+& \mytt{aux.web\_radius\_ratio} & $1.0$&& & \mytt{aux.axial\_local\_unity} & $1.0$\\
+$0.0$ & \mytt{load.pontoon\_base\_attach\_lower} & $0.5$&& & \mytt{aux.axial\_general\_unity} & $1.0$\\
+$0.5$ & \mytt{load.pontoon\_base\_attach\_upper} & $1.0$&& & \mytt{aux.external\_local\_unity} & $1.0$\\
+$1.0$ & \mytt{mm.mooring\_length\_min} &&& & \mytt{aux.external\_general\_unity} & $1.0$\\ 
+& \mytt{mm.mooring\_length\_max} & $1.0$&& & \mytt{load.pontoon\_stress} & $1.0$\\
+& \mytt{base.manufacturability} & $0.0$&& & \mytt{load.tower\_stress} & $1.0$\\ 
+& \mytt{base.weldability} & $0.0$&& & \mytt{load.tower\_shell\_buckling} & $1.0$\\
+& \mytt{aux.manufacturability} & $0.0$&& & \mytt{load.tower\_global\_buckling} & $1.0$\\
+& \mytt{aux.weldability} & $0.0$&& $0.0$ & \mytt{mm.axial\_unity} & $1.0$\\
+& \mytt{tow.manufacturability} & $0.0$&& $0.0$ & \mytt{sm.variable\_ballast\_height\_ratio} & $1.0$\\
+& \mytt{tow.weldability} & $0.0$&& $0.0$ & \mytt{sm.variable\_ballast\_mass} &\\
+$0.0$ & \mytt{load.base\_connection\_ratio} &&& $0.1$ & \mytt{sm.metacentric\_height} &\\
+$0.5$ & \mytt{load.auxiliary\_connection\_ratio} &&& & \mytt{sm.offset\_force\_ratio} & $1.0$\\
+&&&& & \mytt{sm.heel\_moment\_ratio} & $1.0$\\
+    \hline \end{tabular}
+  }
+\end{center} \end{table}
 
 \subsection{Geometry Constraints}
 The user inputs the desired freeboard, fairlead, sea level depth, column
@@ -91,7 +128,7 @@ base.draft_depth_ratio $\leq$ 0.75
 aux.draft_depth_ratio $\leq$ 0.75
 \end{lstlisting}
 where the prefixes, \texttt{base} and \texttt{aux}, have the same
-meaning as in Section \ref{sec:exec}.  The 75\% value is up to the
+meaning as in Table \ref{sec:exec}.  The 75\% value is up to the
 user's discretion.
 
 The fairlead attachment point of the moorings much also be less than the
@@ -102,7 +139,7 @@ aux.fairlead_draft_ratio $\leq$ 1.0
 
 If there are multiple submerged columns, the user specifies their radial
 distance from the center of the structure and the diameters of all
-columns.  A utilization constraint to ensure that the outer shells of adjacent
+columns.  A constraint to ensure that the outer shells of adjacent
 columns do not intersect must be therefore be applied,
 \begin{lstlisting}
 sg.base_auxiliary_spacing $\leq$ 1.0
@@ -161,7 +198,17 @@ the course of a section and the wall thickness ratio relative to the
 diameter are capped.  Similarly, to facilitate welding the
 semisubmersible pontoons to the columns, constraints regarding the radio
 of diameters between the two are enforced. These limits are determined
-by user parameters and constraints,
+by user parameters in Table \ref{tbl:manconvar} and constraints,
+\begin{lstlisting}
+base.manufacturability $\leq$ 0.0
+base.weldability $\leq$ 0.0
+aux.manufacturability $\leq$ 0.0
+aux.weldability $\leq$ 0.0
+tow.manufacturability $\leq$ 0.0
+tow.weldability $\leq$ 0.0
+load.base_connection_ratio $\geq$ 0.0
+load.auxiliary_connection_ratio $\geq$ 0.0
+\end{lstlisting}
 
 \begin{table}[htbp] \begin{center}
     \caption{Constraint variables for the manufacturability in \textit{FloatingSE}.}
@@ -176,21 +223,11 @@ by user parameters and constraints,
 }
 \end{center} \end{table}
 
-\begin{lstlisting}
-base.manufacturability $\leq$ 0.0
-base.weldability $\leq$ 0.0
-aux.manufacturability $\leq$ 0.0
-aux.weldability $\leq$ 0.0
-tow.manufacturability $\leq$ 0.0
-tow.weldability $\leq$ 0.0
-load.base_connection_ratio $\geq$ 0.0
-load.auxiliary_connection_ratio $\geq$ 0.0
-\end{lstlisting}
-
 \subsection{Stress Limits and Code Compliance}
-The stress and buckling code compliance constraints are formulated with
-a safety factor as utilization ratios (ratio of actual to maximum
-values), which must be less than one. The safety factor parameters are,
+The stress and buckling code compliance constraints are formulated as
+utilization ratios (ratio of actual to maximum values), with a safety
+factor, which must be less than one. The safety factor parameters are
+listed in Table \ref{tbl:safetyvar}.
 
 \begin{table}[htbp] \begin{center}
     \caption{Variables specifying the factors of safety within \textit{FloatingSE}.}
@@ -260,11 +297,9 @@ sm.variable_ballast_mass $\geq$ 0.0
 \end{lstlisting}
 
 Static stability is enforced by constraining the metacentric height to
-be positive and, similarly, that the center of gravity be located above
-the center of buoyancy,
+be positive,
 \begin{lstlisting}
 sm.metacentric_height $\geq$ 0.1
-sm.static_stability $\geq$ 0.1
 \end{lstlisting}
 
 As described above, surge and pitch stability are enforced through
@@ -272,7 +307,12 @@ similar approaches.  The total force and moment acting on the turbine
 are compared to the restoring forces and moments applied by the mooring
 system, buoyancy, or other sources at the maximum allowable point of
 displacement.  These constraints are formulated as ratios with the user
-specifying the maximum allowable limits,
+specifying the maximum allowable limits via the variables in Table
+\ref{tbl:moorcon}.
+\begin{lstlisting}
+sm.offset_force_ratio $\leq$ 1.0
+sm.heel_moment_ratio $\leq$ 1.0
+\end{lstlisting}
 
 \begin{table}[htbp] \begin{center}
     \caption{Constraint variables for the mooring system in \textit{FloatingSE}.}
@@ -280,16 +320,11 @@ specifying the maximum allowable limits,
 {\footnotesize
   \begin{tabular}{ l l c l } \hline
     \textbf{Variable} & \textbf{Type} & \textbf{Units} & \textbf{Description} \\
-    \mytt{mooring\_max\_offset} & Float scalar & Max surge/sway offset & $m$\\
-    \mytt{mooring\_max\_heel}   & Float scalar & Max heel (pitching) angle & $deg$\\
+    \mytt{mooring\_max\_offset} & Float scalar & $m$& Max surge/sway offset \\
+    \mytt{mooring\_max\_heel}   & Float scalar & $deg$& Max heel (pitching) angle \\
   \hline \end{tabular}
 }
 \end{center} \end{table}
-
-\begin{lstlisting}
-sm.offset_force_ratio $\leq$ 1.0
-sm.heel_moment_ratio $\leq$ 1.0
-\end{lstlisting}
 
 \section{Objectives}
 Different anaylses will emphasize different metrics, requiring different
@@ -299,4 +334,17 @@ function would be total substructure cost (variable name,
 \texttt{total\_cost}) or mass (variable name, \texttt{total\_mass}).
 
 \section{Example}
-TODO
+
+\begin{figure}[htb]
+  \begin{subfigure}[b]{0.49\linewidth}
+    \centering \includegraphics[width=\linewidth]{figs/spar-psqp.jpg}
+    \caption{Spar}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.49\linewidth}
+    \centering \includegraphics[width=\linewidth]{figs/semi-psqp.jpg}
+    \caption{Semisubmersible}
+  \end{subfigure}\\
+  \caption{Examples of optimized spar and semisubmersible geometries.}
+  \label{fig:optex}
+\end{figure}
+
