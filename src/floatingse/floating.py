@@ -28,25 +28,25 @@ class FloatingSE(Group):
         super(FloatingSE, self).__init__()
 
         #self.add('geomsys', SubstructureDiscretization(nSection), promotes=['z_system'])
-        nFull = 3*nSection+1
+        self.nFull = 3*nSection+1
 
         self.add('hub', NewHubHeight(), promotes=['*'])
 
-        self.add('tow', TowerLeanSE(nSection+1,nFull), promotes=['material_density','tower_section_height',
+        self.add('tow', TowerLeanSE(nSection+1,self.nFull), promotes=['material_density','tower_section_height',
                                                                  'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
                                                                  'tower_buckling_length','min_taper','min_d_to_t','rna_mass','rna_cg','rna_I','tower_mass'])
         
         # Next do base and ballast columns
         # Ballast columns are replicated from same design in the components
-        self.add('base', Column(nSection, nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
+        self.add('base', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                             'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
                                                             'min_taper','min_d_to_t'])
-        self.add('aux', Column(nSection, nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
+        self.add('aux', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                            'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
                                                            'min_taper','min_d_to_t'])
 
         # Add in the connecting truss
-        self.add('load', FloatingLoading(nSection, nFull), promotes=['water_density','material_density','E','G','yield_stress',
+        self.add('load', FloatingLoading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
                                                                      'z0','beta','Uref','zref','shearExp','beta','cd_usr',
                                                                      'pontoon_outer_diameter','pontoon_wall_thickness','outer_cross_pontoons',
                                                                      'cross_attachment_pontoons','lower_attachment_pontoons','upper_attachment_pontoons',
@@ -57,13 +57,13 @@ class FloatingSE(Group):
 
 
         # Run Semi Geometry for interfaces
-        self.add('sg', SubstructureGeometry(nFull))
+        self.add('sg', SubstructureGeometry(self.nFull))
 
         # Next run MapMooring
         self.add('mm', MapMooring(), promotes=['water_density','water_depth'])
         
         # Run main Semi analysis
-        self.add('stab', SemiStable(nFull), promotes=['water_density','total_cost','total_mass'])
+        self.add('stab', SemiStable(self.nFull), promotes=['water_density','total_cost','total_mass'])
 
         # Define all input variables from all models
         
@@ -264,6 +264,7 @@ class FloatingSE(Group):
         
         self.deriv_options['type'] = typeStr
         self.deriv_options['form'] = formStr
+        self.deriv_options['check_form'] = formStr
         self.deriv_options['step_size'] = stepVal
         self.deriv_options['step_calc'] = stepStr
 
