@@ -122,7 +122,7 @@ class FloatingInstance(object):
         self.params['pontoon_cost_rate'] = 6.250
 
         # OC4 Tower
-        self.params['hub_height'] = 77.6
+        self.params['hub_height'] = 87.6
         self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
         self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
         self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
@@ -234,7 +234,7 @@ class FloatingInstance(object):
         if optimizer.upper() == 'CONMIN':
             self.prob.driver.opt_settings['ITMAX'] = 1000
         elif optimizer.upper() in ['PSQP']:
-            self.prob.driver.opt_settings['MIT'] = 1000
+            self.prob.driver.opt_settings['MIT'] = 100
         elif optimizer.upper() in ['NSGA2']:
             self.prob.driver.opt_settings['PopSize'] = 200
             self.prob.driver.opt_settings['maxGen'] = 2000
