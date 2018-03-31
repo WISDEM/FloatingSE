@@ -4,6 +4,7 @@ from offshorebos.wind_obos_component import WindOBOS
 from plant_financese.plant_finance import PlantFinance
 from rotorse.rotor import RotorSE
 from commonse.rna import RNA
+from commonse.turbine_constraints import TurbineConstraints
 from turbine_costsse.turbine_costsse_2015 import Turbine_CostsSE_2015
 
 import numpy as np
@@ -22,17 +23,19 @@ class FloatingTurbine(Group):
         # Rotor
         self.add('rotor', RotorSE(), promotes=['idx_cylinder_aero','idx_cylinder_str','hubFraction','nBlades','turbine_class','sparT','teT',
                                                'r_max_chord','chord_sub','theta_sub','precurve_sub','bladeLength','precone','tilt','yaw',
-                                               'turbulence_class','gust_stddev','VfactorPC','shape_parameter',
+                                               'turbulence_class','gust_stddev','VfactorPC','shape_parameter','Rtip','precurveTip','presweepTip',
                                                'control:Vin','control:Vout','machine_rating','control:minOmega','control:maxOmega',
                                                'control:tsr','control:pitch','pitch_extreme','azimuth_extreme','drivetrainType',
                                                'rstar_damage','Mxb_damage','Myb_damage','strain_ult_spar','strain_ult_te','m_damage',
-                                               'nSector','tiploss','hubloss','wakerotation','usecd','AEP_loss_factor','dynamic_amplication_tip_deflection'])
+                                               'nSector','tiploss','hubloss','wakerotation','usecd','AEP_loss_factor','tip_deflection',
+                                               'dynamic_amplication_tip_deflection'])
 
         # RNA
         self.add('rna', RNA(1))
         
         # Tower and substructure
-        self.add('sm', FloatingSE(nSection), promotes=['radius_to_auxiliary_column','fairlead','fairlead_offset_from_shell',
+        myfloat = FloatingSE(nSection)
+        self.add('sm', myfloat, promotes=['radius_to_auxiliary_column','fairlead','fairlead_offset_from_shell',
                                                        'base_freeboard','base_section_height','base_outer_diameter','base_wall_thickness',
                                                        'auxiliary_freeboard','auxiliary_section_height','auxiliary_outer_diameter','auxiliary_wall_thickness',
                                                        'scope_ratio','anchor_radius','mooring_diameter','number_of_mooring_lines','mooring_type',
@@ -51,6 +54,10 @@ class FloatingTurbine(Group):
                                                        'tower_section_height','tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
                                                        'tower_buckling_length','tower_mass','loading','min_diameter_thickness_ratio','min_taper_ratio'])
 
+        # Turbine constraints
+        self.add('tcons', TurbineConstraints(myfloat.nFull), promotes=['blade_number','Rtip','precurveTip','presweepTip','precone','tilt',
+                                                                       'tip_deflection'])
+        
         # Turbine costs
         self.add('tcost', Turbine_CostsSE_2015(), promotes=['*'])
         
@@ -339,7 +346,6 @@ class FloatingTurbine(Group):
         self.connect('water_depth', ['sm.water_depth', 'wobos.waterD', 'sea_depth'])
         self.connect('hub_height', ['rotor.hub_height', 'sm.hub_height', 'wobos.hubH'])
         self.connect('tower_outer_diameter', 'wobos.towerD', src_indices=[0])
-        #self.connect('sm.tow.z_full', 'rotor.wind.z', src_indices=[])
         
         self.connect('wind_beta', 'sm.beta')
         self.connect('cd_usr', 'sm.cd_usr')
@@ -360,11 +366,11 @@ class FloatingTurbine(Group):
         #self.connect('lumped_mass_matrix', 'sm.lump')
         #self.connect('stress_standard_value', 'sm.DC')
         
-        self.connect('safety_factor_frequency', 'rotor.eta_freq')
-        self.connect('safety_factor_stress', 'sm.gamma_f')
-        self.connect('safety_factor_materials', 'sm.gamma_m')
+        self.connect('safety_factor_frequency', ['rotor.gamma_freq', 'tcons.gamma_freq'])
+        self.connect('safety_factor_stress', ['sm.gamma_f', 'rotor.gamma_f'])
+        self.connect('safety_factor_materials', ['sm.gamma_m', 'rotor.gamma_m','tcons.gamma_m'])
         self.connect('safety_factor_buckling', 'sm.gamma_b')
-        self.connect('safety_factor_fatigue', ['rotor.eta_damage','sm.gamma_fatigue'])
+        self.connect('safety_factor_fatigue', ['rotor.gamma_fatigue','sm.gamma_fatigue'])
         self.connect('safety_factor_consequence', 'sm.gamma_n')
         self.connect('rna.loads.top_F', 'sm.rna_force')
         self.connect('rna.loads.top_M', 'sm.rna_moment')
@@ -375,7 +381,7 @@ class FloatingTurbine(Group):
         self.connect('rotor.I_all_blades', 'rna.blades_I')
         self.connect('hub_mass', 'rna.hub_mass')
         self.connect('nac_mass', 'rna.nac_mass')
-        self.connect('hub_cm', 'rna.hub_cm')
+        self.connect('hub_cm', ['rna.hub_cm','tcons.hub_tt'])
         self.connect('nac_cm', 'rna.nac_cm')
         self.connect('hub_I', 'rna.hub_I')
         self.connect('nac_I', 'rna.nac_I')
@@ -415,6 +421,11 @@ class FloatingTurbine(Group):
 
         self.connect('nBlades','blade_number')
         self.connect('rotor.mass_one_blade', 'blade_mass')
+        self.connect('control:maxOmega', 'tcons.rotor_omega')
+        self.connect('sm.load.f1', 'tcons.tower_f1')
+        self.connect('sm.load.f2', 'tcons.tower_f2')
+        self.connect('sm.tow.z_full', 'tcons.tower_z')
+        self.connect('sm.tow.d_full', 'tcons.tower_d')
         
         self.connect('turbine_cost_kW', 'wobos.turbCapEx')
         self.connect('machine_rating', 'wobos.turbR')
