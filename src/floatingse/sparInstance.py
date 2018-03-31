@@ -52,8 +52,11 @@ class SparInstance(FloatingInstance):
                       #('fairlead_offset_from_shell',0.0, 5.0, 1e2),
                       ('base_freeboard',0.0, 50.0, 1.0),
                       ('base_section_height',1e-1, 100.0, 1e1),
-                      ('base_outer_diameter',1.1, 40.0, 10.0),
-                      ('base_wall_thickness',5e-3, 1.0, 1e3),
+                      ('base_outer_diameter',2.1, 40.0, 10.0),
+                      ('base_wall_thickness',1e-2, 5e-1, 1e3),
+                      ('tower_section_height',1e-1, 100.0, 1e1),
+                      ('tower_outer_diameter',1.1, 40.0, 10.0),
+                      ('tower_wall_thickness',1e-2, 1.0, 1e3),
                       ('scope_ratio', 1.0, 5.0, 1.0),
                       ('anchor_radius', 1.0, 1e3, 1e-2),
                       ('mooring_diameter', 0.05, 1.0, 1e1),
@@ -75,6 +78,9 @@ class SparInstance(FloatingInstance):
     def get_constraints(self):
 
         conlist = [
+            # Try to get tower height to match desired hub height
+            ['tow.height_constraint', None, None, 0.0],
+            
             # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
             # Ensure that fairlead attaches to draft
             ['base.draft_depth_ratio', 0.0, 0.75, None],
@@ -97,7 +103,7 @@ class SparInstance(FloatingInstance):
             
             # API Bulletin 2U constraints
             ['base.flange_spacing_ratio', None, 1.0, None],
-            ['base.web_radius_ratio', None, 1.0, None],
+            ['base.stiffener_radius_ratio', None, 0.5, None],
             ['base.flange_compactness', 1.0, None, None],
             ['base.web_compactness', 1.0, None, None],
             ['base.axial_local_unity', None, 1.0, None],
@@ -143,7 +149,7 @@ class SparInstance(FloatingInstance):
         self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                            0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
 
-        self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard']+self.params['hub_height'], self.params['tower_section_height'],
+        self.draw_column(fig, [0.0, 0.0], self.params['hub_height'], self.params['tower_section_height'],
                          0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)
 
         self.set_figure(fig, fname)
@@ -166,22 +172,25 @@ def optimize_spar(algo='slsqp', myspar=None):
     return myspar
 
 def psqp_optimal():
-    #OrderedDict([('total_cost', array([0.96963594]))])
+    #OrderedDict([('total_cost', array([0.85428322]))])
     myspar = SparInstance()
-    myspar.params['fairlead'] = 4.927202945865353
-    myspar.params['base_freeboard'] = 11.51079573762036
-    myspar.params['base_section_height'] = np.array( [35.088858368278935, 34.80895102971842, 34.974929395775014, 7.410687297063525, 12.97158337346268] )
-    myspar.params['base_outer_diameter'] = np.array( [2.8879418373521997, 4.085966179669333, 6.320531864715026, 8.552395763234195, 5.7346457824168215, 5.514680698692207] )
-    myspar.params['base_wall_thickness'] = np.array( [0.007342726623873182, 0.006694729984940154, 0.007245337732535003, 0.009975902410243778, 0.008361582858927942, 0.004999999999999999] )
-    myspar.params['scope_ratio'] = 2.928625620780157
-    myspar.params['anchor_radius'] = 854.1921746988265
-    myspar.params['mooring_diameter'] = 0.1754188030581036
-    myspar.params['base_permanent_ballast_height'] = 7.2250448680480455
-    myspar.params['base_stiffener_web_height'] = np.array( [0.09837247798364428, 0.09371128257530666, 0.08223199234264876, 0.09776803989025877, 0.015962520996266966] )
-    myspar.params['base_stiffener_web_thickness'] = np.array( [0.0040857158653538495, 0.0038921218800465913, 0.0034153511494099662, 0.004060611653939701, 0.000999999999999997] )
-    myspar.params['base_stiffener_flange_width'] = np.array( [0.010000000000000009, 0.00999999999999999, 0.010000000000000016, 0.013266411098100681, 0.015118496561641243] )
-    myspar.params['base_stiffener_flange_thickness'] = np.array( [0.016737403983002403, 0.027319494467725206, 0.02372704545511987, 0.009539323997907077, 0.0010000000000000013] )
-    myspar.params['base_stiffener_spacing'] = np.array( [0.17303295858177742, 0.18691099646865977, 0.2938311789567957, 0.3353137217358804, 0.17675563913173956] )
+    myspar.params['fairlead'] = 5.2535195304756925
+    myspar.params['base_freeboard'] = 11.266593127013982
+    myspar.params['base_section_height'] = np.array( [35.08425750951959, 34.62912259289317, 34.81694953013919, 7.441391626075208, 12.990742629624677] )
+    myspar.params['base_outer_diameter'] = np.array( [2.6481670472541663, 3.6644590361949887, 5.914499349789744, 8.304762256602293, 5.616116536284985, 5.508506516934016] )
+    myspar.params['base_wall_thickness'] = np.array( [0.006841508279275946, 0.006399425828760462, 0.00677860852296999, 0.006626268366436105, 0.010170203701277653, 0.00550031726871565] )
+    myspar.params['tower_section_height'] = np.array( [15.227647356049365, 15.280735953716578, 15.339859351198202, 15.139266648587856, 15.345897563434004] )
+    myspar.params['tower_outer_diameter'] = np.array( [6.456257663818232, 5.7536143807842315, 5.681532012577617, 5.02961484018852, 4.136090669182665, 3.9832683794360344] )
+    myspar.params['tower_wall_thickness'] = np.array( [0.038070207592394226, 0.015187798073131448, 0.009007699450009954, 0.005591853003006994, 0.005417724373126626, 0.004999999999999961] )
+    myspar.params['scope_ratio'] = 2.9298431862588616
+    myspar.params['anchor_radius'] = 854.1923042892677
+    myspar.params['mooring_diameter'] = 0.1669564274261904
+    myspar.params['base_permanent_ballast_height'] = 6.973411581222806
+    myspar.params['base_stiffener_web_height'] = np.array( [0.07839776923061138, 0.07161528545467119, 0.09016746097165369, 0.07637969725126702, 0.06533829588658703] )
+    myspar.params['base_stiffener_web_thickness'] = np.array( [0.0032561039035359307, 0.0030189646701950733, 0.0037317703705913572, 0.003817035608813318, 0.006693166060995202] )
+    myspar.params['base_stiffener_flange_width'] = np.array( [0.016069147298235786, 0.0230660558593931, 0.009999999999999992, 0.012310842677169986, 0.010260004814402379] )
+    myspar.params['base_stiffener_flange_thickness'] = np.array( [0.01330260231271094, 0.015309976035834184, 0.032704804943342804, 0.012343218694699802, 0.0426071781731897] )
+    myspar.params['base_stiffener_spacing'] = np.array( [0.15442408395236168, 0.1680377737869477, 0.2413573475462672, 0.23671486059235827, 0.4481524581179832] )
 
     myspar.evaluate('slsqp')
     #myspar.visualize('spar-psqp.jpg')

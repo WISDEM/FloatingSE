@@ -23,15 +23,18 @@ class SemiInstance(FloatingInstance):
                       ('base_freeboard',0.0, 50.0, 1.0),
                       ('base_section_height',1e-1, 100.0, 1e1),
                       ('base_outer_diameter',1.1, 40.0, 10.0),
-                      ('base_wall_thickness',5e-3, 1.0, 1e3),
+                      ('base_wall_thickness',1e-2, 1.0, 1e3),
                       ('auxiliary_freeboard',0.0, 50.0, 1.0),
                       ('auxiliary_section_height',1e-1, 100.0, 1e1),
                       ('auxiliary_outer_diameter',1.1, 40.0, 10.0),
-                      ('auxiliary_wall_thickness',5e-3, 1.0, 1e3),
-                      ('pontoon_outer_diameter', 1e-1, 3.0, 10.0),
-                      ('pontoon_wall_thickness', 5e-3, 1e-1, 100.0),
+                      ('auxiliary_wall_thickness',1e-2, 1.0, 1e3),
+                      ('pontoon_outer_diameter', 2e-1, 3.0, 10.0),
+                      ('pontoon_wall_thickness', 1e-2, 1e-1, 100.0),
                       ('base_pontoon_attach_lower',-1e2, 1e2, 1.0),
                       ('base_pontoon_attach_upper',-1e2, 1e2, 1.0),
+                      ('tower_section_height',1e-1, 100.0, 1e1),
+                      ('tower_outer_diameter',1.1, 40.0, 10.0),
+                      ('tower_wall_thickness',1e-2, 1.0, 1e3),
                       ('scope_ratio', 1.0, 5.0, 1.0),
                       ('anchor_radius', 1.0, 1e3, 1e-2),
                       ('mooring_diameter', 0.05, 1.0, 1e1),
@@ -65,6 +68,9 @@ class SemiInstance(FloatingInstance):
     def get_constraints(self):
 
         conlist = [
+            # Try to get tower height to match desired hub height
+            ['tow.height_constraint', None, None, 0.0],
+            
             # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
             # Ensure that fairlead attaches to draft
             ['base.draft_depth_ratio', 0.0, 0.75, None],
@@ -92,7 +98,7 @@ class SemiInstance(FloatingInstance):
             
             # API Bulletin 2U constraints
             ['base.flange_spacing_ratio', None, 1.0, None],
-            ['base.web_radius_ratio', None, 1.0, None],
+            ['base.stiffener_radius_ratio', None, 0.5, None],
             ['base.flange_compactness', 1.0, None, None],
             ['base.web_compactness', 1.0, None, None],
             ['base.axial_local_unity', None, 1.0, None],
@@ -101,7 +107,7 @@ class SemiInstance(FloatingInstance):
             ['base.external_general_unity', None, 1.0, None],
             
             ['aux.flange_spacing_ratio', None, 1.0, None],
-            ['aux.web_radius_ratio', None, 1.0, None],
+            ['aux.stiffener_radius_ratio', None, 0.5, None],
             ['aux.flange_compactness', 1.0, None, None],
             ['aux.web_compactness', 1.0, None, None],
             ['aux.axial_local_unity', None, 1.0, None],
