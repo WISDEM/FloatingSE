@@ -29,6 +29,7 @@ class BulkheadMass(Component):
         # Derivatives
         self.deriv_options['type'] = 'fd'
         self.deriv_options['form'] = 'central'
+        self.deriv_options['check_form'] = 'central'
         self.deriv_options['step_calc'] = 'relative'
         
     def solve_nonlinear(self, params, unknowns, resids):
@@ -110,10 +111,13 @@ class StiffenerMass(Component):
         self.add_param('ring_mass_factor', val=0.0, desc='Stiffener ring mass correction factor')
         
         self.add_output('stiffener_mass', val=np.zeros(nFull-1), units='kg', desc='mass of spar stiffeners')
+        self.add_output('flange_spacing_ratio', val=np.zeros((nFull-1,)), desc='ratio between flange and stiffener spacing')
+        self.add_output('stiffener_radius_ratio', val=np.zeros((nFull-1,)), desc='ratio between stiffener height and radius')
 
         # Derivatives
         self.deriv_options['type'] = 'fd'
         self.deriv_options['form'] = 'central'
+        self.deriv_options['check_form'] = 'central'
         self.deriv_options['step_calc'] = 'relative'
         
     def solve_nonlinear(self, params, unknowns, resids):
@@ -149,20 +153,11 @@ class StiffenerMass(Component):
         # Number of stiffener rings per section (height of section divided by spacing)
         nring_per_section = h_section / L_stiffener
         unknowns['stiffener_mass'] =  nring_per_section * m_ring
-
-    '''
-    def list_deriv_vars(self):
-        inputs = ('d_full','t_full','stiffener_web_height','stiffener_web_thickness','stiffener_flange_width','stiffener_flange_thickness','stiffener_spacing')
-        outputs = ('stiffener_mass',)
-        return inputs, outputs
         
-    def linearize(self, params, unknowns, resids):
-        J = {}
-        inp,out = self.list_deriv_vars()
-        for o in out:
-            for i in inp:
-                J[o,i] = np.zeros( (len(unknowns[o]), len(params[i])) )
-    '''
+        # Create some constraints for reasonable stiffener designs for an optimizer
+        unknowns['flange_spacing_ratio']   = w_flange / (0.5*L_stiffener)
+        unknowns['stiffener_radius_ratio'] = (h_web + t_flange + t_wall) / R_od
+
                 
 
         
@@ -195,6 +190,7 @@ class ColumnGeometry(Component):
         # Derivatives
         self.deriv_options['type'] = 'fd'
         self.deriv_options['form'] = 'central'
+        self.deriv_options['check_form'] = 'central'
         self.deriv_options['step_calc'] = 'relative'
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -290,6 +286,7 @@ class ColumnProperties(Component):
         # Derivatives
         self.deriv_options['type'] = 'fd'
         self.deriv_options['form'] = 'central'
+        self.deriv_options['check_form'] = 'central'
         self.deriv_options['step_calc'] = 'relative'
         self.deriv_options['step_size'] = 1e-5
         
@@ -363,7 +360,7 @@ class ColumnProperties(Component):
         # Apportion every mass to a section for buckling stress computation later
         self.section_mass = coeff*(m_shell + m_stiffener + m_bulkhead[:-1])
         self.section_mass[-1] += coeff*m_bulkhead[-1]
-        
+
         # Store outputs addressed so far
         unknowns['spar_mass']       = m_spar
         unknowns['outfitting_mass'] = params['outfitting_mass_fraction'] * m_spar
@@ -463,7 +460,7 @@ class ColumnProperties(Component):
         self.section_mass     += m_outfit / self.section_mass.size
         unknowns['total_mass'] = self.section_mass
         unknowns['z_center_of_mass'] = ( (m_spar+m_outfit)*cg_spar + m_ballast*cg_ballast ) / m_total
-        
+
         # Compute volume of each section and mass of displaced water by section
         # Find the radius at the waterline so that we can compute the submerged volume as a sum of frustum sections
         if z_nodes[-1] > 0.0:
@@ -537,8 +534,6 @@ class ColumnBuckling(Component):
         self.add_param('loading', val='hydro', desc='Loading type in API checks [hydro/radial]', pass_by_obj=True)
         
         # Output constraints
-        self.add_output('flange_spacing_ratio', val=np.zeros((nFull-1,)), desc='ratio between flange and stiffener spacing')
-        self.add_output('web_radius_ratio', val=np.zeros((nFull-1,)), desc='ratio between web height and radius')
         self.add_output('flange_compactness', val=np.zeros((nFull-1,)), desc='check for flange compactness')
         self.add_output('web_compactness', val=np.zeros((nFull-1,)), desc='check for web compactness')
         self.add_output('axial_local_unity', val=np.zeros((nFull-1,)), desc='unity check for axial load - local buckling')
@@ -549,6 +544,7 @@ class ColumnBuckling(Component):
         # Derivatives
         self.deriv_options['type'] = 'fd'
         self.deriv_options['form'] = 'central'
+        self.deriv_options['check_form'] = 'central'
         self.deriv_options['step_calc'] = 'relative'
         self.deriv_options['step_size'] = 1e-5
 
@@ -599,10 +595,6 @@ class ColumnBuckling(Component):
         loading      = params['loading']
         pressure,_   = nodal2sectional( params['pressure'] )
         
-        # Create some constraints for reasonable stiffener designs for an optimizer
-        unknowns['flange_spacing_ratio'] = w_flange / (0.5*L_stiffener)
-        unknowns['web_radius_ratio']     = h_web    / R_od
-
         # Compute applied axial stress simply, like API guidelines (as opposed to running frame3dd)
         sigma_ax = self.compute_applied_axial(params)
         (flange_compactness, web_compactness, axial_local_unity, axial_general_unity,
@@ -637,8 +629,9 @@ class Column(Group):
         self.add('stiff', StiffenerMass(nSection,nFull), promotes=['d_full','t_full','z_full','z_param','rho','ring_mass_factor',
                                                                    'stiffener_mass','stiffener_web_height',
                                                                    'stiffener_web_thickness','stiffener_flange_width',
-                                                                   'stiffener_flange_thickness','stiffener_spacing'])
-        
+                                                                   'stiffener_flange_thickness','stiffener_spacing',
+                                                                   'flange_spacing_ratio','stiffener_radius_ratio'])
+
         self.add('col', ColumnProperties(nFull), promotes=['water_density','d_full','t_full','z_full','z_section',
                                                            'permanent_ballast_density','permanent_ballast_height',
                                                            'bulkhead_mass','stiffener_mass','column_mass_factor','outfitting_mass_fraction',
@@ -657,7 +650,6 @@ class Column(Group):
                                                                     'loading','stack_mass_in','stiffener_web_height',
                                                                     'stiffener_web_thickness','stiffener_flange_width',
                                                                     'stiffener_flange_thickness','stiffener_spacing',
-                                                                    'flange_spacing_ratio','web_radius_ratio',
                                                                     'flange_compactness','web_compactness',
                                                                     'axial_local_unity','axial_general_unity',
                                                                     'external_local_unity','external_general_unity'])

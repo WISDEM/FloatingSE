@@ -79,6 +79,7 @@ class SubstructureGeometry(Component):
         # Derivatives
         self.deriv_options['type'] = 'fd'
         self.deriv_options['form'] = 'central'
+        self.deriv_options['check_form'] = 'central'
         self.deriv_options['step_calc'] = 'relative'
         self.deriv_options['step_size'] = 1e-5
         
@@ -140,6 +141,7 @@ class SemiStable(SubstructureBase):
         # Derivatives
         self.deriv_options['type'] = 'fd'
         self.deriv_options['form'] = 'central'
+        self.deriv_options['check_form'] = 'central'
         self.deriv_options['step_calc'] = 'relative'
         self.deriv_options['step_size'] = 1e-5
         
