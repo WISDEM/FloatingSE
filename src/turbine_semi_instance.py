@@ -462,7 +462,7 @@ def optimize_semi(algo='slsqp', mysemi=None):
     mysemi.visualize('fowt-'+algo+'.jpg')
     return mysemi
 
-def slsqp_optimal():
+def psqp_optimal():
     #OrderedDict([('sm.total_cost', array([0.65987536]))])
     mysemi = TurbineSemiInstance()
     mysemi.params['fairlead'] = 7.183521549430237
@@ -504,7 +504,7 @@ def slsqp_optimal():
     mysemi.params['theta_sub'] = np.array( [12.309766936805092, 7.045443238837607, -0.36282211475399956, 3.6154561854813005] )
     #OrderedDict([('lcoe', array([42.10756006]))])
     mysemi.evaluate('slsqp')
-    mysemi.visualize('fowt-psqp.jpg')
+    #mysemi.visualize('fowt-psqp.jpg')
     return mysemi
     
 if __name__ == '__main__':
