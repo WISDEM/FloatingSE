@@ -17,6 +17,8 @@ class FloatingTurbineInstance(SemiInstance):
         self.params.pop('rna_cg', None)
         self.params.pop('rna_mass', None)
         self.params.pop('rna_I', None)
+        self.params.pop('rna_moment', None)
+        self.params.pop('rna_force', None)
 
         # Environmental parameters
         self.params['air_density'] = self.params['base.windLoads.rho']
@@ -399,20 +401,20 @@ class FloatingTurbineInstance(SemiInstance):
         desvarList = super(FloatingTurbineInstance, self).get_design_variables()
         # Make a neat list of design variables, lower bound, upper bound, scalar
         desvarList.extend( [('hub_height', 50.0, 300.0, 1.0),
-                            ('hubFraction', 1e-2, 1e-1, 1e2),
-                            ('bladeLength', 30.0, 110.0, 1.0),
+                            #('hubFraction', 1e-2, 1e-1, 1e2),
+                            ('bladeLength', 30.0, 120.0, 1.0),
                             #('r_max_chord', 0.1, 0.7, 10.0),
                             #('control:Vin', 1.0, 20.0, 1.0),
                             #('control:Vout', 20.0, 35.0, 1.0),
                             #('control:ratedPower', 1e6, 15e6, 1e-6),
                             #('control:maxOmega', 1.0, 30.0, 1.0),
-                            #('control:tsr', 1.0, 15.0, 1.0),
-                            #('sparT', 1e-3, 2e-1, 1e2),
-                            #('teT', 1e-3, 5e-1, 1e2),
+                            #('control:tsr', 2.0, 15.0, 1.0),
+                            #('sparT', 2e-3, 2e-1, 1e2),
+                            #('teT', 2e-3, 2e-1, 1e2),
                             ('chord_sub', 1.0, 5.0, 1.0), #transport widths?
-                            ('theta_sub', -30.0, 30.0, 1.0),
-                            ('precone', 0.0, 20.0, 1.0),
-                            ('tilt', 0.0, 20.0, 1.0)] )
+                            ('theta_sub', -30.0, 30.0, 1.0)])
+                            #('precone', 0.0, 20.0, 1.0),
+                            #('tilt', 0.0, 20.0, 1.0)] )
         return desvarList
 
     def get_constraints(self):
@@ -427,15 +429,19 @@ class FloatingTurbineInstance(SemiInstance):
                          ['rotor.rotor_strain_sparU', -1.0, None, None],
                          ['rotor.rotor_strain_sparL', None, 1.0, None],
                          ['rotor.rotor_strain_teU', -1.0, None, None],
-                         ['rotor.rotor_strain_teL', None, 1.0, None] ] )
-                         #['rotor.rotor_buckling_sparU', None, 0.0, None],
-                         #['rotor.rotor_buckling_sparL', None, 0.0, None],
-                         #['rotor.rotor_buckling_teU', None, 0.0, None],
-                         #['rotor.rotor_buckling_teL', None, 0.0, None],
-                         #['rotor.rotor_damage_sparU', None, 0.0, None],
-                         #['rotor.rotor_damage_sparL', None, 0.0, None],
-                         #['rotor.rotor_damage_teU', None, 0.0, None],
-                         #['rotor.rotor_damage_teL', None, 0.0, None],
+                         ['rotor.rotor_strain_teL', None, 1.0, None],
+                         ['rotor.rotor_buckling_sparU', None, 1.0, None],
+                         ['rotor.rotor_buckling_sparL', None, 1.0, None],
+                         ['rotor.rotor_buckling_teU', None, 1.0, None],
+                         ['rotor.rotor_buckling_teL', None, 1.0, None],
+                         ['rotor.rotor_damage_sparU', None, 0.0, None],
+                         ['rotor.rotor_damage_sparL', None, 0.0, None],
+                         ['rotor.rotor_damage_teU', None, 0.0, None],
+                         ['rotor.rotor_damage_teL', None, 0.0, None],
+                         ['tcons.frequency_ratio', None, 1.0, None],
+                         ['tcons.tip_deflection_ratio', None, 1.0, None],
+                         ['tcons.ground_clearance', 30.0, None, None],
+        ])
         return conList
 
     def add_objective(self):
@@ -448,17 +454,59 @@ def example():
     mysemi = FloatingTurbineInstance()
     mysemi.evaluate('psqp')
     #mysemi.visualize('semi-initial.jpg')
-    #mysemi.run('slsqp')
+    return mysemi
+
+def optimize_semi(algo='slsqp', mysemi=None):
+    if mysemi is None: mysemi = FloatingTurbineInstance()
+    mysemi.run(algo)
+    mysemi.visualize('fowt-'+algo+'.jpg')
     return mysemi
 
 def slsqp_optimal():
     #OrderedDict([('sm.total_cost', array([0.65987536]))])
     mysemi = FloatingTurbineInstance()
-
+    mysemi.params['fairlead'] = 7.183521549430237
+    mysemi.params['fairlead_offset_from_shell'] = 4.967469680533604
+    mysemi.params['radius_to_auxiliary_column'] = 35.58870759240209
+    mysemi.params['base_freeboard'] = 1.8556926622837724
+    mysemi.params['base_section_height'] = np.array( [5.758702205499821, 5.932123715473788, 12.649914720165619, 1.1743267198999756, 2.28400750301171] )
+    mysemi.params['base_outer_diameter'] = np.array( [2.682869034274697, 4.679698577662294, 2.8368461322486755, 3.9093609084596106, 8.53661518622927, 9.601420790369382] )
+    mysemi.params['base_wall_thickness'] = np.array( [0.015610491104533566, 0.014264204669877033, 0.01084396143779099, 0.017048182990643174, 0.016317203123475895, 0.009999999999972966] )
+    mysemi.params['auxiliary_freeboard'] = 7.743688638413e-06
+    mysemi.params['auxiliary_section_height'] = np.array( [0.3584582528483153, 0.11284845512926432, 4.745281122675717, 2.6052232333567638, 0.1021088647853414] )
+    mysemi.params['auxiliary_outer_diameter'] = np.array( [2.805333883415325, 9.193677611995618, 3.7323328062447083, 2.5230079309738342, 7.685288769102364, 27.944181635345167] )
+    mysemi.params['auxiliary_wall_thickness'] = np.array( [0.0100000000000001, 0.0226286388652529, 0.010431737725082074, 0.012367006377755127, 0.025137023242421785, 0.033430110352010815] )
+    mysemi.params['pontoon_outer_diameter'] = 0.6602057831089426
+    mysemi.params['pontoon_wall_thickness'] = 0.010000000000029945
+    mysemi.params['base_pontoon_attach_lower'] = -15.760226115905143
+    mysemi.params['base_pontoon_attach_upper'] = 1.2519188710694733
+    mysemi.params['tower_section_height'] = np.array( [17.655396366000158, 19.226433757973275, 14.23644859388797, 22.784705691594947, 20.972221763589605] )
+    mysemi.params['tower_outer_diameter'] = np.array( [9.714088786763828, 7.323184441896651, 3.615403892264461, 11.16592185497034, 6.25464845911022, 9.074488902735874] )
+    mysemi.params['tower_wall_thickness'] = np.array( [0.009999999999967563, 0.009999999999992463, 0.009999999999998321, 0.010000000000053395, 0.009999999999958998, 0.010000000000055418] )
+    mysemi.params['scope_ratio'] = 4.307472574455454
+    mysemi.params['anchor_radius'] = 837.4978564574001
+    mysemi.params['mooring_diameter'] = 0.1058895307179274
+    mysemi.params['base_stiffener_web_height'] = np.array( [0.27457614479043413, 0.5184059820139102, 0.08751808320279283, 0.11238220311363739, 0.26109531911027145] )
+    mysemi.params['base_stiffener_web_thickness'] = np.array( [0.011404004882958604, 0.02153101863763857, 0.00887354561558569, 0.15529418628382105, 0.01736488731387063] )
+    mysemi.params['base_stiffener_flange_width'] = np.array( [0.023432167681717464, 0.009999999999933432, 0.047657705072646585, 0.010000000000048408, 0.009999999999882395] )
+    mysemi.params['base_stiffener_flange_thickness'] = np.array( [0.06070860998100411, 0.05602708959912581, 0.28499054362624754, 0.1215489209591134, 0.19092489430295656] )
+    mysemi.params['base_stiffener_spacing'] = np.array( [4.290802879580099, 1.3325820165443916, 8.055350673864233, 17.074821647983427, 4.016377530800262] )
+    mysemi.params['base_permanent_ballast_height'] = 0.7406786845363778
+    mysemi.params['auxiliary_stiffener_web_height'] = np.array( [0.010821490056153862, 0.04346822107899336, 0.011388379728794092, 0.038167978545700365, 0.04420615217267322] )
+    mysemi.params['auxiliary_stiffener_web_thickness'] = np.array( [0.045577133827427, 0.0016691291238774102, 0.0011970892934217978, 0.06061344218716923, 0.0010000000000044383] )
+    mysemi.params['auxiliary_stiffener_flange_width'] = np.array( [0.024622749706955625, 0.010000000000003322, 0.08851884953834328, 0.01584452110848402, 0.009999999999901314] )
+    mysemi.params['auxiliary_stiffener_flange_thickness'] = np.array( [0.014425061183055105, 0.02488395486326047, 0.12348274150880165, 0.26410846269870586, 0.4235681536891606] )
+    mysemi.params['auxiliary_stiffener_spacing'] = np.array( [1.4261012367607533, 3.569062685370194, 6.1914071400568425, 17.09349416894326, 16.46590146309927] )
+    mysemi.params['auxiliary_permanent_ballast_height'] = 0.11460333696924746
+    mysemi.params['hub_height'] = 96.73089883532874
+    mysemi.params['bladeLength'] = 61.73698189718739
+    mysemi.params['chord_sub'] = np.array( [3.348395782771469, 5.000000000000066, 3.0705421226293144, 1.0000000000000553] )
+    mysemi.params['theta_sub'] = np.array( [12.309766936805092, 7.045443238837607, -0.36282211475399956, 3.6154561854813005] )
+    #OrderedDict([('lcoe', array([42.10756006]))])
     mysemi.evaluate('slsqp')
-    mysemi.visualize('semi-psqp.jpg')
+    mysemi.visualize('fowt-psqp.jpg')
     return mysemi
     
 if __name__ == '__main__':
-    #slsqp_optimal()
-    example()
+    mysemi=optimize_semi('psqp')
+    #example()
