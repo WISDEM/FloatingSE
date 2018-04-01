@@ -8,10 +8,10 @@ import commonse.UtilizationSupplement as util
 from commonse.WindWaveDrag import AeroHydroLoads, CylinderWindDrag, CylinderWaveDrag
 from commonse.environment import WaveBase, PowerWind
 from commonse.vertical_cylinder import CylinderDiscretization, CylinderMass
-from towerse.tower import TowerDiscretization, TowerMass
 
 def find_nearest(array,value):
     return (np.abs(array-value)).argmin() 
+
 
 
 class FloatingFrame(Component):
@@ -142,6 +142,7 @@ class FloatingFrame(Component):
         # Derivatives
         self.deriv_options['type'] = 'fd'
         self.deriv_options['form'] = 'central'
+        self.deriv_options['check_form'] = 'central'
         self.deriv_options['step_calc'] = 'relative'
         self.deriv_options['step_size'] = 1e-5
          
@@ -301,7 +302,7 @@ class FloatingFrame(Component):
         # ---REACTIONS---
         # Pin (3DOF) the nodes at the mooring connections.  Otherwise free
         # Free=0, Rigid=1
-        rid = np.array([ fairleadID[0] ])
+        rid = np.array(fairleadID)
         Rx = Ry = Rz = Rxx = Ryy = Rzz = np.ones(rid.shape)
         #if ncolumn > 0:
         #    Rxx[1:] = Ryy[1:] = Rzz[1:] = 0.0
@@ -630,17 +631,17 @@ class FloatingFrame(Component):
 
 
         # ---DYNAMIC ANALYSIS---
-        nM = 3              # number of desired dynamic modes of vibration
-        Mmethod = 2         # 1: subspace Jacobi     2: Stodola
+        nM = 6              # number of desired dynamic modes of vibration
+        Mmethod = 1         # 1: subspace Jacobi     2: Stodola
         lump = 0            # 0: consistent mass ... 1: lumped mass matrix
-        tol = 1e-7          # mode shape tolerance
+        tol = 1e-5          # mode shape tolerance
         shift = 0.0         # shift value ... for unrestrained structures
         
         myframe.enableDynamics(nM, Mmethod, lump, tol, shift)
 
 
         # ---RUN ANALYSIS---
-        #myframe.write('test.3dd') # For debugging
+        #myframe.write('debug.3dd') # For debugging
         displacements, forces, reactions, internalForces, mass, modal = myframe.run()
         
         # --OUTPUTS--
@@ -791,3 +792,4 @@ class FloatingLoading(Group):
         self.connect('windLoads.windLoads:Py', 'tower_Py')
         self.connect('windLoads.windLoads:Pz', 'tower_Pz')
         self.connect('windLoads.windLoads:qdyn', 'tower_qdyn')
+
