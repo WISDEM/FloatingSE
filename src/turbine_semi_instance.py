@@ -9,9 +9,9 @@ import time
 
 NDEL = 0
 
-class FloatingTurbineInstance(SemiInstance):
+class TurbineSemiInstance(SemiInstance):
     def __init__(self):
-        super(FloatingTurbineInstance, self).__init__()
+        super(TurbineSemiInstance, self).__init__()
         
         # Remove what we don't need from Semi
         self.params.pop('rna_cg', None)
@@ -398,7 +398,7 @@ class FloatingTurbineInstance(SemiInstance):
     def get_assembly(self): return FloatingTurbine(NSECTIONS)
     
     def get_design_variables(self):
-        desvarList = super(FloatingTurbineInstance, self).get_design_variables()
+        desvarList = super(TurbineSemiInstance, self).get_design_variables()
         # Make a neat list of design variables, lower bound, upper bound, scalar
         desvarList.extend( [('hub_height', 50.0, 300.0, 1.0),
                             #('hubFraction', 1e-2, 1e-1, 1e2),
@@ -418,7 +418,7 @@ class FloatingTurbineInstance(SemiInstance):
         return desvarList
 
     def get_constraints(self):
-        conList = super(FloatingTurbineInstance, self).get_constraints()
+        conList = super(TurbineSemiInstance, self).get_constraints()
         for con in conList:
             con[0] = 'sm.' + con[0]
 
@@ -451,20 +451,20 @@ class FloatingTurbineInstance(SemiInstance):
 
 
 def example():
-    mysemi = FloatingTurbineInstance()
+    mysemi = TurbineSemiInstance()
     mysemi.evaluate('psqp')
     #mysemi.visualize('semi-initial.jpg')
     return mysemi
 
 def optimize_semi(algo='slsqp', mysemi=None):
-    if mysemi is None: mysemi = FloatingTurbineInstance()
+    if mysemi is None: mysemi = TurbineSemiInstance()
     mysemi.run(algo)
     mysemi.visualize('fowt-'+algo+'.jpg')
     return mysemi
 
 def slsqp_optimal():
     #OrderedDict([('sm.total_cost', array([0.65987536]))])
-    mysemi = FloatingTurbineInstance()
+    mysemi = TurbineSemiInstance()
     mysemi.params['fairlead'] = 7.183521549430237
     mysemi.params['fairlead_offset_from_shell'] = 4.967469680533604
     mysemi.params['radius_to_auxiliary_column'] = 35.58870759240209

@@ -9,9 +9,9 @@ import time
 
 NDEL = 0
 
-class FloatingTurbineInstance(SparInstance):
+class TurbineSparInstance(SparInstance):
     def __init__(self):
-        super(FloatingTurbineInstance, self).__init__()
+        super(TurbineSparInstance, self).__init__()
         
         # Remove what we don't need from Spar
         self.params.pop('rna_cg', None)
@@ -398,7 +398,7 @@ class FloatingTurbineInstance(SparInstance):
     def get_assembly(self): return FloatingTurbine(NSECTIONS)
     
     def get_design_variables(self):
-        desvarList = super(FloatingTurbineInstance, self).get_design_variables()
+        desvarList = super(TurbineSparInstance, self).get_design_variables()
         # Make a neat list of design variables, lower bound, upper bound, scalar
         desvarList.extend( [('hub_height', 50.0, 300.0, 1.0),
                             #('hubFraction', 1e-2, 1e-1, 1e2),
@@ -418,7 +418,7 @@ class FloatingTurbineInstance(SparInstance):
         return desvarList
 
     def get_constraints(self):
-        conList = super(FloatingTurbineInstance, self).get_constraints()
+        conList = super(TurbineSparInstance, self).get_constraints()
         for con in conList:
             con[0] = 'sm.' + con[0]
 
@@ -451,20 +451,20 @@ class FloatingTurbineInstance(SparInstance):
 
 
 def example():
-    myspar = FloatingTurbineInstance()
+    myspar = TurbineSparInstance()
     myspar.evaluate('psqp')
     #myspar.visualize('spar-initial.jpg')
     return myspar
 
 def optimize_spar(algo='slsqp', myspar=None):
-    if myspar is None: myspar = FloatingTurbineInstance()
+    if myspar is None: myspar = TurbineSparInstance()
     myspar.run(algo)
     myspar.visualize('fowt-'+algo+'.jpg')
     return myspar
 
 def psqp_optimal():
 #OrderedDict([('lcoe', array([86.74566798]))])
-    myspar = FloatingTurbineInstance()
+    myspar = TurbineSparInstance()
     myspar.params['fairlead'] = 10.45427429906716
     myspar.params['base_freeboard'] = 0.012227997729194548
     myspar.params['base_section_height'] = np.array( [24.91986941308374, 28.664570049375737, 17.388103281705487, 5.355696433808805, 1.0089558548858526] )
@@ -493,7 +493,7 @@ def psqp_optimal():
 
 def deriv_check():
    # ----------------
-    myspar = FloatingTurbineInstance()
+    myspar = TurbineSparInstance()
     myspar.evaluate('psqp')
     f = open('deriv_total_spar.dat','w')
     out = myspar.prob.check_total_derivatives(f)#, compact_print=True)
