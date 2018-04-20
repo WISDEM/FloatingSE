@@ -84,6 +84,9 @@ class TestMapMooring(unittest.TestCase):
         self.params['mooring_cost_rate'] = 1.1
 
         self.params['tower_base_radius'] = 4.0
+
+        # Initialize an unknown
+        self.unknowns['plot_matrix'] = np.zeros((15,20,3))
         
         self.set_geometry()
 
