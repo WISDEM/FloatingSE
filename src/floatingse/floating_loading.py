@@ -9,9 +9,9 @@ from commonse.WindWaveDrag import AeroHydroLoads, CylinderWindDrag, CylinderWave
 from commonse.environment import WaveBase, PowerWind
 from commonse.vertical_cylinder import CylinderDiscretization, CylinderMass
 
+
 def find_nearest(array,value):
     return (np.abs(array-value)).argmin() 
-
 
 
 class FloatingFrame(Component):
@@ -77,7 +77,7 @@ class FloatingFrame(Component):
         
         # Semi geometry
         self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
-        self.add_param('number_of_auxiliary_columns', val=3, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
+        self.add_param('number_of_auxiliary_columns', val=3, desc='Number of ballast columns evenly spaced around base column')
 
         # Pontoon properties
         self.add_param('pontoon_outer_diameter', val=0.0, units='m',desc='Outer radius of tubular pontoon that connects ballast or base columns')
@@ -147,6 +147,24 @@ class FloatingFrame(Component):
         self.deriv_options['step_size'] = 1e-5
          
     def solve_nonlinear(self, params, unknowns, resids):
+        # If something fails, we have to tell the optimizer this design is no good
+        def bad_input():
+            unknowns['f1'] = 1e30
+            unknowns['f2'] = 1e30
+            unknowns['top_deflection'] = 1e30
+            unknowns['substructure_mass']  = 1e30
+            unknowns['structural_mass']    = 1e30
+            unknowns['total_displacement'] = 1e30
+            unknowns['z_center_of_buoyancy'] = 0.0
+            unknowns['substructure_center_of_mass'] = 1e30 * np.ones(3)
+            unknowns['center_of_mass'] = 1e30 * np.ones(3)
+            unknowns['total_force'] =  1e30 * np.ones(3)
+            unknowns['total_moment'] = 1e30 * np.ones(3)
+            unknowns['tower_stress'] = 1e30 * np.ones(m_base.shape)
+            unknowns['tower_shell_buckling'] = 1e30 * np.ones(m_base.shape)
+            unknowns['tower_global_buckling'] = 1e30 * np.ones(m_base.shape)
+            return
+        
         # Unpack variables
         crossAttachFlag = params['cross_attachment_pontoons']
         lowerAttachFlag = params['lower_attachment_pontoons']
@@ -171,7 +189,7 @@ class FloatingFrame(Component):
         rho            = params['material_density']
         sigma_y        = params['yield_stress']
         
-        ncolumn        = params['number_of_auxiliary_columns']
+        ncolumn        = int(params['number_of_auxiliary_columns'])
         z_base         = params['base_z_full']
         z_ballast      = params['auxiliary_z_full']
         z_tower        = params['tower_z_full']
@@ -214,7 +232,23 @@ class FloatingFrame(Component):
         unknowns['auxiliary_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_ballast
         unknowns['pontoon_base_attach_upper'] = (z_attach_upper - z_base[0]) / (z_base[-1] - z_base[0]) #0.5<x<1.0
         unknowns['pontoon_base_attach_lower'] = (z_attach_lower - z_base[0]) / (z_base[-1] - z_base[0]) #0.0<x<0.5
-        
+
+        # --- INPUT CHECKS -----
+        # There is no truss if not auxiliary columns
+        if ncolumn == 0:
+            crossAttachFlag = lowerAttachFlag = upperAttachFlag = False
+            lowerRingFlag = upperRingFlag = outerCrossFlag  = False
+
+        # Must have symmetry for the substructure to work out
+        if ncolumn in [1, 2] or ncolumn > 7:
+            bad_input()
+            return
+
+        # If there are auxiliary columns, must have attachment pontoons (only have ring pontoons doesn't make sense)
+        if (ncolumn > 0) and (not crossAttachFlag) and (not lowerAttachFlag) and (not upperAttachFlag):
+            bad_input()
+            return
+            
         # ---NODES---
         # Senu TODO: Should tower and rna have nodes at their CGs?
         # Senu TODO: Mooring tension on column nodes?
@@ -513,7 +547,7 @@ class FloatingFrame(Component):
         Px_base,    Py_base,    Pz_base    = params['base_column_Pz'], params['base_column_Py'], -params['base_column_Px']  # switch to local c.s.
         Px_ballast, Py_ballast, Pz_ballast = params['auxiliary_column_Pz'], params['auxiliary_column_Py'], -params['auxiliary_column_Px']  # switch to local c.s.
         Px_tower,   Py_tower,   Pz_tower   = params['tower_Pz'], params['tower_Py'], -params['tower_Px']  # switch to local c.s.
-        epsOff = 1e-6
+        epsOff = 1e-5
         # Get mass right- ballasts, stiffeners, tower, rna, etc.
         # Also account for buoyancy loads
         # Also apply wind/wave loading as trapezoidal on each element
@@ -639,11 +673,16 @@ class FloatingFrame(Component):
         
         myframe.enableDynamics(nM, Mmethod, lump, tol, shift)
 
+        # ---DEBUGGING---
+        #myframe.write('debug.3dd') # For debugging
 
         # ---RUN ANALYSIS---
-        #myframe.write('debug.3dd') # For debugging
-        displacements, forces, reactions, internalForces, mass, modal = myframe.run()
-        
+        try:
+            displacements, forces, reactions, internalForces, mass, modal = myframe.run()
+        except:
+            bad_input()
+            return
+            
         # --OUTPUTS--
         nE    = nelem.size
         iCase = 0
@@ -652,7 +691,7 @@ class FloatingFrame(Component):
         if ncolumn > 0:
             # Buoyancy assembly from incremental calculations above
             V_pontoon = F_truss/rhoWater/gravity
-            z_cb      = z_cb[-1] / F_truss
+            z_cb      = z_cb[-1] / F_truss if F_truss > 0.0 else 0.0
             unknowns['pontoon_displacement'] = V_pontoon
             unknowns['pontoon_center_of_buoyancy'] = z_cb
 
@@ -753,6 +792,33 @@ class FloatingFrame(Component):
 
 
 
+
+class TrussIntegerToBoolean(Component):
+    def __init__(self):
+        super(TrussIntegerToBoolean,self).__init__()
+        self.add_param('cross_attachment_pontoons_int', val=1, desc='Inclusion of pontoons that connect the bottom of the central base to the tops of the outer ballast columns')
+        self.add_param('lower_attachment_pontoons_int', val=1, desc='Inclusion of pontoons that connect the central base to the outer ballast columns at their bottoms')
+        self.add_param('upper_attachment_pontoons_int', val=1, desc='Inclusion of pontoons that connect the central base to the outer ballast columns at their tops')
+        self.add_param('lower_ring_pontoons_int', val=1, desc='Inclusion of pontoons that ring around outer ballast columns at their bottoms')
+        self.add_param('upper_ring_pontoons_int', val=1, desc='Inclusion of pontoons that ring around outer ballast columns at their tops')
+        self.add_param('outer_cross_pontoons_int', val=1, desc='Inclusion of pontoons that ring around outer ballast columns at their tops')
+
+        self.add_output('cross_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the bottom of the central base to the tops of the outer ballast columns', pass_by_obj=True)
+        self.add_output('lower_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central base to the outer ballast columns at their bottoms', pass_by_obj=True)
+        self.add_output('upper_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central base to the outer ballast columns at their tops', pass_by_obj=True)
+        self.add_output('lower_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their bottoms', pass_by_obj=True)
+        self.add_output('upper_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their tops', pass_by_obj=True)
+        self.add_output('outer_cross_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their tops', pass_by_obj=True)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        unknowns['cross_attachment_pontoons'] = (int(params['cross_attachment_pontoons_int']) == 1)
+        unknowns['lower_attachment_pontoons'] = (int(params['lower_attachment_pontoons_int']) == 1)
+        unknowns['upper_attachment_pontoons'] = (int(params['upper_attachment_pontoons_int']) == 1)
+        unknowns['lower_ring_pontoons']       = (int(params['lower_ring_pontoons_int']) == 1)
+        unknowns['upper_ring_pontoons']       = (int(params['upper_ring_pontoons_int']) == 1)
+        unknowns['outer_cross_pontoons']      = (int(params['outer_cross_pontoons_int']) == 1)
+
+        
 # -----------------
 #  Assembly
 # -----------------
@@ -767,19 +833,19 @@ class FloatingLoading(Group):
         self.add('base_pontoon_attach_upper',  IndepVarComp('base_pontoon_attach_upper', 0.0), promotes=['*'])
         self.add('pontoon_outer_diameter',     IndepVarComp('pontoon_outer_diameter', 0.0), promotes=['*'])
         self.add('pontoon_wall_thickness',     IndepVarComp('pontoon_wall_thickness', 0.0), promotes=['*'])
-        self.add('outer_cross_pontoons',       IndepVarComp('outer_cross_pontoons', True, pass_by_obj=True), promotes=['*'])
-        self.add('cross_attachment_pontoons',  IndepVarComp('cross_attachment_pontoons', True, pass_by_obj=True), promotes=['*'])
-        self.add('lower_attachment_pontoons',  IndepVarComp('lower_attachment_pontoons', True, pass_by_obj=True), promotes=['*'])
-        self.add('upper_attachment_pontoons',  IndepVarComp('upper_attachment_pontoons', True, pass_by_obj=True), promotes=['*'])
-        self.add('lower_ring_pontoons',        IndepVarComp('lower_ring_pontoons', True, pass_by_obj=True), promotes=['*'])
-        self.add('upper_ring_pontoons',        IndepVarComp('upper_ring_pontoons', True, pass_by_obj=True), promotes=['*'])
+        self.add('outer_cross_pontoons_int',       IndepVarComp('outer_cross_pontoons_int', 1), promotes=['*'])
+        self.add('cross_attachment_pontoons_int',  IndepVarComp('cross_attachment_pontoons_int', 1), promotes=['*'])
+        self.add('lower_attachment_pontoons_int',  IndepVarComp('lower_attachment_pontoons_int', 1), promotes=['*'])
+        self.add('upper_attachment_pontoons_int',  IndepVarComp('upper_attachment_pontoons_int', 1), promotes=['*'])
+        self.add('lower_ring_pontoons_int',        IndepVarComp('lower_ring_pontoons_int', 1), promotes=['*'])
+        self.add('upper_ring_pontoons_int',        IndepVarComp('upper_ring_pontoons_int', 1), promotes=['*'])
         self.add('pontoon_cost_rate',          IndepVarComp('pontoon_cost_rate', 0.0), promotes=['*'])
         self.add('connection_ratio_max',       IndepVarComp('connection_ratio_max', 0.0), promotes=['*'])
 
         # All the components
         self.add('wind', PowerWind(nFull), promotes=['z0','Uref','shearExp','zref'])
         self.add('windLoads', CylinderWindDrag(nFull), promotes=['cd_usr','beta'])
-
+        self.add('intbool', TrussIntegerToBoolean(), promotes=['*'])
         self.add('frame', FloatingFrame(nFull), promotes=['*'])
         
         # Connections for geometry and mass

@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from commonse import gravity as g
 
+
 NSECTIONS = 5
 NPTS = 11
 myones = np.ones((NPTS,))
@@ -61,9 +62,9 @@ class TestFrame(unittest.TestCase):
         self.params['base_column_displaced_volume'] = 1e2 * np.ones((NSECTIONS,))
         self.params['base_column_center_of_buoyancy'] = -10.0
         self.params['base_column_center_of_mass'] = -6.0
-        self.params['base_column_Px'] = 50.0 * np.ones((NSECTIONS,))
-        self.params['base_column_Py'] = np.zeros((NSECTIONS,))
-        self.params['base_column_Pz'] = np.zeros((NSECTIONS,))
+        self.params['base_column_Px'] = 50.0 * np.ones((NSECTIONS+1,))
+        self.params['base_column_Py'] = np.zeros((NSECTIONS+1,))
+        self.params['base_column_Pz'] = np.zeros((NSECTIONS+1,))
         self.params['base_column_qdyn'] = 70.0 * np.ones((NSECTIONS+1,))
 
         self.params['auxiliary_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
@@ -73,9 +74,9 @@ class TestFrame(unittest.TestCase):
         self.params['auxiliary_column_displaced_volume'] = 1e1 * np.ones((NSECTIONS,))
         self.params['auxiliary_column_center_of_buoyancy'] = -5.0
         self.params['auxiliary_column_center_of_mass'] = -3.0
-        self.params['auxiliary_column_Px'] = 50.0 * np.ones((NSECTIONS,))
-        self.params['auxiliary_column_Py'] = np.zeros((NSECTIONS,))
-        self.params['auxiliary_column_Pz'] = np.zeros((NSECTIONS,))
+        self.params['auxiliary_column_Px'] = 50.0 * np.ones((NSECTIONS+1,))
+        self.params['auxiliary_column_Py'] = np.zeros((NSECTIONS+1,))
+        self.params['auxiliary_column_Pz'] = np.zeros((NSECTIONS+1,))
         self.params['auxiliary_column_qdyn'] = 70.0 * np.ones((NSECTIONS+1,))
 
         self.params['tower_z_full'] = np.linspace(0, 90, NSECTIONS+1)
@@ -84,9 +85,9 @@ class TestFrame(unittest.TestCase):
         self.params['tower_mass'] = 2e2 * np.ones((NSECTIONS,))
         self.params['tower_buckling_length'] = 25.0
         self.params['tower_center_of_mass'] = 50.0
-        self.params['tower_Px'] = 50.0 * np.ones((NSECTIONS,))
-        self.params['tower_Py'] = np.zeros((NSECTIONS,))
-        self.params['tower_Pz'] = np.zeros((NSECTIONS,))
+        self.params['tower_Px'] = 50.0 * np.ones((NSECTIONS+1,))
+        self.params['tower_Py'] = np.zeros((NSECTIONS+1,))
+        self.params['tower_Pz'] = np.zeros((NSECTIONS+1,))
         self.params['tower_qdyn'] = 70.0 * np.ones((NSECTIONS+1,))
         
         self.params['E'] = 200e9
@@ -113,7 +114,6 @@ class TestFrame(unittest.TestCase):
         self.unknowns['pontoon_stress'] = np.zeros(50)
         
         self.mytruss = sP.FloatingFrame(NSECTIONS+1)
-
 
 
     def testStandard(self):
@@ -265,8 +265,56 @@ class TestFrame(unittest.TestCase):
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
         npt.assert_almost_equal(self.unknowns['total_force'], np.array([10.0, 10.0, 10-m*g]), decimal=1)
         self.assertEqual(self.unknowns['total_moment'][-1], 20.0)
+
         
+    def testBadInput(self):
+        self.params['number_of_auxiliary_columns'] = 1
+        self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
+        self.assertEqual(self.unknowns['substructure_mass'], 1e30)
+
+        self.params['number_of_auxiliary_columns'] = 2
+        self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
+        self.assertEqual(self.unknowns['substructure_mass'], 1e30)
+
+        self.params['number_of_auxiliary_columns'] = 8
+        self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
+        self.assertEqual(self.unknowns['substructure_mass'], 1e30)
+
+        self.params['number_of_auxiliary_columns'] = 3
+        self.params['base_z_full'][-2] = self.params['base_z_full'][-3] + 1e-12
+        self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
+        self.assertEqual(self.unknowns['substructure_mass'], 1e30)
         
+    def testCombinations(self):
+        self.params['radius_to_auxiliary_column'] = 30.0
+        
+        for nc in [0, 3, 4, 5, 6, 7]:
+            
+            for cap in [True, False]:
+                
+                for lap in [True, False]:
+                    
+                    for uap in [True, False]:
+                        
+                        for lrp in [True, False]:
+                            
+                            for urp in [True, False]:
+                                
+                                for ocp in [True, False]:
+                                    self.params['number_of_auxiliary_columns'] = nc
+                                    self.params['cross_attachment_pontoons'] = cap
+                                    self.params['lower_attachment_pontoons'] = lap
+                                    self.params['upper_attachment_pontoons'] = uap
+                                    self.params['lower_ring_pontoons'] = lrp
+                                    self.params['upper_ring_pontoons'] = urp
+                                    self.params['outer_cross_pontoons'] = ocp
+                                    if (nc > 0) and (not cap) and (not lap) and (not uap): continue
+        
+                                    self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
+                                    if self.unknowns['substructure_mass'] == 1e30:
+                                        print nc, cap, lap, uap, lrp, urp, ocp
+                                    self.assertNotEqual(self.unknowns['substructure_mass'], 1e30)
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestFrame))

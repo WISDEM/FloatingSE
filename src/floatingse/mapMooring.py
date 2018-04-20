@@ -43,7 +43,7 @@ class MapMooring(Component):
         self.add_param('mooring_diameter', val=0.0, units='m',desc='diameter of mooring line')
 
         # User inputs (could be design variables)
-        self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines', pass_by_obj=True)
+        self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines')
         self.add_param('mooring_type', val='CHAIN', desc='chain, nylon, polyester, fiber, or iwrc', pass_by_obj=True)
         self.add_param('anchor_type', val='SUCTIONPILE', desc='SUCTIONPILE or DRAGEMBEDMENT', pass_by_obj=True)
         self.add_param('drag_embedment_extra_length', val=0.0, units='m', desc='Extra mooring line length so that anchors only see horizontal forces')
@@ -63,7 +63,7 @@ class MapMooring(Component):
         self.add_output('vertical_load', val=0.0, units='N',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='N',desc='sum of forces in x direction after max offset')
         self.add_output('max_heel_restoring_force', val=np.zeros((10,3)), units='N',desc='forces for all mooring lines after max heel')
-        self.add_output('plot_matrix', val=np.zeros((3, 20, 3)), units='m', desc='data matrix for plotting') 
+        self.add_output('plot_matrix', val=np.zeros((15, 20, 3)), units='m', desc='data matrix for plotting') 
 
         # Output constriants
         self.add_output('axial_unity', val=0.0, units='m',desc='range of damaged mooring')
@@ -313,7 +313,7 @@ class MapMooring(Component):
         OUTPUTS  : none
         """
         # Unpack variables
-        nlines = params['number_of_mooring_lines']
+        nlines = int(params['number_of_mooring_lines'])
         
         self.finput.append('---------------------- SOLVER OPTIONS-----------------------------------------')
         self.finput.append('Option')
@@ -395,7 +395,7 @@ class MapMooring(Component):
         waterDepth    = params['water_depth']
         fairleadDepth = params['fairlead']
         Dmooring      = params['mooring_diameter']
-        nlines        = params['number_of_mooring_lines']
+        nlines        = int(params['number_of_mooring_lines'])
         offset        = params['max_offset']
         heel          = params['max_heel']
         gamma         = params['gamma']
@@ -424,7 +424,7 @@ class MapMooring(Component):
             plotMat[k,:,2] = mymap.plot_z(k, npltpts)
         unknowns['vertical_load'] = Fz
         unknowns['mooring_effective_mass'] = Fz / gravity
-        unknowns['plot_matrix'] = plotMat
+        unknowns['plot_matrix'][:nlines,:,:] = plotMat
 
         # Get the restoring moment at maximum angle of heel
         # Since we don't know the substucture CG, have to just get the forces of the lines now and do the cross product later
@@ -506,7 +506,7 @@ class MapMooring(Component):
         OUTPUTS  : none (mooring_cost/mass unknown dictionary values set)
         """
         # Unpack variables
-        nlines        = params['number_of_mooring_lines']
+        nlines        = int(params['number_of_mooring_lines'])
         rhoWater      = params['water_density']
         Dmooring      = params['mooring_diameter']
         anchorType    = params['anchor_type']

@@ -48,28 +48,29 @@ class FloatingSE(Group):
         # Add in the connecting truss
         self.add('load', FloatingLoading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
                                                                      'z0','beta','Uref','zref','shearExp','beta','cd_usr',
-                                                                     'pontoon_outer_diameter','pontoon_wall_thickness','outer_cross_pontoons',
-                                                                     'cross_attachment_pontoons','lower_attachment_pontoons','upper_attachment_pontoons',
-                                                                     'lower_ring_pontoons','upper_ring_pontoons','pontoon_cost_rate',
+                                                                     'pontoon_outer_diameter','pontoon_wall_thickness','outer_cross_pontoons_int',
+                                                                     'cross_attachment_pontoons_int','lower_attachment_pontoons_int','upper_attachment_pontoons_int',
+                                                                     'lower_ring_pontoons_int','upper_ring_pontoons_int','pontoon_cost_rate',
                                                                      'connection_ratio_max','base_pontoon_attach_lower','base_pontoon_attach_upper',
                                                                      'gamma_b','gamma_f','gamma_fatigue','gamma_m','gamma_n',
-                                                                     'rna_I','rna_cg','rna_force','rna_moment','rna_mass'])
+                                                                          'rna_I','rna_cg','rna_force','rna_moment','rna_mass',
+                                                                          'number_of_auxiliary_columns'])
 
 
         # Run Semi Geometry for interfaces
-        self.add('sg', SubstructureGeometry(self.nFull))
+        self.add('sg', SubstructureGeometry(self.nFull), promotes=['number_of_auxiliary_columns'])
 
         # Next run MapMooring
         self.add('mm', MapMooring(), promotes=['water_density','water_depth'])
         
         # Run main Semi analysis
-        self.add('stab', SemiStable(self.nFull), promotes=['water_density','total_cost','total_mass'])
+        self.add('stab', SemiStable(self.nFull), promotes=['water_density','total_cost','total_mass','number_of_auxiliary_columns'])
 
         # Define all input variables from all models
         
         # SemiGeometry
         self.add('radius_to_auxiliary_column', IndepVarComp('radius_to_auxiliary_column', 0.0), promotes=['*'])
-        self.add('number_of_auxiliary_columns',  IndepVarComp('number_of_auxiliary_columns', 0, pass_by_obj=True), promotes=['*'])
+        self.add('number_of_auxiliary_columns',  IndepVarComp('number_of_auxiliary_columns', 0), promotes=['*'])
         
         self.add('fairlead',                   IndepVarComp('fairlead', 0.0), promotes=['*'])
         self.add('fairlead_offset_from_shell', IndepVarComp('fairlead_offset_from_shell', 0.0), promotes=['*'])
@@ -88,7 +89,7 @@ class FloatingSE(Group):
         self.add('scope_ratio',                IndepVarComp('scope_ratio', 0.0), promotes=['*'])
         self.add('anchor_radius',              IndepVarComp('anchor_radius', 0.0), promotes=['*'])
         self.add('mooring_diameter',           IndepVarComp('mooring_diameter', 0.0), promotes=['*'])
-        self.add('number_of_mooring_lines',    IndepVarComp('number_of_mooring_lines', 0, pass_by_obj=True), promotes=['*'])
+        self.add('number_of_mooring_lines',    IndepVarComp('number_of_mooring_lines', 0), promotes=['*'])
         self.add('mooring_type',               IndepVarComp('mooring_type', 'chain', pass_by_obj=True), promotes=['*'])
         self.add('anchor_type',                IndepVarComp('anchor_type', 'SUCTIONPILE', pass_by_obj=True), promotes=['*'])
         self.add('drag_embedment_extra_length',IndepVarComp('drag_embedment_extra_length', 0.0), promotes=['*'])
@@ -204,8 +205,6 @@ class FloatingSE(Group):
         self.connect('tapered_col_cost_rate', ['base.tapered_col_cost_rate', 'aux.tapered_col_cost_rate'])
         self.connect('outfitting_cost_rate', ['base.outfitting_cost_rate', 'aux.outfitting_cost_rate'])
 
-        self.connect('number_of_auxiliary_columns', ['sg.number_of_auxiliary_columns', 'load.number_of_auxiliary_columns','stab.number_of_auxiliary_columns'])
-
         # Link outputs from one model to inputs to another
         self.connect('sg.fairlead_radius', ['mm.fairlead_radius', 'stab.fairlead_radius'])
 
@@ -280,12 +279,12 @@ def sparExample():
 
     # Remove all auxiliary columns
     prob['number_of_auxiliary_columns'] = 0
-    prob['cross_attachment_pontoons']   = False
-    prob['lower_attachment_pontoons']   = False
-    prob['upper_attachment_pontoons']   = False
-    prob['lower_ring_pontoons']         = False
-    prob['upper_ring_pontoons']         = False
-    prob['outer_cross_pontoons']        = False
+    prob['cross_attachment_pontoons_int']   = 0
+    prob['lower_attachment_pontoons_int']   = 0
+    prob['upper_attachment_pontoons_int']   = 0
+    prob['lower_ring_pontoons_int']         = 0
+    prob['upper_ring_pontoons_int']         = 0
+    prob['outer_cross_pontoons_int']        = 0
 
     # Set environment to that used in OC3 testing campaign
     prob['water_depth'] = 320.0  # Distance to sea floor [m]
@@ -431,12 +430,12 @@ def semiExample():
 
     # Add in auxiliary columns and truss elements
     prob['number_of_auxiliary_columns'] = 3
-    prob['cross_attachment_pontoons']   = True # Lower-Upper base-to-auxiliary connecting cross braces
-    prob['lower_attachment_pontoons']   = True # Lower base-to-auxiliary connecting pontoons
-    prob['upper_attachment_pontoons']   = True # Upper base-to-auxiliary connecting pontoons
-    prob['lower_ring_pontoons']         = True # Lower ring of pontoons connecting auxiliary columns
-    prob['upper_ring_pontoons']         = True # Upper ring of pontoons connecting auxiliary columns
-    prob['outer_cross_pontoons']        = True # Auxiliary ring connecting V-cross braces
+    prob['cross_attachment_pontoons_int']   = 1 # Lower-Upper base-to-auxiliary connecting cross braces
+    prob['lower_attachment_pontoons_int']   = 1 # Lower base-to-auxiliary connecting pontoons
+    prob['upper_attachment_pontoons_int']   = 1 # Upper base-to-auxiliary connecting pontoons
+    prob['lower_ring_pontoons_int']         = 1 # Lower ring of pontoons connecting auxiliary columns
+    prob['upper_ring_pontoons_int']         = 1 # Upper ring of pontoons connecting auxiliary columns
+    prob['outer_cross_pontoons_int']        = 1 # Auxiliary ring connecting V-cross braces
 
     # Set environment to that used in OC4 testing campaign
     prob['water_depth'] = 200.0  # Distance to sea floor [m]

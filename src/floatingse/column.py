@@ -594,7 +594,7 @@ class ColumnBuckling(Component):
         sigma_y      = params['yield_stress']
         loading      = params['loading']
         pressure,_   = nodal2sectional( params['pressure'] )
-        
+
         # Compute applied axial stress simply, like API guidelines (as opposed to running frame3dd)
         sigma_ax = self.compute_applied_axial(params)
         (flange_compactness, web_compactness, axial_local_unity, axial_general_unity,

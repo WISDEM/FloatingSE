@@ -1,5 +1,7 @@
-from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver, DumpRecorder
+from __future__ import print_function
+from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver, SOGADriver, SOGADriverParallel, DumpRecorder
 import numpy as np
+import cPickle as pickle        
 
 #import matplotlib.pyplot as plt
 #from mpl_toolkits.mplot3d import Axes3D
@@ -46,6 +48,9 @@ class FloatingInstance(object):
     def __init__(self):
         self.prob = Problem()
         self.params = {}
+        self.optimizerSet = False
+        self.desvarSet = False
+        self.optimizer = None
 
         # Environmental parameters
         self.params['water_depth'] = 200.0
@@ -113,12 +118,12 @@ class FloatingInstance(object):
         self.params['ballast_cost_rate'] = 100.0
         self.params['tapered_col_cost_rate'] = 4720.0
         self.params['outfitting_cost_rate'] = 6980.0
-        self.params['cross_attachment_pontoons'] = True
-        self.params['lower_attachment_pontoons'] = True
-        self.params['upper_attachment_pontoons'] = True
-        self.params['lower_ring_pontoons'] = True
-        self.params['upper_ring_pontoons'] = True
-        self.params['outer_cross_pontoons'] = True #False
+        self.params['cross_attachment_pontoons_int'] = 1
+        self.params['lower_attachment_pontoons_int'] = 1
+        self.params['upper_attachment_pontoons_int'] = 1
+        self.params['lower_ring_pontoons_int'] = 1
+        self.params['upper_ring_pontoons_int'] = 1
+        self.params['outer_cross_pontoons_int'] = 1 #False
         self.params['pontoon_cost_rate'] = 6.250
 
         # OC4 Tower
@@ -207,38 +212,68 @@ class FloatingInstance(object):
         self.params['auxiliary_bulkhead_nodes']             = [False] * (NSECTIONS+1)
         self.params['auxiliary_bulkhead_nodes'][0]          = True
         self.params['auxiliary_bulkhead_nodes'][1]          = True
+
+
+    def save(self, fname):
+        assert type(fname) == type(''), 'Input filename must be a string'
+        with open(fname,'wb') as fp:
+            pickle.dump(self.params, fp)
+            
+    def load(self, fname):
+        assert type(fname) == type(''), 'Input filename must be a string'
+        with open(fname,'rb') as fp:
+            self.params = pickle.load(fp)
         
     def get_assembly(self):
         raise NotImplementedError("Subclasses should implement this!")
 
-    def get_design_variables(self):
-        raise NotImplementedError("Subclasses should implement this!")
+    
+    def add_design_variable(self, varStr, lowVal, highVal):
+        if not self.optimizerSet:
+            raise RuntimeError('Must set the optimizer to set the driver first')
         
-    def init_optimization(self, optimizer=None):
+        assert type(varStr) == type(''), 'Input variable must be a string'
+        assert isinstance(lowVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid lower bound'
+        assert isinstance(highVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid upper bound'
+        
+        if self.optimizer in ['COBLYA']:
+            iscale=min(1.0 / lowVal, highVal / 1.0)
+            self.prob.driver.add_desvar(varStr, lower=lowVal, upper=highVal, scaler=iscale)
+        else:
+            self.prob.driver.add_desvar(varStr, lower=lowVal, upper=highVal)
+
+        self.desvarSet = True
+        
+            
+    def set_optimizer(self, optStr):
+        assert type(optStr) == type(''), 'Input optimizer must be a string'
+        self.optimizer = optStr.upper()
+        
         # Establish the optimization driver
-        validStr = 'Valid options are: [COBYLA, SLSQP, CONMIN, PSQP]'
-        if optimizer is None:
-            return
-        elif optimizer.upper() in ['COBYLA','SLSQP']:
+        if self.optimizer in ['SOGA']:
+            self.prob.driver = SOGADriverParallel()
+        elif self.optimizer in ['COBYLA','SLSQP']:
             self.prob.driver = ScipyOptimizer()
-        elif optimizer.upper() in ['CONMIN', 'PSQP','SNOPT', 'NSGA2']:
-            self.prob.driver = pyOptSparseDriver()
-        elif optimizer.upper() in ['ALPSO', 'SLSQP']:
-            print 'WARNING: These optimizers run but jump to infeasible values. '+validStr
+        elif self.optimizer in ['CONMIN', 'PSQP','SNOPT','NSGA2','ALPSO']:
             self.prob.driver = pyOptSparseDriver()
         else:
             raise ValueError('Unknown or unworking optimizer. '+validStr)
 
-        # Optimizer specific parameters
-        self.prob.driver.options['optimizer'] = optimizer.upper()
-        if optimizer.upper() == 'CONMIN':
+        self.optimizerSet = True
+        
+        # Set default options
+        self.prob.driver.options['optimizer'] = self.optimizer
+        if self.optimizer == 'CONMIN':
             self.prob.driver.opt_settings['ITMAX'] = 1000
-        elif optimizer.upper() in ['PSQP']:
-            self.prob.driver.opt_settings['MIT'] = 100
-        elif optimizer.upper() in ['NSGA2']:
+        elif self.optimizer in ['PSQP']:
+            self.prob.driver.opt_settings['MIT'] = 1000
+        elif self.optimizer in ['SOGA']:
+            self.prob.driver.options['population'] = 200
+            self.prob.driver.options['generations'] = 500
+        elif self.optimizer in ['NSGA2']:
             self.prob.driver.opt_settings['PopSize'] = 200
-            self.prob.driver.opt_settings['maxGen'] = 2000
-        elif optimizer.upper() in ['SNOPT']:
+            self.prob.driver.opt_settings['maxGen'] = 500
+        elif self.optimizer in ['SNOPT']:
             self.prob.driver.opt_settings['Major iterations limit'] = 500
             self.prob.driver.opt_settings['Minor iterations limit'] = 250
             #self.prob.driver.opt_settings['Major optimality tolerance'] = 1e-5
@@ -247,20 +282,25 @@ class FloatingInstance(object):
             #self.prob.driver.opt_settings['Function precision'] = 1e-12
             #self.prob.driver.opt_settings['Linesearch tolerance'] = 0.4
             #self.prob.driver.opt_settings['LU singularity tolerance'] = 1e30
-        elif optimizer.upper() in ['COBYLA','SLSQP']:
+        elif self.optimizer in ['COBYLA','SLSQP']:
             self.prob.driver.options['tol'] = 1e-6
-            self.prob.driver.options['maxiter'] = 100000
+            self.prob.driver.options['maxiter'] = 1000
 
-        # Add in design variables
-        desvarList = self.get_design_variables()
-        if optimizer.upper() in ['CONMIN','PSQP','ALPSO','NSGA2','SLSQP','SNOPT']:
-            for ivar in desvarList:
-                self.prob.driver.add_desvar(ivar[0], lower=ivar[1], upper=ivar[2])
-        else:
-            for ivar in desvarList:
-                iscale=ivar[3]
-                self.prob.driver.add_desvar(ivar[0], lower=iscale*ivar[1], upper=iscale*ivar[2], scaler=iscale)
 
+    def set_options(self, indict):
+        if not self.optimizerSet:
+            raise RuntimeError('Must set the optimizer to set the driver first')
+        assert isinstance(indict, dict), 'Options must be passed as a string:value dictionary'
+        
+        for k in indict.keys():
+            if self.optimizer in ['SOGA','COBYLA','SLSQP']:
+                self.prob.driver.options[k] = indict[k]
+            elif self.optimizer in ['CONMIN', 'PSQP','SNOPT','NSGA2','ALPSO']:
+                if k in ['title','print_results','gradient method']:
+                    self.prob.driver.options[k] = indict[k]
+                else:
+                    self.prob.driver.opt_settings[k] = indict[k]
+            
     def get_constraints(self):
         raise NotImplementedError("Subclasses should implement this!")
 
@@ -274,15 +314,15 @@ class FloatingInstance(object):
             try:
                 self.prob[ivar] = self.params[ivar]
             except KeyError:
-                print 'Cannot set: ', ivar
+                print('Cannot set: ', ivar)
                 continue
             except AttributeError as e:
-                print 'Vector issues?: ', ivar
-                print e
+                print('Vector issues?: ', ivar)
+                print(e)
                 raise e
             except ValueError as e:
-                print 'Badding setting of: ', ivar
-                print e
+                print('Badding setting of: ', ivar)
+                print(e)
                 raise e
 
         # Check that everything got set correctly
@@ -291,7 +331,7 @@ class FloatingInstance(object):
             if self.prob.root._unknowns_dict[ivar].has_key('_canset_') and self.prob.root._unknowns_dict[ivar]['_canset_']:
                 selfvar = ivar.split('.')[-1]
                 if not selfvar in localnames:
-                    print 'WARNING:', selfvar, 'has not been set!'
+                    print('WARNING:', selfvar, 'has not been set!')
                     
 
         '''
@@ -302,15 +342,15 @@ class FloatingInstance(object):
 
                 selfval = self.prob[selfvar]
                 if ( (type(selfval) == type(0.0)) or (type(selfval) == np.float64) or (type(selfval) == np.float32) ) and selfval == 0.0:
-                    print selfvar, 'is zero! Did you set it?'
+                    print(selfvar, 'is zero! Did you set it?')
                 if ( (type(selfval) == type(0)) or (type(selfval) == np.int64) or (type(selfval) == np.int32) ) and selfval == 0:
-                    print selfvar, 'is zero! Did you set it?'
+                    print(selfvar, 'is zero! Did you set it?')
                 elif type(selfval) == type(np.array([])) and not np.any(selfval):
-                    print selfvar, 'is zero! Did you set it?'
+                    print(selfvar, 'is zero! Did you set it?')
 
                 selfval = getattr(self, selfvar, None)
                 if selfval is None:
-                    print 'Variable not found:', ivar, selfvar, self.prob[ivar]
+                    print('Variable not found:', ivar, selfvar, self.prob[ivar])
                 else:
                     self.prob[ivar] = selfval
         #raise NotImplementedError("Subclasses should implement this!")
@@ -327,19 +367,23 @@ class FloatingInstance(object):
             if selfvar in localnames:
                 self.params[ivar] = ival
                 ivalstr = 'np.array( '+str(ival.tolist())+' )' if type(ival)==type(np.array([])) else str(ival)
-                print ivar, '=', ivalstr
+                print(ivar, '=', ivalstr)
+
                 
-    def init_problem(self, optimizer=None):
-        self.prob = Problem()
+    def init_problem(self, optFlag=False):
         self.prob.root = self.get_assembly()
+        
+        if optFlag:
+            if not self.optimizerSet:
+                raise RuntimeError('Must set the optimizer to set the driver first')
+            if not self.desvarSet:
+                raise RuntimeError('Must set design variables before running optimization')
+            
+            constlist = self.get_constraints()
+            for con in constlist:
+                self.prob.driver.add_constraint(con[0], lower=con[1], upper=con[2], equals=con[3])
 
-        self.init_optimization(optimizer=optimizer)
-
-        constlist = self.get_constraints()
-        for con in constlist:
-            self.prob.driver.add_constraint(con[0], lower=con[1], upper=con[2], equals=con[3])
-
-        self.add_objective()
+            self.add_objective()
 
         # Recorder
         #recorder = DumpRecorder('floatingOptimization.dat')
@@ -357,26 +401,24 @@ class FloatingInstance(object):
 
         # Checks
         self.prob.check_setup()
-        self.prob.pre_run_check()
         #self.prob.check_total_derivatives()
 
-    def run(self, optimizer=None):
-        self.init_problem(optimizer)
-        self.prob.run()
-        if not optimizer is None:
+    def run(self):
+        if not self.optimizerSet:
+            print('WARNING: executing once because optimizer is not set')
+            self.evaluate()
+        else:
+            self.init_problem(optFlag=True)
+            self.prob.run()
             self.store_results()
-            print self.prob.driver.get_constraints()
-            #print self.prob.driver.get_desvars()
-            print self.prob.driver.get_objectives()
+            print(self.prob.driver.get_constraints())
+            #print(self.prob.driver.get_desvars())
+            print(self.prob.driver.get_objectives())
         
-    def evaluate(self, optimizer=None):
-        self.init_problem(optimizer)
+    def evaluate(self):
+        self.init_problem(optFlag=False)
         self.prob.run_once()
-        if not optimizer is None:
-            #self.store_results()
-            print self.prob.driver.get_constraints()
-            print self.prob.driver.get_desvars()
-            print self.prob.driver.get_objectives()
+
 
     def visualize(self, fname=None):
         raise NotImplementedError("Subclasses should implement this!")
@@ -440,7 +482,7 @@ class FloatingInstance(object):
         mlab.mesh(X,Y,Z, opacity=1.0, color=mybrown, figure=fig)
 
         cmoor = (0,1,0)
-        for k in xrange(self.params['number_of_mooring_lines']):
+        for k in xrange(int(self.params['number_of_mooring_lines'])):
             #ax.plot(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], 'k', lw=2)
             mlab.plot3d(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], color=cmoor, tube_radius=0.5*self.params['mooring_diameter'], figure=fig)
 
@@ -480,7 +522,7 @@ class FloatingInstance(object):
             z = z_nodes[k] + spacingVec[k]
             while z < z_nodes[k+1]:
                 rk = np.interp(z, z_nodes[k:], r_nodes[k:])
-                #print z, z_nodes[k], z_nodes[k+1], rk, r_nodes[k], r_nodes[k+1]
+                #print(z, z_nodes[k], z_nodes[k+1], rk, r_nodes[k], r_nodes[k+1])
                 #ax.plot(rk*np.cos(th), rk*np.sin(th), z*np.ones(th.shape), 'r', lw=0.25)
                 mlab.plot3d(rk*np.cos(th) + centerline[0], rk*np.sin(th) + centerline[1], z*np.ones(th.shape), color=(0.5,0,0), figure=fig)
                 z += spacingVec[k]

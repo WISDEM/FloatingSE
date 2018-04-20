@@ -67,7 +67,7 @@ class SubstructureGeometry(Component):
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
         self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
-        self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
+        self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column')
         self.add_param('tower_base', val=0.0, units='m', desc='tower base diameter')
         
         # Output constraints
@@ -109,7 +109,7 @@ class SubstructureGeometry(Component):
         unknowns['base_auxiliary_spacing'] = (R_od_base.max() + R_od_ballast.max()) / R_semi
 
         # Determine radius at mooring connection point (fairlead)
-        if params['number_of_auxiliary_columns'] > 0:
+        if int(params['number_of_auxiliary_columns']) > 0:
             unknowns['fairlead_radius'] = R_semi + fair_off + np.interp(-fairlead, z_nodes_ballast, R_od_ballast)
         else:
             unknowns['fairlead_radius'] = fair_off + np.interp(-fairlead, z_nodes_base, R_od_base)
@@ -134,7 +134,7 @@ class SemiStable(SubstructureBase):
         self.add_param('auxiliary_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
         self.add_param('auxiliary_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
         
-        self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column', pass_by_obj=True)
+        self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column')
         self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
 
         
@@ -210,7 +210,7 @@ class SemiStable(SubstructureBase):
         
     def compute_stability(self, params, unknowns):
         # Unpack variables
-        ncolumn         = params['number_of_auxiliary_columns']
+        ncolumn         = int(params['number_of_auxiliary_columns'])
         z_cb            = params['z_center_of_buoyancy']
         z_cg            = unknowns['center_of_mass'][-1]
         V_system        = params['total_displacement']
@@ -284,7 +284,7 @@ class SemiStable(SubstructureBase):
         
     def compute_costs(self, params, unknowns):
         # Unpack variables
-        ncolumn    = params['number_of_auxiliary_columns']
+        ncolumn    = int(params['number_of_auxiliary_columns'])
         c_mooring  = params['mooring_cost']
         c_aux      = params['auxiliary_column_cost']
         c_base     = params['base_column_cost']
