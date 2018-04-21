@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.testing as npt
 import unittest
-import floatingse.mapMooring as mapMooring
+import floatingse.map_mooring as mapMooring
 from floatingse.column import ColumnGeometry
 from floatingse.mapapi import *
 

@@ -1,7 +1,7 @@
 import unittest
 
 import column_PyU
-import mapMooring_PyU
+import map_mooring_PyU
 import floating_loading_PyU
 import substructure_PyU
 

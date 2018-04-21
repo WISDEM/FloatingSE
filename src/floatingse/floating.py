@@ -2,7 +2,7 @@ from openmdao.api import Group, IndepVarComp, Problem, Component
 from column import Column, ColumnGeometry
 from substructure import SemiStable, SubstructureGeometry
 from floating_loading import FloatingLoading
-from mapMooring import MapMooring
+from map_mooring import MapMooring
 from towerse.tower import TowerLeanSE
 import numpy as np
 
