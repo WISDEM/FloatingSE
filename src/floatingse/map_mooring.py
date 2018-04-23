@@ -2,7 +2,7 @@ from openmdao.api import Component
 import numpy as np
 import os
 import sys
-from mapapi import *
+from pymap import pyMAP
 
 from commonse import gravity
 from commonse import Enum
@@ -404,7 +404,7 @@ class MapMooring(Component):
         self.write_input_file(params)
 
         # Initiate MAP++ for this design
-        mymap = MapAPI( )
+        mymap = pyMAP( )
         #mymap.ierr = 0
         mymap.map_set_sea_depth(waterDepth)
         mymap.map_set_gravity(gravity)

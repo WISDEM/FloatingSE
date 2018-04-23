@@ -3,8 +3,7 @@ import numpy.testing as npt
 import unittest
 import floatingse.map_mooring as mapMooring
 from floatingse.column import ColumnGeometry
-from floatingse.mapapi import *
-
+from pymap import pyMAP
 from commonse import gravity as g
 
 def myisnumber(instr):
@@ -155,7 +154,7 @@ class TestMapMooring(unittest.TestCase):
     
     def testListEntry(self):
         # Initiate MAP++ for this design
-        mymap = MapAPI( )
+        mymap = pyMAP( )
         #mymap.ierr = 0
         mymap.map_set_sea_depth(self.params['water_depth'])
         mymap.map_set_gravity(g)
