@@ -85,7 +85,7 @@ class TestSubs(unittest.TestCase):
         h_expect = np.interp(m_water, self.params['water_ballast_mass_vector'], self.params['water_ballast_zpts_vector']) + 10.0
         cg_expect_z = (1e4*40.0 + m_water*(-10 + 0.5*h_expect)) / (1e4+m_water)
         cg_expect_xy = 1e4*40.0/ (1e4+m_water)
-        
+
         self.assertEqual(self.unknowns['variable_ballast_mass'], m_water)
         self.assertEqual(self.unknowns['variable_ballast_height_ratio'], h_expect/4.0)
         npt.assert_almost_equal(self.unknowns['center_of_mass'], np.array([cg_expect_xy, cg_expect_xy, cg_expect_z]))
