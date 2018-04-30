@@ -1,4 +1,4 @@
-from floatingInstance import FloatingInstance, NSECTIONS, NPTS, vecOption
+from floating_instance import FloatingInstance, NSECTIONS, NPTS, vecOption
 from floating import FloatingSE
 from commonse import eps
 import numpy as np
