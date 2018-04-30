@@ -44,7 +44,7 @@ class BulkheadMass(Component):
         Zf,Zp = np.meshgrid(z_full, z_param)
         idx = np.argmin( np.abs(Zf-Zp), axis=1 )
         bulk_param = np.zeros( z_param.shape, dtype=np.int_)
-        bulk_param[ bulkheadTF ] = 1
+        bulk_param[ np.where(bulkheadTF) ] = 1
         self.bulk_full = np.zeros( z_full.shape, dtype=np.int_)
         self.bulk_full[idx] = bulk_param
         
