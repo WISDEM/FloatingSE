@@ -2,12 +2,22 @@ from openmdao.api import Component, Group
 import numpy as np
 from scipy.integrate import cumtrapz
 
-from commonse.utilities import nodal2sectional
+from commonse.utilities import nodal2sectional, assembleI, unassembleI
 import commonse.frustum as frustum
 from commonse.UtilizationSupplement import shellBuckling_withStiffeners, GeometricConstraints
 from commonse import gravity, eps, AeroHydroLoads, CylinderWindDrag, CylinderWaveDrag
 from commonse.vertical_cylinder import CylinderDiscretization, CylinderMass
 from commonse.environment import PowerWind, LinearWaves
+
+def I_tube(r_i, r_o, h, m):
+    n = r_i.size
+    r_i = r_i.flatten()
+    r_o = r_o.flatten()
+    h   = h.flatten()
+    m   = m.flatten()
+    Ixx = Iyy = (m/12.0) * (3.0*(r_i**2.0 + r_o**2.0) + h**2.0)
+    Izz = 0.5 * m * (r_i**2.0 + r_o**2.0)
+    return np.c_[Ixx, Iyy, Izz, np.zeros((n,3))]
 
 
 class BulkheadMass(Component):
@@ -25,6 +35,7 @@ class BulkheadMass(Component):
         self.add_param('bulkhead_mass_factor', val=0.0, desc='Bulkhead mass correction factor')
 
         self.add_output('bulkhead_mass', val=np.zeros(nFull), units='kg', desc='mass of spar bulkheads')
+        self.add_output('bulkhead_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of bulkheads relative to keel point')
         
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -54,12 +65,23 @@ class BulkheadMass(Component):
         
         # Convert to mass with fudge factor for design features not captured in this simple approach
         m_bulk = self.bulk_full * params['bulkhead_mass_factor'] * params['rho'] * V_bulk
-        
-        # Zero out nodes where there is no bulkhead
-        #m_bulk[np.logical_not(self.bulk_full)] = 0.0
 
+        # Compute moments of inertia at keel
+        # Assume bulkheads are just simple thin discs with radius R_od-t_wall and mass already computed
+        Izz = 0.5 * m_bulk * (R_od - twall)**2
+        Ixx = Iyy = 0.5 * Izz
+        I_keel = np.zeros((3,3))
+        dz  = z_full - z_full[0]
+        for k in xrange(m_bulk.size):
+            R = np.array([0.0, 0.0, dz[k]])
+            Icg = assembleI( [Ixx[k], Iyy[k], Izz[k], 0.0, 0.0, 0.0] )
+            I_keel += Icg + m_bulk[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        
+        # Store results
+        unknowns['bulkhead_I_keel'] = unassembleI(I_keel)
         unknowns['bulkhead_mass'] = m_bulk
 
+    '''
     def list_deriv_vars(self):
         inputs = ('d_full','t_full')
         outputs = ('bulkhead_mass',)
@@ -77,6 +99,7 @@ class BulkheadMass(Component):
         J['bulkhead_mass','d_full'] = coeff * np.diag(dVdR*myones) * 0.5 # 0.5 for d->r
         J['bulkhead_mass','t_full'] = coeff * np.diag(dVdt*myones)
         return J
+    '''
 
     
 
@@ -111,6 +134,7 @@ class StiffenerMass(Component):
         self.add_param('ring_mass_factor', val=0.0, desc='Stiffener ring mass correction factor')
         
         self.add_output('stiffener_mass', val=np.zeros(nFull-1), units='kg', desc='mass of spar stiffeners')
+        self.add_output('stiffener_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of stiffeners relative to keel point')
         self.add_output('flange_spacing_ratio', val=np.zeros((nFull-1,)), desc='ratio between flange and stiffener spacing')
         self.add_output('stiffener_radius_ratio', val=np.zeros((nFull-1,)), desc='ratio between stiffener height and radius')
 
@@ -148,11 +172,27 @@ class StiffenerMass(Component):
 
         # Ring mass by volume by section 
         # Include fudge factor for design features not captured in this simple approach
-        m_ring = params['ring_mass_factor']*params['rho']*(V_web + V_flange)
+        m_web    = params['ring_mass_factor'] * params['rho'] * V_web
+        m_flange = params['ring_mass_factor'] * params['rho'] * V_flange
+        m_ring   = m_web + m_flange
 
         # Number of stiffener rings per section (height of section divided by spacing)
         nring_per_section = h_section / L_stiffener
         unknowns['stiffener_mass'] =  nring_per_section * m_ring
+
+        # Compute moments of inertia for stiffeners (lumped by section for simplicity) at keel
+        I_web     = I_tube(R_wi, R_wo, t_web   , m_web)
+        I_flange  = I_tube(R_fi, R_fo, w_flange, m_flange)
+        I_section = I_web + I_flange
+        I_keel    = np.zeros((3,3))
+        dz        = z_section - z_full[0]
+        for k in xrange(m_ring.size):
+            R = np.array([0.0, 0.0, dz[k]])
+            Icg = assembleI( I_section[k,:] )
+            I_keel += Icg + m_ring[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        
+        # Store results
+        unknowns['stiffener_I_keel'] = unassembleI(I_keel)
         
         # Create some constraints for reasonable stiffener designs for an optimizer
         unknowns['flange_spacing_ratio']   = w_flange / (0.5*L_stiffener)
@@ -256,6 +296,11 @@ class ColumnProperties(Component):
         self.add_param('bulkhead_mass', val=np.zeros(nFull), units='kg', desc='mass of spar bulkheads')
         self.add_param('column_mass_factor', val=0.0, desc='Overall spar mass correction factor')
         self.add_param('outfitting_mass_fraction', val=0.0, desc='Mass fraction added for outfitting')
+
+        # Moments of inertia
+        self.add_param('shell_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of outer shell relative to keel point')
+        self.add_param('bulkhead_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of bulkheads relative to keel point')
+        self.add_param('stiffener_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of stiffeners relative to keel point')
         
         # Cost rates
         self.add_param('ballast_cost_rate', val=0.0, units='USD/kg', desc='Cost per unit mass of ballast')
@@ -272,6 +317,7 @@ class ColumnProperties(Component):
         self.add_output('z_center_of_buoyancy', val=0.0, units='m', desc='z-position CofB of column')
         self.add_output('Awater', val=0.0, units='m**2', desc='Area of waterplace cross section')
         self.add_output('Iwater', val=0.0, units='m**4', desc='Second moment of area of waterplace cross section')
+        self.add_output('I_column', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of whole column relative to keel point')
         self.add_output('displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='Volume of water displaced by column by section')
  
         self.add_output('spar_cost', val=0.0, units='USD', desc='cost of spar structure')
@@ -280,6 +326,7 @@ class ColumnProperties(Component):
         self.add_output('outfitting_cost', val=0.0, units='USD', desc='cost of outfitting the spar')
         self.add_output('outfitting_mass', val=0.0, units='kg', desc='cost of outfitting the spar')
 
+        self.add_output('added_mass', val=np.zeros(6), units='kg', desc='hydrodynamic added mass matrix diagonal')
         self.add_output('total_mass', val=np.zeros((nFull-1,)), units='kg', desc='total mass of column by section')
         self.add_output('total_cost', val=0.0, units='USD', desc='total cost of column')
         
@@ -332,12 +379,16 @@ class ColumnProperties(Component):
         outfitting_mass in 'unknowns' dictionary set
         """
         # Unpack variables
+        out_frac     = params['outfitting_mass_fraction']
         coeff        = params['column_mass_factor']
         z_nodes      = params['z_full']
         z_section    = params['z_section']
         m_shell      = params['shell_mass']
         m_stiffener  = params['stiffener_mass']
         m_bulkhead   = params['bulkhead_mass']
+        I_shell      = params['shell_I_keel']
+        I_stiffener  = params['stiffener_I_keel']
+        I_bulkhead   = params['bulkhead_I_keel']
         
         m_spar = 0.0
         z_cg = 0.0
@@ -363,10 +414,13 @@ class ColumnProperties(Component):
 
         # Store outputs addressed so far
         unknowns['spar_mass']       = m_spar
-        unknowns['outfitting_mass'] = params['outfitting_mass_fraction'] * m_spar
+        unknowns['outfitting_mass'] = out_frac * m_spar
 
+        # Add up moments of inertia at keel, make sure to scale mass appropriately
+        I_spar = ((1+out_frac) + coeff) * (I_shell + I_stiffener + I_bulkhead)
+        
         # Return total spar mass and position of spar cg
-        return m_spar, z_cg
+        return m_spar, z_cg, I_spar
 
 
     def compute_ballast_mass_cg(self, params, unknowns):
@@ -410,6 +464,17 @@ class ColumnProperties(Component):
         for k in xrange(z_nodes.size-1):
             ind = np.logical_and(zpts>=z_nodes[k], zpts<=z_nodes[k+1]) 
             self.section_mass[k] += rho_ballast * np.pi * np.trapz(R_id[ind]**2, zpts[ind])
+
+        Ixx = Iyy = frustum.frustumIxx(R_id[:-1], R_id[1:], np.diff(zpts))
+        Izz = frustum.frustumIzz(R_id[:-1], R_id[1:], np.diff(zpts))
+        m_slice = rho_ballast * frustum.frustumVol(R_id[:-1], R_id[1:], np.diff(zpts))
+        I_keel = np.zeros((3,3))
+        dz  = 0.5*(zpts[:-1] + zpts[1:]) - z_draft
+        for k in xrange(m_slice.size):
+            R = np.array([0.0, 0.0, dz[k]])
+            Icg = assembleI( [Ixx[k], Iyy[k], Izz[k], 0.0, 0.0, 0.0] )
+            I_keel += Icg + m_slice[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        I_keel = unassembleI(I_keel)
         
         # Water ballast will start at top of fixed ballast
         z_water_start = z_draft + h_ballast
@@ -425,7 +490,7 @@ class ColumnProperties(Component):
         # Save permanent ballast mass and variable height
         unknowns['ballast_mass'] = m_perm
 
-        return m_perm, z_cg_perm
+        return m_perm, z_cg_perm, I_keel
 
         
     def balance_column(self, params, unknowns):
@@ -450,16 +515,18 @@ class ColumnProperties(Component):
         R_od              = 0.5*params['d_full']
         t_wall            = params['t_full']
         z_nodes           = params['z_full']
+        rho_water         = params['water_density']
         self.section_mass = np.zeros((z_nodes.size-1,))
         
         # Add in contributions from the spar and permanent ballast assumed to start at draft point
-        m_spar   , cg_spar     = self.compute_spar_mass_cg(params, unknowns)
-        m_ballast, cg_ballast  = self.compute_ballast_mass_cg(params, unknowns)
-        m_outfit               = unknowns['outfitting_mass']
-        m_total                = m_spar + m_ballast + m_outfit
-        self.section_mass     += m_outfit / self.section_mass.size
-        unknowns['total_mass'] = self.section_mass
-        unknowns['z_center_of_mass'] = ( (m_spar+m_outfit)*cg_spar + m_ballast*cg_ballast ) / m_total
+        m_spar   , cg_spar, I_spar       = self.compute_spar_mass_cg(params, unknowns)
+        m_ballast, cg_ballast, I_ballast = self.compute_ballast_mass_cg(params, unknowns)
+        m_outfit           = unknowns['outfitting_mass']
+        m_total            = m_spar + m_ballast + m_outfit
+        self.section_mass += m_outfit / self.section_mass.size
+        z_cg               = ( (m_spar+m_outfit)*cg_spar + m_ballast*cg_ballast ) / m_total
+        unknowns['total_mass']       = self.section_mass
+        unknowns['z_center_of_mass'] = z_cg
 
         # Compute volume of each section and mass of displaced water by section
         # Find the radius at the waterline so that we can compute the submerged volume as a sum of frustum sections
@@ -485,7 +552,8 @@ class ColumnProperties(Component):
         z_cg_under  = np.r_[z_cg_under, np.zeros((add0,))]
         # Now take weighted average of these CG points with volume
         V_under += eps
-        unknowns['z_center_of_buoyancy'] = np.dot(V_under, z_cg_under) / V_under.sum()
+        z_cb     = np.dot(V_under, z_cg_under) / V_under.sum()
+        unknowns['z_center_of_buoyancy'] = z_cb
 
         # 2nd moment of area for circular cross section
         # Note: Assuming Iwater here depends on "water displacement" cross-section
@@ -493,6 +561,23 @@ class ColumnProperties(Component):
         unknowns['Iwater'] = 0.25 * np.pi * r_waterline**4.0
         unknowns['Awater'] = np.pi * r_waterline**2.0
 
+        # Now that cg is calculated, move moments of inertia from keel to cg
+        I_total  = I_spar + I_ballast
+        I_total -= m_total*(z_cg-z_nodes[0])**2.0 * np.r_[1.0, 1.0, np.zeros(4)]
+        unknowns['I_column'] = I_total
+
+        # Calculate diagonal entries of added mass matrix
+        # Prep for integrals too
+        npts     = 5 * R_od.size
+        zpts     = np.linspace(z_under[0], z_under[-1], npts)
+        r_under  = np.interp(zpts, z_under, r_under)
+        m_a      = np.zeros(6)
+        m_a[:2]  = rho_water * V_under.sum() # A11 surge, A22 sway
+        m_a[2]   = 0.5 * (8.0/3.0) * rho_water * r_under.max()**3.0# A33 heave
+        m_a[3:5] = np.pi * rho_water * np.trapz((zpts-z_cb)**2.0 * r_under**2.0, zpts)# A44 roll, A55 pitch
+        m_a[5]   = 0.0 # A66 yaw
+        unknowns['added_mass'] = m_a
+        
         
     def compute_cost(self, params, unknowns):
         unknowns['ballast_cost']    = params['ballast_cost_rate'] * unknowns['ballast_mass']
@@ -637,8 +722,8 @@ class Column(Group):
                                                            'bulkhead_mass','stiffener_mass','column_mass_factor','outfitting_mass_fraction',
                                                            'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
                                                            'variable_ballast_interp_mass','variable_ballast_interp_zpts',
-                                                           'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater',
-                                                           'displaced_volume','total_mass','total_cost'])
+                                                           'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater','I_column',
+                                                           'displaced_volume','added_mass','total_mass','total_cost'])
 
         self.add('wind', PowerWind(nFull), promotes=['Uref','zref','shearExp','z0'])
         self.add('wave', LinearWaves(nFull), promotes=['Uc','hmax','T'])

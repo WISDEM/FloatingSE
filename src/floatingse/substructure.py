@@ -2,58 +2,12 @@ from openmdao.api import Component
 import numpy as np
 
 from commonse import gravity, eps, DirectionVector
-
-
-class SubstructureBase(Component):
-    def __init__(self, nFull):
-        super(SubstructureBase,self).__init__()
-        # Environment
-        self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
-
-        # From other components
-        self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
-        self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
-        self.add_param('mooring_effective_mass', val=0.0, units='kg', desc='Mass of mooring lines that weigh on structure, ignoring mass of mooring lines on sea floor')
-        self.add_param('mooring_surge_restoring_force', val=0.0, units='N', desc='Restoring force from mooring system after surge motion')
-        self.add_param('mooring_pitch_restoring_force', val=np.zeros((10,3)), units='N', desc='Restoring force from mooring system after pitch motion')
-        self.add_param('mooring_cost', val=0.0, units='USD', desc='Cost of mooring system')
-        self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
-        self.add_param('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
-
-        self.add_param('base_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
-        self.add_param('base_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
-        self.add_param('base_freeboard', val=0.0, units='m', desc='Length of spar above water line')
-
-        self.add_param('water_ballast_mass_vector', val=np.zeros((nFull,)), units='kg', desc='mass vector of potential ballast mass')
-        self.add_param('water_ballast_zpts_vector', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
-
-        self.add_param('structural_mass', val=0.0, units='kg', desc='Mass of whole turbine except for mooring lines')
-        self.add_param('structure_center_of_mass', val=np.zeros(3), units='m', desc='xyz-position of center of gravity of whole turbine')
-        self.add_param('z_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of gravity (x,y = 0,0)')
-        self.add_param('total_displacement', val=0.0, units='m**3', desc='Total volume of water displaced by floating turbine (except for mooring lines)')
-        self.add_param('total_force', val=np.zeros(3), units='N', desc='Net forces on turbine')
-        self.add_param('total_moment', val=np.zeros(3), units='N*m', desc='Moments on whole turbine')
-
-        
-        # Outputs
-        self.add_output('total_mass', val=0.0, units='kg', desc='total mass of spar and moorings')
-        self.add_output('total_cost', val=0.0, units='USD', desc='total cost of spar and moorings')
-        self.add_output('metacentric_height', val=0.0, units='m', desc='measure of static overturning stability')
-        self.add_output('buoyancy_to_gravity', val=0.0, desc='static stability margin based on position of centers of gravity and buoyancy')
-        self.add_output('offset_force_ratio', val=0.0, desc='total surge force divided by restoring force')
-        self.add_output('heel_moment_ratio', val=0.0, desc='total pitch moment divided by restoring moment')
-
-        self.add_output('center_of_mass', val=np.zeros(3), units='m', desc='xyz-position of center of gravity (x,y = 0,0)')
-
-        self.add_output('variable_ballast_mass', val=0.0, units='kg', desc='Amount of variable water ballast')
-        self.add_output('variable_ballast_height_ratio', val=0.0, units='m', desc='height of water ballast to balance spar')
-
+from commonse.utilities import assembleI, unassembleI
 
         
 class SubstructureGeometry(Component):
     """
-    OpenMDAO Component class for Semi substructure for floating offshore wind turbines.
-    Should be tightly coupled with MAP Mooring class for full system representation.
+    OpenMDAO Component class for substructure geometry for floating offshore wind turbines.
     """
 
     def __init__(self, nFull):
@@ -119,24 +73,76 @@ class SubstructureGeometry(Component):
 
 
 
-class SemiStable(SubstructureBase):
-    """
-    OpenMDAO Component class for Semisubmersible substructure for floating offshore wind turbines.
-    Should be tightly coupled with MAP Mooring class for full system representation.
-    """
 
+class Substructure(Component):
     def __init__(self, nFull):
-        super(SemiStable,self).__init__(nFull)
+        super(Substructure,self).__init__()
+        # Environment
+        self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
+        self.add_param('wave_period', 0.0, units='s', desc='period of maximum wave height')
 
-        self.add_param('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
-        
-        self.add_param('auxiliary_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
-        self.add_param('auxiliary_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
-        self.add_param('auxiliary_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        # From other components
+        self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
+        self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
+        self.add_param('mooring_effective_mass', val=0.0, units='kg', desc='Mass of mooring lines that weigh on structure, ignoring mass of mooring lines on sea floor')
+        self.add_param('mooring_surge_restoring_force', val=0.0, units='N', desc='Restoring force from mooring system after surge motion')
+        self.add_param('mooring_pitch_restoring_force', val=np.zeros((10,3)), units='N', desc='Restoring force from mooring system after pitch motion')
+        self.add_param('mooring_cost', val=0.0, units='USD', desc='Cost of mooring system')
+        self.add_param('mooring_stiffness', val=np.zeros((6,6)), units='N/m', desc='Linearized stiffness matrix of mooring system at neutral (no offset) conditions.')
+        self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
+        self.add_param('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
         
         self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column')
         self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
 
+        self.add_param('base_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
+        self.add_param('base_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
+        self.add_param('base_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('base_freeboard', val=0.0, units='m', desc='Length of spar above water line')
+        self.add_param('base_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
+        self.add_param('base_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
+        self.add_param('base_column_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of column about base [xx yy zz xy xz yz]')
+        self.add_param('base_column_added_mass', val=np.zeros(6), units='kg', desc='Diagonal of added mass matrix- masses are first 3 entries, moments are last 3')
+
+        self.add_param('auxiliary_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
+        self.add_param('auxiliary_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
+        self.add_param('auxiliary_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('auxiliary_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
+        self.add_param('auxiliary_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
+        self.add_param('auxiliary_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
+        self.add_param('auxiliary_column_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of column about base [xx yy zz xy xz yz]')
+        self.add_param('auxiliary_column_added_mass', val=np.zeros(6), units='kg', desc='Diagonal of added mass matrix- masses are first 3 entries, moments are last 3')
+        
+        self.add_param('water_ballast_mass_vector', val=np.zeros((nFull,)), units='kg', desc='mass vector of potential ballast mass')
+        self.add_param('water_ballast_zpts_vector', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
+
+        self.add_param('structural_mass', val=0.0, units='kg', desc='Mass of whole turbine except for mooring lines')
+        self.add_param('structure_center_of_mass', val=np.zeros(3), units='m', desc='xyz-position of center of gravity of whole turbine')
+        self.add_param('z_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of gravity (x,y = 0,0)')
+        self.add_param('total_displacement', val=0.0, units='m**3', desc='Total volume of water displaced by floating turbine (except for mooring lines)')
+        self.add_param('total_force', val=np.zeros(3), units='N', desc='Net forces on turbine')
+        self.add_param('total_moment', val=np.zeros(3), units='N*m', desc='Moments on whole turbine')
+
+
+        self.add_param('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
+
+        
+        # Outputs
+        self.add_output('total_mass', val=0.0, units='kg', desc='total mass of spar and moorings')
+        self.add_output('total_cost', val=0.0, units='USD', desc='total cost of spar and moorings')
+        self.add_output('metacentric_height', val=0.0, units='m', desc='measure of static overturning stability')
+        self.add_output('buoyancy_to_gravity', val=0.0, desc='static stability margin based on position of centers of gravity and buoyancy')
+        self.add_output('offset_force_ratio', val=0.0, desc='total surge force divided by restoring force')
+        self.add_output('heel_moment_ratio', val=0.0, desc='total pitch moment divided by restoring moment')
+
+        self.add_output('center_of_mass', val=np.zeros(3), units='m', desc='xyz-position of center of gravity (x,y = 0,0)')
+
+        self.add_output('variable_ballast_mass', val=0.0, units='kg', desc='Amount of variable water ballast')
+        self.add_output('variable_ballast_height_ratio', val=0.0, units='m', desc='height of water ballast to balance spar')
+
+        self.add_output('natural_periods', val=np.zeros(6), units='s', desc='Natural periods of oscillation in 6 DOF')
+        self.add_output('period_margin', val=np.zeros(6), desc='Margin between natural periods and wave periods')
+        
         
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -152,6 +158,9 @@ class SemiStable(SubstructureBase):
         
         # Determine stability, metacentric height from waterplane profile, displaced volume
         self.compute_stability(params, unknowns)
+
+        # Compute natural periods of osciallation
+        self.compute_natural_periods(params, unknowns)
         
         # Sum all costs
         self.compute_costs(params, unknowns)
@@ -281,6 +290,78 @@ class SemiStable(SubstructureBase):
         # Compare restoring force from mooring to force of worst case spar displacement
         unknowns['offset_force_ratio'] = np.abs(F_surge / F_restore)
 
+
+    def compute_natural_periods(self, params, unknowns):
+        # Unpack variables
+        ncolumn         = int(params['number_of_auxiliary_columns'])
+        R_semi          = params['radius_to_auxiliary_column']
+        
+        m_column        = params['auxiliary_column_mass']
+        m_struct        = params['structural_mass']
+        m_water         = unknowns['variable_ballast_mass']
+        m_a_base        = params['base_column_added_mass']
+        m_a_column      = params['auxiliary_column_added_mass']
+        
+        rhoWater        = params['water_density']
+        T_wave          = params['wave_period']
+        V_system        = params['total_displacement']
+        h_metacenter    = unknowns['metacentric_height']
+
+        Awater_base     = params['base_column_Awaterplane']
+        Awater_column   = params['auxiliary_column_Awaterplane']
+        I_base          = params['base_column_moments_of_inertia']
+        I_column        = params['auxiliary_column_moments_of_inertia']
+
+        z_cg_base       = params['base_column_center_of_mass']
+        z_cb_base       = params['base_column_center_of_buoyancy']
+        z_cg_column     = params['auxiliary_column_center_of_mass']
+        z_cb_column     = params['auxiliary_column_center_of_buoyancy']
+        
+        K_moor          = np.diag( params['mooring_stiffness'] )
+
+        
+        # Number of degrees of freedom
+        nDOF = 6
+        
+        # Compute elements on mass matrix diagonal
+        M_mat = np.zeros((nDOF,))
+        # Surge, sway, heave just use normal inertia
+        M_mat[:3] = m_struct + m_water
+        # Add up moments of intertia of all columns for other entries
+        radii_x   = R_semi * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
+        radii_y   = R_semi * np.sin( np.linspace(0, 2*np.pi, ncolumn+1) )
+        dz_cg     = z_cg_column - z_cg_base
+        I_total   = assembleI( I_base )
+        I_column  = assembleI( I_column )
+        for k in xrange(ncolumn):
+            R        = np.array([radii_x[k], radii_y[k], dz_cg])
+            I_total += I_column + m_column*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        M_mat[3:] = unassembleI( I_total )[:3]
+
+        # Add up all added mass entries in a similar way
+        A_mat = np.zeros((nDOF,))
+        # Surge, sway, heave just use normal inertia
+        A_mat[:3] = m_a_base[:3] + ncolumn*m_a_column[:3]
+        # Add up added moments of intertia of all columns for other entries
+        dz_cb     = z_cb_column - z_cb_base
+        I_total   = assembleI( np.r_[m_a_base[3:]  , np.zeros(3)] )
+        I_column  = assembleI( np.r_[m_a_column[3:], np.zeros(3)] )
+        for k in xrange(ncolumn):
+            R        = np.array([radii_x[k], radii_y[k], dz_cb])
+            I_total += I_column + m_a_column[0]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        A_mat[3:] = unassembleI( I_total )[:3]
+        
+        # Hydrostatic stiffness has contributions in heave (K33) and roll/pitch (K44/55)
+        # See DNV-RP-H103: Modeling and Analyis of Marine Operations
+        K_hydro = np.zeros((nDOF,))
+        K_hydro[2]   = rhoWater * gravity * (Awater_base + ncolumn*Awater_column)
+        K_hydro[3:5] = rhoWater * gravity * V_system * h_metacenter
+
+        # Now compute all six natural periods at once
+        T_sys = 2*np.pi * np.sqrt( (M_mat + A_mat) / (K_hydro + K_moor) )
+        unknowns['natural_periods'] = T_sys
+        unknowns['period_margin'] = np.abs(T_sys - T_wave) / T_wave
+        
         
     def compute_costs(self, params, unknowns):
         # Unpack variables

@@ -1,4 +1,4 @@
-from floatingInstance import FloatingInstance, NSECTIONS, NPTS, vecOption
+from floating_instance import FloatingInstance, NSECTIONS, NPTS, vecOption
 from floating import FloatingSE
 from commonse import eps
 import numpy as np
@@ -78,20 +78,20 @@ class SemiInstance(FloatingInstance):
             ['load.tower_global_buckling', None, 1.0, None],
             
             # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
-            ['stab.variable_ballast_height_ratio', 0.0, 1.0, None],
-            ['stab.variable_ballast_mass', 0.0, None, None],
+            ['subs.variable_ballast_height_ratio', 0.0, 1.0, None],
+            ['subs.variable_ballast_mass', 0.0, None, None],
             
             # Metacentric height should be positive for static stability
-            ['stab.metacentric_height', 0.1, None, None],
+            ['subs.metacentric_height', 0.1, None, None],
             
             # Center of buoyancy should be above CG (difference should be positive, None],
-            #['stab.buoyancy_to_gravity', 0.1, None, None],
+            #['subs.buoyancy_to_gravity', 0.1, None, None],
             
             # Surge restoring force should be greater than wave-wind forces (ratio < 1, None],
-            ['stab.offset_force_ratio', None, 1.0, None],
+            ['subs.offset_force_ratio', None, 1.0, None],
             
             # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
-            ['stab.heel_moment_ratio', None, 1.0, None]]
+            ['subs.heel_moment_ratio', None, 1.0, None]]
         return conlist
 
 

@@ -59,6 +59,7 @@ class MapMooring(Component):
         self.add_output('mooring_length', val=0.0, units='m',desc='total length of a single mooring line (scope)')
         self.add_output('mooring_mass', val=0.0, units='kg',desc='total mass of mooring')
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
+        self.add_output('mooring_stiffness', val=np.zeros((6,6)), units='N/m', desc='Linearized stiffness matrix of mooring system at neutral (no offset) conditions.')
         self.add_output('anchor_cost', val=0.0, units='USD',desc='total cost for anchor')
         self.add_output('vertical_load', val=0.0, units='N',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='N',desc='sum of forces in x direction after max offset')
@@ -412,6 +413,14 @@ class MapMooring(Component):
         mymap.read_list_input(self.finput)
         mymap.init( )
 
+        # Get the stiffness matrix at neutral position
+        mymap.displace_vessel(0, 0, 0, 0, 0, 0)
+        mymap.update_states(0.0, 0)
+        K = mymap.linear(1e-4) # Input finite difference epsilon
+        unknowns['mooring_stiffness'] = np.array( K )
+        mymap.displace_vessel(0, 0, 0, 0, 0, 0)
+        mymap.update_states(0.0, 0)
+        
         # Get the vertical load on the spar and plotting data
         Fz = 0.0
         npltpts = 20
