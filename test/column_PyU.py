@@ -28,15 +28,28 @@ class TestBulk(unittest.TestCase):
     def testAll(self):
         self.bulk.solve_nonlinear(self.params, self.unknowns, self.resid)
 
+        R_i = 0.5 * 10 - 0.5
+        m_bulk = np.pi * 1e3 * 1.1 * R_i**2 * 0.5 
         expect = np.zeros( self.params['z_full'].shape )
-        expect[[2,6]] = np.pi * 1e3 * 1.1 * 4.5**2 * 0.5 
+        expect[[2,6]] = m_bulk
         npt.assert_almost_equal(self.unknowns['bulkhead_mass'], expect)
-        
+
+        J0 = 0.50 * m_bulk * R_i**2
+        I0 = 0.25 * m_bulk * R_i**2
+
+        I = np.zeros(6)
+        I[2] = 2.0 * J0
+        I[0] = I0 + m_bulk*self.params['z_param'][1]**2
+        I[0] += I0 + m_bulk*self.params['z_param'][3]**2
+        I[1] = I[0]
+        npt.assert_almost_equal(self.unknowns['bulkhead_I_keel'], I)
+    '''
     def testDeriv(self):
         self.bulk.solve_nonlinear(self.params, self.unknowns, self.resid)
         J = self.bulk.linearize(self.params, self.unknowns, self.resid)
         self.assertEqual(J['bulkhead_mass', 'd_full'].shape, (11,11))
         self.assertEqual(J['bulkhead_mass', 't_full'].shape, (11,11))
+    '''
 
         
 class TestStiff(unittest.TestCase):
@@ -71,11 +84,24 @@ class TestStiff(unittest.TestCase):
         V1 = np.pi*(Rwo**2 - Rwi**2)*0.5
         V2 = np.pi*(Rwi**2 - Rfi**2)*2.0 
         V = V1+V2
-        expect = 1.1*V*1e3 * 0.1/3.0
+        expect = 1.1*V*1e3
         actual = self.unknowns['stiffener_mass']
 
-        self.assertAlmostEqual(actual.sum(), expect*(NPTS-1))
-        npt.assert_almost_equal(actual, expect)
+        I_web = column.I_tube(Rwi, Rwo, 0.5, V1*1e3*1.1)
+        I_fl  = column.I_tube(Rfi, Rwi, 2.0, V2*1e3*1.1)
+        I_sec = I_web + I_fl
+        z_sec = 0.5*(self.params['z_full'][1:] + self.params['z_full'][:-1])
+
+        I = np.zeros(6)
+        I[2] = I_sec[:,2] * z_sec.size
+        I[0] += I_sec[:,0] * z_sec.size + expect*np.sum(z_sec**2)
+        I[1] = I[0]
+        
+        self.assertAlmostEqual(actual.sum(), expect*(NPTS-1) * 0.1/3.0)
+        npt.assert_almost_equal(actual, expect * 0.1/3.0)
+        npt.assert_almost_equal(self.unknowns['stiffener_I_keel'], I)
+        npt.assert_equal(self.unknowns['flange_spacing_ratio'], 2*2.0/3.0)
+        npt.assert_equal(self.unknowns['stiffener_radius_ratio'], 1.75/9.0)
 
 
 class TestGeometry(unittest.TestCase):
@@ -127,6 +153,10 @@ class TestProperties(unittest.TestCase):
         self.params['d_full'] = 2*10.0*myones
 
         self.params['stack_mass_in'] = 0.0
+
+        self.params['shell_I_keel'] = 10.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        self.params['stiffener_I_keel'] = 20.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        self.params['bulkhead_I_keel'] = 30.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
         
         self.params['water_density'] = 1e3
         self.params['bulkhead_mass'] = 10.0*myones
@@ -159,7 +189,7 @@ class TestProperties(unittest.TestCase):
             self.params[pairs[0]] = pairs[1]
 
     def testSparMassCG(self):
-        m_spar, cg_spar = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
+        m_spar, cg_spar, I_spar = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
 
         bulk  = self.params['bulkhead_mass']
         stiff = self.params['stiffener_mass']
@@ -168,20 +198,29 @@ class TestProperties(unittest.TestCase):
         mysec = stiff+shell+bulk[:-1]
         mysec[-1] += bulk[-1]
         mysec *= 1.1
+
+        I_expect = 1.05 * 1.1 * 60.0*np.r_[np.ones(3), np.zeros(3)]
         
         self.assertAlmostEqual(self.unknowns['spar_mass'], 1.1*(bulk.sum()+stiff.sum()+shell.sum()) )
         self.assertAlmostEqual(self.unknowns['spar_mass'], m_spar )
         self.assertEqual(self.unknowns['outfitting_mass'], 0.05*m_spar )
         self.assertAlmostEqual(cg_spar, mycg )
         npt.assert_equal(self.myspar.section_mass, mysec)
+        npt.assert_equal(I_expect, I_spar)
 
     def testBallastMassCG(self):
-        m_ballast, cg_ballast = self.myspar.compute_ballast_mass_cg(self.params, self.unknowns)
+        m_ballast, cg_ballast, I_ballast = self.myspar.compute_ballast_mass_cg(self.params, self.unknowns)
 
         area = np.pi * 9.5**2
         m_perm = area * 1.0 * 2e3
         cg_perm = self.params['z_full'][0] + 0.5
 
+        I_perm = np.zeros(6)
+        I_perm[2] = 0.5 * m_perm * 9.5**2
+        I_perm[0] = m_perm * (3*9.5**2 + 1.0**2) / 12.0 + m_perm*0.5**2
+        I_perm[1] = I_perm[0]
+        
+        # Unused!
         h_expect = 1e6 / area / 1000.0
         m_expect = m_perm + 1e6
         cg_water = self.params['z_full'][0] + 1.0 + 0.5*h_expect
@@ -191,12 +230,13 @@ class TestProperties(unittest.TestCase):
         
         self.assertAlmostEqual(m_ballast, m_perm)
         self.assertAlmostEqual(cg_ballast, cg_perm)
+        npt.assert_almost_equal(I_perm, I_ballast)
 
 
     def testBalance(self):
         self.myspar.balance_column(self.params, self.unknowns)
-        m_spar, cg_spar = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
-        m_ballast, cg_ballast = self.myspar.compute_ballast_mass_cg(self.params, self.unknowns)
+        m_spar, cg_spar, I_spar = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
+        m_ballast, cg_ballast, I_ballast = self.myspar.compute_ballast_mass_cg(self.params, self.unknowns)
         m_out = 0.05 * m_spar
         m_expect = m_spar + m_ballast + m_out
         cg_system = ((m_spar+m_out)*cg_spar + m_ballast*cg_ballast) / m_expect
@@ -213,6 +253,19 @@ class TestProperties(unittest.TestCase):
         self.assertAlmostEqual(self.unknowns['Iwater'], Ixx)
         self.assertAlmostEqual(self.unknowns['Awater'], Axx)
 
+        z_draft = 15.0 - 50.0
+        I_expect = I_spar + I_ballast
+        I_expect[0] -= m_expect*(cg_system-z_draft)**2
+        I_expect[1] = I_expect[0]
+        npt.assert_almost_equal(self.unknowns['I_column'], I_expect)
+
+        m_a = np.zeros(6)
+        rho_w = self.params['water_density']
+        m_a[:2] = V_expect * rho_w
+        m_a[2]  = 0.5 * (8.0/3.0) * rho_w * 10.0**3
+        m_a[3:5] = np.pi * rho_w * 100.0 * 2.0 * 17.5**3.0 / 3.0
+        npt.assert_almost_equal(self.unknowns['added_mass'], m_a, decimal=-4)
+        
         # Test if everything under water
         dz = -1.5*self.params['z_full'][-1]
         self.params['z_section'] += dz 

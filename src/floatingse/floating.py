@@ -47,14 +47,15 @@ class FloatingSE(Group):
 
         # Add in the connecting truss
         self.add('load', FloatingLoading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
-                                                                     'z0','beta','Uref','zref','shearExp','beta','cd_usr',
-                                                                     'pontoon_outer_diameter','pontoon_wall_thickness','outer_cross_pontoons_int',
-                                                                     'cross_attachment_pontoons_int','lower_attachment_pontoons_int','upper_attachment_pontoons_int',
-                                                                     'lower_ring_pontoons_int','upper_ring_pontoons_int','pontoon_cost_rate',
-                                                                     'connection_ratio_max','base_pontoon_attach_lower','base_pontoon_attach_upper',
-                                                                     'gamma_b','gamma_f','gamma_fatigue','gamma_m','gamma_n',
+                                                                          'z0','beta','Uref','zref','shearExp','beta','cd_usr',
+                                                                          'pontoon_outer_diameter','pontoon_wall_thickness','outer_cross_pontoons_int',
+                                                                          'cross_attachment_pontoons_int','lower_attachment_pontoons_int',
+                                                                          'upper_attachment_pontoons_int','lower_ring_pontoons_int',
+                                                                          'upper_ring_pontoons_int','pontoon_cost_rate',
+                                                                          'connection_ratio_max','base_pontoon_attach_lower','base_pontoon_attach_upper',
+                                                                          'gamma_b','gamma_f','gamma_fatigue','gamma_m','gamma_n',
                                                                           'rna_I','rna_cg','rna_force','rna_moment','rna_mass',
-                                                                          'number_of_auxiliary_columns'])
+                                                                          'number_of_auxiliary_columns','structural_frequencies'])
 
 
         # Run Semi Geometry for interfaces
@@ -64,7 +65,8 @@ class FloatingSE(Group):
         self.add('mm', MapMooring(), promotes=['water_density','water_depth'])
         
         # Run main Semi analysis
-        self.add('subs', Substructure(self.nFull), promotes=['water_density','total_cost','total_mass','number_of_auxiliary_columns'])
+        self.add('subs', Substructure(self.nFull), promotes=['water_density','total_cost','total_mass','number_of_auxiliary_columns',
+                                                             'structural_frequencies','natural_periods'])
 
         # Define all input variables from all models
         

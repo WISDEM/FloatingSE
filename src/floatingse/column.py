@@ -10,11 +10,14 @@ from commonse.vertical_cylinder import CylinderDiscretization, CylinderMass
 from commonse.environment import PowerWind, LinearWaves
 
 def I_tube(r_i, r_o, h, m):
-    n = r_i.size
-    r_i = r_i.flatten()
-    r_o = r_o.flatten()
-    h   = h.flatten()
-    m   = m.flatten()
+    if type(r_i) == type(np.array([])):
+        n = r_i.size
+        r_i = r_i.flatten()
+        r_o = r_o.flatten()
+        h   = h.flatten()
+        m   = m.flatten()
+    else:
+        n = 1
     Ixx = Iyy = (m/12.0) * (3.0*(r_i**2.0 + r_o**2.0) + h**2.0)
     Izz = 0.5 * m * (r_i**2.0 + r_o**2.0)
     return np.c_[Ixx, Iyy, Izz, np.zeros((n,3))]
@@ -417,7 +420,7 @@ class ColumnProperties(Component):
         unknowns['outfitting_mass'] = out_frac * m_spar
 
         # Add up moments of inertia at keel, make sure to scale mass appropriately
-        I_spar = ((1+out_frac) + coeff) * (I_shell + I_stiffener + I_bulkhead)
+        I_spar = ((1+out_frac) * coeff) * (I_shell + I_stiffener + I_bulkhead)
         
         # Return total spar mass and position of spar cg
         return m_spar, z_cg, I_spar
@@ -467,14 +470,14 @@ class ColumnProperties(Component):
 
         Ixx = Iyy = frustum.frustumIxx(R_id[:-1], R_id[1:], np.diff(zpts))
         Izz = frustum.frustumIzz(R_id[:-1], R_id[1:], np.diff(zpts))
-        m_slice = rho_ballast * frustum.frustumVol(R_id[:-1], R_id[1:], np.diff(zpts))
+        V_slice = frustum.frustumVol(R_id[:-1], R_id[1:], np.diff(zpts))
         I_keel = np.zeros((3,3))
-        dz  = 0.5*(zpts[:-1] + zpts[1:]) - z_draft
-        for k in xrange(m_slice.size):
+        dz  = frustum.frustumCG(R_id[:-1], R_id[1:], np.diff(zpts)) + zpts[:-1] - z_draft
+        for k in xrange(V_slice.size):
             R = np.array([0.0, 0.0, dz[k]])
             Icg = assembleI( [Ixx[k], Iyy[k], Izz[k], 0.0, 0.0, 0.0] )
-            I_keel += Icg + m_slice[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
-        I_keel = unassembleI(I_keel)
+            I_keel += Icg + V_slice[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        I_keel = rho_ballast * unassembleI(I_keel)
         
         # Water ballast will start at top of fixed ballast
         z_water_start = z_draft + h_ballast
@@ -568,7 +571,7 @@ class ColumnProperties(Component):
 
         # Calculate diagonal entries of added mass matrix
         # Prep for integrals too
-        npts     = 5 * R_od.size
+        npts     = 1e2 * R_od.size
         zpts     = np.linspace(z_under[0], z_under[-1], npts)
         r_under  = np.interp(zpts, z_under, r_under)
         m_a      = np.zeros(6)
@@ -577,7 +580,6 @@ class ColumnProperties(Component):
         m_a[3:5] = np.pi * rho_water * np.trapz((zpts-z_cb)**2.0 * r_under**2.0, zpts)# A44 roll, A55 pitch
         m_a[5]   = 0.0 # A66 yaw
         unknowns['added_mass'] = m_a
-        
         
     def compute_cost(self, params, unknowns):
         unknowns['ballast_cost']    = params['ballast_cost_rate'] * unknowns['ballast_mass']
