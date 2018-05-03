@@ -332,7 +332,7 @@ class Substructure(Component):
         # Compute elements on mass matrix diagonal
         M_mat = np.zeros((nDOF,))
         # Surge, sway, heave just use normal inertia
-        M_mat[:3] = m_struct + m_water
+        M_mat[:3] = m_struct + np.maximum(m_water, 0.0)
         # Add up moments of intertia of all columns for other entries
         radii_x   = R_semi * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
         radii_y   = R_semi * np.sin( np.linspace(0, 2*np.pi, ncolumn+1) )
@@ -373,7 +373,9 @@ class Substructure(Component):
         unknowns['hydrostatic_stiffness'] = K_hydro
 
         # Now compute all six natural periods at once
-        unknowns['natural_periods'] = 2*np.pi * np.sqrt( (M_mat + A_mat) / (K_hydro + K_moor) )
+        epsilon = 1e-6 # Avoids numerical issues
+        K_total = np.maximum(K_hydro + K_moor, 0.0)
+        unknowns['natural_periods'] = 2*np.pi * np.sqrt( (M_mat + A_mat) / (K_total + epsilon) )
 
         
     def check_frequency_margins(self, params, unknowns):

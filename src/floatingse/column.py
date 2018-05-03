@@ -38,7 +38,7 @@ class BulkheadMass(Component):
         self.add_param('bulkhead_mass_factor', val=0.0, desc='Bulkhead mass correction factor')
 
         self.add_output('bulkhead_mass', val=np.zeros(nFull), units='kg', desc='mass of spar bulkheads')
-        self.add_output('bulkhead_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of bulkheads relative to keel point')
+        self.add_output('bulkhead_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of bulkheads relative to keel point')
         
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -137,7 +137,7 @@ class StiffenerMass(Component):
         self.add_param('ring_mass_factor', val=0.0, desc='Stiffener ring mass correction factor')
         
         self.add_output('stiffener_mass', val=np.zeros(nFull-1), units='kg', desc='mass of spar stiffeners')
-        self.add_output('stiffener_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of stiffeners relative to keel point')
+        self.add_output('stiffener_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of stiffeners relative to keel point')
         self.add_output('flange_spacing_ratio', val=np.zeros((nFull-1,)), desc='ratio between flange and stiffener spacing')
         self.add_output('stiffener_radius_ratio', val=np.zeros((nFull-1,)), desc='ratio between stiffener height and radius')
 
@@ -161,6 +161,7 @@ class StiffenerMass(Component):
         h_web        = np.interp(z_section, z_param, params['stiffener_web_height'])
         w_flange     = np.interp(z_section, z_param, params['stiffener_flange_width'])
         L_stiffener  = np.interp(z_section, z_param, params['stiffener_spacing'])
+        rho          = params['rho']
         
         # Outer and inner radius of web by section
         R_wo = R_od - t_wall
@@ -175,8 +176,8 @@ class StiffenerMass(Component):
 
         # Ring mass by volume by section 
         # Include fudge factor for design features not captured in this simple approach
-        m_web    = params['ring_mass_factor'] * params['rho'] * V_web
-        m_flange = params['ring_mass_factor'] * params['rho'] * V_flange
+        m_web    = params['ring_mass_factor'] * rho * V_web
+        m_flange = params['ring_mass_factor'] * rho * V_flange
         m_ring   = m_web + m_flange
 
         # Number of stiffener rings per section (height of section divided by spacing)
@@ -186,7 +187,7 @@ class StiffenerMass(Component):
         # Compute moments of inertia for stiffeners (lumped by section for simplicity) at keel
         I_web     = I_tube(R_wi, R_wo, t_web   , m_web)
         I_flange  = I_tube(R_fi, R_fo, w_flange, m_flange)
-        I_section = I_web + I_flange
+        I_section = params['ring_mass_factor'] * rho * (I_web + I_flange)
         I_keel    = np.zeros((3,3))
         dz        = z_section - z_full[0]
         for k in xrange(m_ring.size):
@@ -301,9 +302,9 @@ class ColumnProperties(Component):
         self.add_param('outfitting_mass_fraction', val=0.0, desc='Mass fraction added for outfitting')
 
         # Moments of inertia
-        self.add_param('shell_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of outer shell relative to keel point')
-        self.add_param('bulkhead_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of bulkheads relative to keel point')
-        self.add_param('stiffener_I_keel', val=np.zeros(6), units='kg*m^2', desc='Moments of inertia of stiffeners relative to keel point')
+        self.add_param('shell_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of outer shell relative to keel point')
+        self.add_param('bulkhead_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of bulkheads relative to keel point')
+        self.add_param('stiffener_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of stiffeners relative to keel point')
         
         # Cost rates
         self.add_param('ballast_cost_rate', val=0.0, units='USD/kg', desc='Cost per unit mass of ballast')
@@ -421,7 +422,7 @@ class ColumnProperties(Component):
 
         # Add up moments of inertia at keel, make sure to scale mass appropriately
         I_spar = ((1+out_frac) * coeff) * (I_shell + I_stiffener + I_bulkhead)
-        
+
         # Return total spar mass and position of spar cg
         return m_spar, z_cg, I_spar
 
@@ -531,6 +532,11 @@ class ColumnProperties(Component):
         unknowns['total_mass']       = self.section_mass
         unknowns['z_center_of_mass'] = z_cg
 
+        # Now that cg is calculated, move moments of inertia from keel to cg
+        I_total  = I_spar + I_ballast
+        I_total -= m_total*((z_cg-z_nodes[0])**2.0) * np.r_[1.0, 1.0, np.zeros(4)]
+        unknowns['I_column'] = I_total
+
         # Compute volume of each section and mass of displaced water by section
         # Find the radius at the waterline so that we can compute the submerged volume as a sum of frustum sections
         if z_nodes[-1] > 0.0:
@@ -563,11 +569,6 @@ class ColumnProperties(Component):
         # and not actual moment of inertia type of cross section (thin hoop)
         unknowns['Iwater'] = 0.25 * np.pi * r_waterline**4.0
         unknowns['Awater'] = np.pi * r_waterline**2.0
-
-        # Now that cg is calculated, move moments of inertia from keel to cg
-        I_total  = I_spar + I_ballast
-        I_total -= m_total*(z_cg-z_nodes[0])**2.0 * np.r_[1.0, 1.0, np.zeros(4)]
-        unknowns['I_column'] = I_total
 
         # Calculate diagonal entries of added mass matrix
         # Prep for integrals too
@@ -711,10 +712,11 @@ class Column(Group):
         self.add('gc', GeometricConstraints(nSection+1, diamFlag=True), promotes=['min_taper','min_d_to_t','manufacturability','weldability'])
 
         self.add('bulk', BulkheadMass(nSection, nFull), promotes=['z_full','z_param','d_full','t_full','rho',
-                                                                  'bulkhead_mass_factor','bulkhead_nodes','bulkhead_mass'])
+                                                                  'bulkhead_mass_factor','bulkhead_nodes',
+                                                                  'bulkhead_mass','bulkhead_I_keel'])
 
         self.add('stiff', StiffenerMass(nSection,nFull), promotes=['d_full','t_full','z_full','z_param','rho','ring_mass_factor',
-                                                                   'stiffener_mass','stiffener_web_height',
+                                                                   'stiffener_mass','stiffener_I_keel','stiffener_web_height',
                                                                    'stiffener_web_thickness','stiffener_flange_width',
                                                                    'stiffener_flange_thickness','stiffener_spacing',
                                                                    'flange_spacing_ratio','stiffener_radius_ratio'])
@@ -722,6 +724,7 @@ class Column(Group):
         self.add('col', ColumnProperties(nFull), promotes=['water_density','d_full','t_full','z_full','z_section',
                                                            'permanent_ballast_density','permanent_ballast_height',
                                                            'bulkhead_mass','stiffener_mass','column_mass_factor','outfitting_mass_fraction',
+                                                           'bulkhead_I_keel','stiffener_I_keel',
                                                            'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
                                                            'variable_ballast_interp_mass','variable_ballast_interp_zpts',
                                                            'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater','I_column',
@@ -749,6 +752,7 @@ class Column(Group):
         self.connect('cyl_mass.section_center_of_mass', 'col_geom.section_center_of_mass')
         
         self.connect('cyl_mass.mass', 'col.shell_mass')
+        self.connect('cyl_mass.I_base', 'col.shell_I_keel')
         self.connect('material_density','rho')
         
         self.connect('total_mass', 'buck.section_mass')
