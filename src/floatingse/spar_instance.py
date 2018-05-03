@@ -102,7 +102,12 @@ class SparInstance(FloatingInstance):
             ['subs.offset_force_ratio', None, 1.0, None],
             
             # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
-            ['subs.heel_moment_ratio', None, 1.0, None]]
+            ['subs.heel_moment_ratio', None, 1.0, None],
+
+            # Wave forcing period should be different than natural periods and structural modes
+            ['subs.period_margin', 0.1, None, None],
+            ['subs.modal_margin', 0.1, None, None]
+        ]
         return conlist
 
     def add_objective(self):
