@@ -212,15 +212,11 @@ class Substructure(Component):
         h_water = z_end - z_water_data[0]
         unknowns['variable_ballast_mass']   = m_water
         unknowns['variable_ballast_height_ratio'] = coeff * h_water / (z_water_data[-1] - z_water_data[0])
+
         
         # Find cg of whole system
-        # First find cg of water variable ballast by taking derivative of cumulative integral
-        # 2nd-order accurate derivative of data
-        dmdz    = np.gradient(m_water_data, z_water_data)
-        # Put derivative on new data points for integration
-        zpts    = np.linspace(z_water_data[0], z_end, npts)
-        dmdz    = np.interp(zpts, z_water_data, dmdz)
-        z_water = np.trapz(zpts * dmdz, zpts) / m_water
+        # First find cg of water variable ballast by finding midpoint of mass sum
+        z_water = np.interp(0.5*coeff*m_water, m_water_data, z_water_data)
         unknowns['center_of_mass'] = (m_struct*cg_struct + m_water*np.r_[0.0, 0.0, z_water]) / m_system
 
         
