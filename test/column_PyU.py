@@ -70,8 +70,8 @@ class TestStiff(unittest.TestCase):
         self.params['t_full'][1::2] = 0.4
         self.params['d_full'] = 2*10.0*myones
         self.params['d_full'][1::2] = 2*8.0
-        self.params['z_full'] = np.linspace(0, 1, NPTS)
-        self.params['z_param'] = np.linspace(0, 1, NSEC+1)
+        self.params['z_full'] = np.linspace(0, 1, NPTS) - 0.5
+        self.params['z_param'] = np.linspace(0, 1, NSEC+1) - 0.5
 
         self.stiff = column.StiffenerMass(NSEC, NPTS)
 

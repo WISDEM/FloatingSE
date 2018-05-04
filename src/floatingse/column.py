@@ -188,7 +188,7 @@ class StiffenerMass(Component):
 
         # Now march up the column, adding stiffeners at correct spacing until we are done
         z_march  = z_full[0]
-        z_stiff  = [0.0]
+        z_stiff  = [z_full[0]]
         isection = 0
         epsilon  = 1e-6
         while True:
@@ -208,7 +208,7 @@ class StiffenerMass(Component):
 
         # Number of stiffener rings per section (height of section divided by spacing)
         unknowns['stiffener_mass'] =  n_stiff * m_ring
-
+        
         # Find total number of stiffeners in each original section
         npts_per    = z_section.size / z_param.size
         n_stiff_sec = np.zeros(z_param.shape)
