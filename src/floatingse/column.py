@@ -34,7 +34,7 @@ class BulkheadMass(Component):
         self.add_param('d_full', val=np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
         self.add_param('t_full', val=np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
         self.add_param('rho', val=0.0, units='kg/m**3', desc='material density')
-        self.add_param('bulkhead_nodes', val=[False]*(nSection+1), desc='Nodal locations where there is a bulkhead bottom to top (length = nsection + 1)', pass_by_obj=True)
+        self.add_param('bulkhead_thickness', val=np.zeros(nSection+1), units='m', desc='Nodal locations of bulkhead thickness, zero meaning no bulkhead, bottom to top (length = nsection + 1)')
         self.add_param('bulkhead_mass_factor', val=0.0, desc='Bulkhead mass correction factor')
 
         self.add_output('bulkhead_mass', val=np.zeros(nFull), units='kg', desc='mass of spar bulkheads')
@@ -52,22 +52,20 @@ class BulkheadMass(Component):
         z_param    = params['z_param']
         R_od       = 0.5*params['d_full'] # at section nodes
         twall      = params['t_full'] # at section nodes
-        bulkheadTF = params['bulkhead_nodes'] # at section nodes
+        t_bulk     = params['bulkhead_thickness'] # at section nodes
         
         # Map bulkhead locations to finer computation grid
         Zf,Zp = np.meshgrid(z_full, z_param)
         idx = np.argmin( np.abs(Zf-Zp), axis=1 )
-        bulk_param = np.zeros( z_param.shape, dtype=np.int_)
-        bulk_param[ np.where(bulkheadTF) ] = 1
-        self.bulk_full = np.zeros( z_full.shape, dtype=np.int_)
-        self.bulk_full[idx] = bulk_param
+        t_bulk_full = np.zeros( z_full.shape )
+        t_bulk_full[idx] = t_bulk
         
         # Compute bulkhead volume at every section node
         # Assume bulkheads are same thickness as shell wall
-        V_bulk = np.pi * (R_od - twall)**2 * twall
+        V_bulk = np.pi * (R_od - twall)**2 * t_bulk_full
         
         # Convert to mass with fudge factor for design features not captured in this simple approach
-        m_bulk = self.bulk_full * params['bulkhead_mass_factor'] * params['rho'] * V_bulk
+        m_bulk = params['bulkhead_mass_factor'] * params['rho'] * V_bulk
 
         # Compute moments of inertia at keel
         # Assume bulkheads are just simple thin discs with radius R_od-t_wall and mass already computed
@@ -138,6 +136,7 @@ class StiffenerMass(Component):
         
         self.add_output('stiffener_mass', val=np.zeros(nFull-1), units='kg', desc='mass of spar stiffeners')
         self.add_output('stiffener_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of stiffeners relative to keel point')
+        self.add_output('number_of_stiffeners', val=np.zeros(nSection, dtype=np.int_), desc='number of stiffeners in each section')
         self.add_output('flange_spacing_ratio', val=np.zeros((nFull-1,)), desc='ratio between flange and stiffener spacing')
         self.add_output('stiffener_radius_ratio', val=np.zeros((nFull-1,)), desc='ratio between stiffener height and radius')
 
@@ -179,22 +178,44 @@ class StiffenerMass(Component):
         m_web    = params['ring_mass_factor'] * rho * V_web
         m_flange = params['ring_mass_factor'] * rho * V_flange
         m_ring   = m_web + m_flange
-
-        # Number of stiffener rings per section (height of section divided by spacing)
-        nring_per_section = h_section / L_stiffener
-        unknowns['stiffener_mass'] =  nring_per_section * m_ring
-
+        n_stiff  = np.zeros(z_section.shape, dtype=np.int_)
+        
         # Compute moments of inertia for stiffeners (lumped by section for simplicity) at keel
         I_web     = I_tube(R_wi, R_wo, t_web   , m_web)
         I_flange  = I_tube(R_fi, R_fo, w_flange, m_flange)
-        I_section = params['ring_mass_factor'] * rho * (I_web + I_flange)
+        I_ring    = I_web + I_flange
         I_keel    = np.zeros((3,3))
-        dz        = z_section - z_full[0]
-        for k in xrange(m_ring.size):
-            R = np.array([0.0, 0.0, dz[k]])
-            Icg = assembleI( I_section[k,:] )
-            I_keel += Icg + m_ring[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
-        
+
+        # Now march up the column, adding stiffeners at correct spacing until we are done
+        z_march  = z_full[0]
+        z_stiff  = [0.0]
+        isection = 0
+        epsilon  = 1e-6
+        while True:
+            z_march = np.minimum(z_full[isection+1], z_stiff[-1] + L_stiffener[isection]) + epsilon
+            if z_march >= z_full[-1]: break
+            isection = np.searchsorted(z_full, z_march) - 1
+            if (z_march - z_stiff[-1]) >= L_stiffener[isection]:
+                z_stiff.append(z_march)
+                n_stiff[isection] += 1
+                
+                R       = np.array([0.0, 0.0, (z_march - z_full[0])])
+                Icg     = assembleI( I_ring[isection,:] )
+                I_keel += Icg + m_ring[isection]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+
+        # Don't really need a stiffener at z=0.0, that was just numerical convenience
+        z_stiff.pop(0)
+
+        # Number of stiffener rings per section (height of section divided by spacing)
+        unknowns['stiffener_mass'] =  n_stiff * m_ring
+
+        # Find total number of stiffeners in each original section
+        npts_per    = z_section.size / z_param.size
+        n_stiff_sec = np.zeros(z_param.shape)
+        for k in range(npts_per):
+            n_stiff_sec += n_stiff[k::npts_per]
+        unknowns['number_of_stiffeners'] = n_stiff_sec
+            
         # Store results
         unknowns['stiffener_I_keel'] = unassembleI(I_keel)
         
@@ -464,7 +485,7 @@ class ColumnProperties(Component):
         R_id      = np.interp(zpts, z_nodes, R_od-t_wall)
         V_perm    = np.pi * np.trapz(R_id**2, zpts)
         m_perm    = rho_ballast * V_perm
-        z_cg_perm = rho_ballast * np.pi * np.trapz(zpts*R_id**2, zpts) / m_perm
+        z_cg_perm = rho_ballast * np.pi * np.trapz(zpts*R_id**2, zpts) / m_perm if m_perm > 0.0 else 0.0
         for k in xrange(z_nodes.size-1):
             ind = np.logical_and(zpts>=z_nodes[k], zpts<=z_nodes[k+1]) 
             self.section_mass[k] += rho_ballast * np.pi * np.trapz(R_id[ind]**2, zpts[ind])
@@ -712,7 +733,7 @@ class Column(Group):
         self.add('gc', GeometricConstraints(nSection+1, diamFlag=True), promotes=['min_taper','min_d_to_t','manufacturability','weldability'])
 
         self.add('bulk', BulkheadMass(nSection, nFull), promotes=['z_full','z_param','d_full','t_full','rho',
-                                                                  'bulkhead_mass_factor','bulkhead_nodes',
+                                                                  'bulkhead_mass_factor','bulkhead_thickness',
                                                                   'bulkhead_mass','bulkhead_I_keel'])
 
         self.add('stiff', StiffenerMass(nSection,nFull), promotes=['d_full','t_full','z_full','z_param','rho','ring_mass_factor',

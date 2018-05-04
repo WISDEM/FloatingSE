@@ -21,7 +21,7 @@ class TestBulk(unittest.TestCase):
         self.params['t_full'] = 0.5 * myones
         self.params['rho'] = 1e3
         self.params['bulkhead_mass_factor'] = 1.1
-        self.params['bulkhead_nodes'] = [False, True, False, True, False, False]
+        self.params['bulkhead_thickness'] = 0.05 * np.array([0.0, 1.0, 0.0, 1.0, 0.0, 0.0])
 
         self.bulk = column.BulkheadMass(5, NPTS)
 
@@ -29,7 +29,7 @@ class TestBulk(unittest.TestCase):
         self.bulk.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         R_i = 0.5 * 10 - 0.5
-        m_bulk = np.pi * 1e3 * 1.1 * R_i**2 * 0.5 
+        m_bulk = np.pi * 1e3 * 1.1 * R_i**2 * 0.05 
         expect = np.zeros( self.params['z_full'].shape )
         expect[[2,6]] = m_bulk
         npt.assert_almost_equal(self.unknowns['bulkhead_mass'], expect)
@@ -62,7 +62,7 @@ class TestStiff(unittest.TestCase):
         self.params['stiffener_flange_thickness'] = np.array([0.3, 0.3])
         self.params['stiffener_web_height']  = np.array([1.0, 1.0])
         self.params['stiffener_flange_width'] = np.array([2.0, 2.0])
-        self.params['stiffener_spacing'] = np.array([3.0, 3.0])
+        self.params['stiffener_spacing'] = np.array([0.1, 0.05])
         self.params['rho'] = 1e3
         self.params['ring_mass_factor'] = 1.1
 
@@ -87,20 +87,24 @@ class TestStiff(unittest.TestCase):
         expect = 1.1*V*1e3
         actual = self.unknowns['stiffener_mass']
 
+        # Test Mass
+        self.assertAlmostEqual(actual.sum(), expect*(0.5/0.1 + 0.5/0.05 - 1.0))
+
+        # Test moment
+        self.params['stiffener_spacing'] = np.array([0.6, 0.6])
+        self.stiff.solve_nonlinear(self.params, self.unknowns, self.resid)
         I_web = column.I_tube(Rwi, Rwo, 0.5, V1*1e3*1.1)
         I_fl  = column.I_tube(Rfi, Rwi, 2.0, V2*1e3*1.1)
         I_sec = I_web + I_fl
-        z_sec = 0.5*(self.params['z_full'][1:] + self.params['z_full'][:-1])
+        z_sec = 0.6 + 1e-6
 
         I = np.zeros(6)
-        I[2] = I_sec[:,2] * z_sec.size
-        I[0] += I_sec[:,0] * z_sec.size + expect*np.sum(z_sec**2)
+        I[2] = I_sec[0,2]
+        I[0] += I_sec[0,0] + expect*z_sec**2.0
         I[1] = I[0]
         
-        self.assertAlmostEqual(actual.sum(), expect*(NPTS-1) * 0.1/3.0)
-        npt.assert_almost_equal(actual, expect * 0.1/3.0)
         npt.assert_almost_equal(self.unknowns['stiffener_I_keel'], I)
-        npt.assert_equal(self.unknowns['flange_spacing_ratio'], 2*2.0/3.0)
+        npt.assert_equal(self.unknowns['flange_spacing_ratio'], 2*2.0/0.6)
         npt.assert_equal(self.unknowns['stiffener_radius_ratio'], 1.75/9.0)
 
 
@@ -316,7 +320,7 @@ class TestBuckle(unittest.TestCase):
         self.params['E'] = 29e3 * ksi_to_si
         self.params['nu'] = 0.3
         self.params['yield_stress'] = 50 * ksi_to_si
-        self.params['bulkhead_nodes'] = [False, False, False, False]
+        self.params['bulkhead_thickness'] = np.zeros(NSEC+1)
         self.params['wave_height'] = 0.0 # gives only static pressure
         self.params['stack_mass_in'] = 9000 * kip_to_si/g
         self.params['section_mass'] = 0.0 * np.ones((NPTS-1,))

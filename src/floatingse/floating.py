@@ -107,7 +107,7 @@ class FloatingSE(Group):
         self.add('base_stiffener_flange_width',     IndepVarComp('base_stiffener_flange_width', np.zeros((nSection,))), promotes=['*'])
         self.add('base_stiffener_flange_thickness', IndepVarComp('base_stiffener_flange_thickness', np.zeros((nSection,))), promotes=['*'])
         self.add('base_stiffener_spacing',          IndepVarComp('base_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
-        self.add('base_bulkhead_nodes',             IndepVarComp('base_bulkhead_nodes', [False]*(nSection+1), pass_by_obj=True ), promotes=['*'])
+        self.add('base_bulkhead_thickness',             IndepVarComp('base_bulkhead_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('base_permanent_ballast_height',   IndepVarComp('base_permanent_ballast_height', 0.0), promotes=['*'])
 
         self.add('auxiliary_stiffener_web_height',       IndepVarComp('auxiliary_stiffener_web_height', np.zeros((nSection,))), promotes=['*'])
@@ -115,7 +115,7 @@ class FloatingSE(Group):
         self.add('auxiliary_stiffener_flange_width',     IndepVarComp('auxiliary_stiffener_flange_width', np.zeros((nSection,))), promotes=['*'])
         self.add('auxiliary_stiffener_flange_thickness', IndepVarComp('auxiliary_stiffener_flange_thickness', np.zeros((nSection,))), promotes=['*'])
         self.add('auxiliary_stiffener_spacing',          IndepVarComp('auxiliary_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
-        self.add('auxiliary_bulkhead_nodes',             IndepVarComp('auxiliary_bulkhead_nodes', [False]*(nSection+1), pass_by_obj=True ), promotes=['*'])
+        self.add('auxiliary_bulkhead_thickness',             IndepVarComp('auxiliary_bulkhead_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('auxiliary_permanent_ballast_height',   IndepVarComp('auxiliary_permanent_ballast_height', 0.0), promotes=['*'])
 
         self.add('bulkhead_mass_factor',       IndepVarComp('bulkhead_mass_factor', 0.0), promotes=['*'])
@@ -187,7 +187,7 @@ class FloatingSE(Group):
         self.connect('base_stiffener_flange_width', 'base.stiffener_flange_width')
         self.connect('base_stiffener_flange_thickness', 'base.stiffener_flange_thickness')
         self.connect('base_stiffener_spacing', 'base.stiffener_spacing')
-        self.connect('base_bulkhead_nodes', 'base.bulkhead_nodes')
+        self.connect('base_bulkhead_thickness', 'base.bulkhead_thickness')
         self.connect('base_permanent_ballast_height', 'base.permanent_ballast_height')
         
         self.connect('auxiliary_stiffener_web_height', 'aux.stiffener_web_height')
@@ -195,7 +195,7 @@ class FloatingSE(Group):
         self.connect('auxiliary_stiffener_flange_width', 'aux.stiffener_flange_width')
         self.connect('auxiliary_stiffener_flange_thickness', 'aux.stiffener_flange_thickness')
         self.connect('auxiliary_stiffener_spacing', 'aux.stiffener_spacing')
-        self.connect('auxiliary_bulkhead_nodes', 'aux.bulkhead_nodes')
+        self.connect('auxiliary_bulkhead_thickness', 'aux.bulkhead_thickness')
         self.connect('auxiliary_permanent_ballast_height', 'aux.permanent_ballast_height')
         
         self.connect('bulkhead_mass_factor', ['base.bulkhead_mass_factor', 'aux.bulkhead_mass_factor'])
@@ -348,7 +348,7 @@ def sparExample():
     prob['base_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])  # Length of each section [m]
     prob['base_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
     prob['base_wall_thickness'] = 0.05 * np.ones(nsection+1)               # Shell thickness at each section node (linear lofting between) [m]
-    prob['base_bulkhead_nodes'] = [True, True, False, False, False, False] # Locations of internal bulkheads at section interfaces
+    prob['base_bulkhead_thickness'] = 0.05*np.array([1,1,0,0,0,0]) # Locations/thickness of internal bulkheads at section interfaces [m]
     
     # Column ring stiffener parameters
     prob['base_stiffener_web_height']       = 0.10 * np.ones(nsection) # (by section) [m]
@@ -500,7 +500,7 @@ def semiExample():
     prob['base_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])  # Length of each section [m]
     prob['base_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
     prob['base_wall_thickness'] = 0.05 * np.ones(nsection+1)               # Shell thickness at each section node (linear lofting between) [m]
-    prob['base_bulkhead_nodes'] = [True, True, False, False, False, False] # Locations of internal bulkheads at section interfaces
+    prob['base_bulkhead_thickness'] = 0.05*np.array([1,1,0,0,0,0]) # Locations/thickness of internal bulkheads at section interfaces [m]
 
     # Auxiliary column geometry
     prob['radius_to_auxiliary_column']         = 33.333 * np.cos(np.pi/6) # Centerline of base column to centerline of auxiliary column [m]

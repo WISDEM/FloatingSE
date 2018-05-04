@@ -198,9 +198,8 @@ class FloatingInstance(object):
         self.params['base_stiffener_flange_width']     = vecOption(self.params['base_stiffener_flange_width'], NSECTIONS)
         self.params['base_stiffener_flange_thickness'] = vecOption(self.params['base_stiffener_flange_thickness'], NSECTIONS)
         self.params['base_stiffener_spacing']          = vecOption(self.params['base_stiffener_spacing'], NSECTIONS)
-        self.params['base_bulkhead_nodes']             = [False] * (NSECTIONS+1)
-        self.params['base_bulkhead_nodes'][0]          = True
-        self.params['base_bulkhead_nodes'][1]          = True
+        self.params['base_bulkhead_thickness']         = vecOption(self.params['base_bulkhead_thickness'], NSECTIONS+1)
+        #self.params['base_bulkhead_thickness'][:2] = 0.05
         
         self.params['auxiliary_outer_diameter']             = vecOption(self.params['auxiliary_outer_diameter'], NSECTIONS+1)
         self.params['auxiliary_wall_thickness']             = vecOption(self.params['auxiliary_wall_thickness'], NSECTIONS+1)
@@ -209,9 +208,8 @@ class FloatingInstance(object):
         self.params['auxiliary_stiffener_flange_width']     = vecOption(self.params['auxiliary_stiffener_flange_width'], NSECTIONS)
         self.params['auxiliary_stiffener_flange_thickness'] = vecOption(self.params['auxiliary_stiffener_flange_thickness'], NSECTIONS)
         self.params['auxiliary_stiffener_spacing']          = vecOption(self.params['auxiliary_stiffener_spacing'], NSECTIONS)
-        self.params['auxiliary_bulkhead_nodes']             = [False] * (NSECTIONS+1)
-        self.params['auxiliary_bulkhead_nodes'][0]          = True
-        self.params['auxiliary_bulkhead_nodes'][1]          = True
+        self.params['auxiliary_bulkhead_thickness']         = vecOption(self.params['auxiliary_bulkhead_thickness'], NSECTIONS+1)
+        #self.params['auxiliary_bulkhead_thickness'][:2] = 0.05
 
 
     def save(self, fname):
