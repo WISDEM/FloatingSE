@@ -335,6 +335,7 @@ class ColumnProperties(Component):
         # Outputs
         self.add_output('ballast_cost', val=0.0, units='USD', desc='cost of permanent ballast')
         self.add_output('ballast_mass', val=0.0, units='kg', desc='mass of permanent ballast')
+        self.add_output('ballast_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of permanent ballast relative to keel point')
         self.add_output('variable_ballast_interp_mass', val=np.zeros((nFull,)), units='kg', desc='mass vector of potential ballast mass')
         self.add_output('variable_ballast_interp_zpts', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
 
@@ -514,6 +515,7 @@ class ColumnProperties(Component):
         
         # Save permanent ballast mass and variable height
         unknowns['ballast_mass'] = m_perm
+        unknowns['ballast_I_keel'] = I_keel
 
         return m_perm, z_cg_perm, I_keel
 
@@ -749,7 +751,8 @@ class Column(Group):
                                                            'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
                                                            'variable_ballast_interp_mass','variable_ballast_interp_zpts',
                                                            'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater','I_column',
-                                                           'displaced_volume','added_mass','total_mass','total_cost'])
+                                                           'displaced_volume','added_mass','total_mass','total_cost',
+                                                           'ballast_mass','ballast_I_keel'])
 
         self.add('wind', PowerWind(nFull), promotes=['Uref','zref','shearExp','z0'])
         self.add('wave', LinearWaves(nFull), promotes=['Uc','hmax','T'])
