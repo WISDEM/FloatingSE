@@ -138,6 +138,7 @@ class Substructure(Component):
         self.add_output('center_of_mass', val=np.zeros(3), units='m', desc='xyz-position of center of gravity (x,y = 0,0)')
 
         self.add_output('variable_ballast_mass', val=0.0, units='kg', desc='Amount of variable water ballast')
+        self.add_output('variable_ballast_center_of_mass', val=0.0, units='m', desc='Center of mass for variable ballast')
         self.add_output('variable_ballast_height_ratio', val=0.0, units='m', desc='height of water ballast to balance spar')
 
         self.add_output('mass_matrix', val=np.zeros(6), units='kg', desc='Summary mass matrix of structure (minus pontoons)')
@@ -218,6 +219,7 @@ class Substructure(Component):
         # First find cg of water variable ballast by finding midpoint of mass sum
         z_water = np.interp(0.5*coeff*m_water, m_water_data, z_water_data)
         unknowns['center_of_mass'] = (m_struct*cg_struct + m_water*np.r_[0.0, 0.0, z_water]) / m_system
+        unknowns['variable_ballast_center_of_mass'] = z_water
 
         
     def compute_stability(self, params, unknowns):
