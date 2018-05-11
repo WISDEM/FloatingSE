@@ -205,7 +205,12 @@ class StiffenerMass(Component):
             
             isection = np.searchsorted(z_full, z_march) - 1
             
-            if (len(z_stiff)==0 and isection==0) or ((z_march - z_stiff[-1]) >= L_stiffener[isection]):
+            if len(z_stiff) == 0:
+                add_stiff = (z_march - z_full[0]) >= 0.5*L_stiffener[isection]
+            else:
+                add_stiff = (z_march - z_stiff[-1]) >= L_stiffener[isection]
+                
+            if add_stiff:
                 z_stiff.append(z_march)
                 n_stiff[isection] += 1
                 

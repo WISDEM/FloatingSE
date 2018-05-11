@@ -9,6 +9,17 @@ NPTS = 11
 NSEC = 2
 myones = np.ones((NPTS,))
 
+class TestSectional(unittest.TestCase):
+    def testAll(self):
+        x = np.arange(0.0, 2.1, 0.5)
+        y = np.array([-1.0, 1.0, -2.0, 2.0])
+        xi = np.array([-0.1, 0.25, 0.9, 1.4, 1.5, 1.6, 2.1])
+        yi = column.sectionalInterp(xi, x, y)
+
+        y_expect = np.array([-1.0, -1.0, 1.0, -2.0, 2.0, 2.0, 2.0])
+        npt.assert_array_equal(yi, y_expect)
+        
+
 class TestBulk(unittest.TestCase):
     def setUp(self):
         self.params = {}
@@ -88,10 +99,10 @@ class TestStiff(unittest.TestCase):
         actual = self.unknowns['stiffener_mass']
 
         # Test Mass
-        self.assertAlmostEqual(actual.sum(), expect*(0.5/0.1 + 0.5/0.05 - 1.0))
+        self.assertAlmostEqual(actual.sum(), expect*(0.5/0.1 + 0.5/0.05))
 
         # Test moment
-        self.params['stiffener_spacing'] = np.array([0.6, 0.6])
+        self.params['stiffener_spacing'] = np.array([1.2, 1.2])
         self.stiff.solve_nonlinear(self.params, self.unknowns, self.resid)
         I_web = column.I_tube(Rwi, Rwo, 0.5, V1*1e3*1.1)
         I_fl  = column.I_tube(Rfi, Rwi, 2.0, V2*1e3*1.1)
@@ -104,7 +115,7 @@ class TestStiff(unittest.TestCase):
         I[1] = I[0]
         
         npt.assert_almost_equal(self.unknowns['stiffener_I_keel'], I)
-        npt.assert_equal(self.unknowns['flange_spacing_ratio'], 2*2.0/0.6)
+        npt.assert_equal(self.unknowns['flange_spacing_ratio'], 2*2.0/1.2)
         npt.assert_equal(self.unknowns['stiffener_radius_ratio'], 1.75/9.0)
 
 
@@ -352,6 +363,7 @@ class TestBuckle(unittest.TestCase):
         
 def suite():
     suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestSectional))
     suite.addTest(unittest.makeSuite(TestBulk))
     suite.addTest(unittest.makeSuite(TestStiff))
     suite.addTest(unittest.makeSuite(TestGeometry))
