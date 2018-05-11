@@ -22,6 +22,12 @@ def I_tube(r_i, r_o, h, m):
     Izz = 0.5 * m * (r_i**2.0 + r_o**2.0)
     return np.c_[Ixx, Iyy, Izz, np.zeros((n,3))]
 
+def sectionalInterp(xi, x, y):
+    epsilon = 1e-11
+    xx=np.c_[x[:-1], x[1:]-epsilon].flatten()
+    yy=np.c_[y, y].flatten()    
+    return np.interp(xi, xx, yy)
+    
 
 class BulkheadMass(Component):
     """Computes bulkhead masses at each section node"""
@@ -63,7 +69,7 @@ class BulkheadMass(Component):
         # Compute bulkhead volume at every section node
         # Assume bulkheads are same thickness as shell wall
         V_bulk = np.pi * (R_od - twall)**2 * t_bulk_full
-        
+
         # Convert to mass with fudge factor for design features not captured in this simple approach
         m_bulk = params['bulkhead_mass_factor'] * params['rho'] * V_bulk
 
@@ -152,14 +158,14 @@ class StiffenerMass(Component):
         R_od        *= 0.5
         t_wall,_     = nodal2sectional( params['t_full'] ) # at section nodes
         z_full       = params['z_full'] # at section nodes
-        z_param,_    = nodal2sectional( params['z_param'] )
+        z_param      = params['z_param']
         z_section,_  = nodal2sectional( params['z_full'] )
         h_section    = np.diff(z_full)
-        t_web        = np.interp(z_section, z_param, params['stiffener_web_thickness'])
-        t_flange     = np.interp(z_section, z_param, params['stiffener_flange_thickness'])
-        h_web        = np.interp(z_section, z_param, params['stiffener_web_height'])
-        w_flange     = np.interp(z_section, z_param, params['stiffener_flange_width'])
-        L_stiffener  = np.interp(z_section, z_param, params['stiffener_spacing'])
+        t_web        = sectionalInterp(z_section, z_param, params['stiffener_web_thickness'])
+        t_flange     = sectionalInterp(z_section, z_param, params['stiffener_flange_thickness'])
+        h_web        = sectionalInterp(z_section, z_param, params['stiffener_web_height'])
+        w_flange     = sectionalInterp(z_section, z_param, params['stiffener_flange_width'])
+        L_stiffener  = sectionalInterp(z_section, z_param, params['stiffener_spacing'])
         rho          = params['rho']
         
         # Outer and inner radius of web by section
@@ -187,15 +193,19 @@ class StiffenerMass(Component):
         I_keel    = np.zeros((3,3))
 
         # Now march up the column, adding stiffeners at correct spacing until we are done
-        z_march  = z_full[0]
-        z_stiff  = [z_full[0]]
+        z_stiff  = []
         isection = 0
         epsilon  = 1e-6
         while True:
-            z_march = np.minimum(z_full[isection+1], z_stiff[-1] + L_stiffener[isection]) + epsilon
+            if len(z_stiff) == 0:
+                z_march = np.minimum(z_full[isection+1], z_full[0] + 0.5*L_stiffener[isection]) + epsilon
+            else:
+                z_march = np.minimum(z_full[isection+1], z_stiff[-1] + L_stiffener[isection]) + epsilon
             if z_march >= z_full[-1]: break
+            
             isection = np.searchsorted(z_full, z_march) - 1
-            if (z_march - z_stiff[-1]) >= L_stiffener[isection]:
+            
+            if (len(z_stiff)==0 and isection==0) or ((z_march - z_stiff[-1]) >= L_stiffener[isection]):
                 z_stiff.append(z_march)
                 n_stiff[isection] += 1
                 
@@ -203,19 +213,16 @@ class StiffenerMass(Component):
                 Icg     = assembleI( I_ring[isection,:] )
                 I_keel += Icg + m_ring[isection]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
 
-        # Don't really need a stiffener at z=0.0, that was just numerical convenience
-        z_stiff.pop(0)
-
         # Number of stiffener rings per section (height of section divided by spacing)
         unknowns['stiffener_mass'] =  n_stiff * m_ring
         
         # Find total number of stiffeners in each original section
-        npts_per    = z_section.size / z_param.size
-        n_stiff_sec = np.zeros(z_param.shape)
+        npts_per    = z_section.size / (z_param.size - 1)
+        n_stiff_sec = np.zeros(z_param.size - 1)
         for k in range(npts_per):
             n_stiff_sec += n_stiff[k::npts_per]
         unknowns['number_of_stiffeners'] = n_stiff_sec
-            
+
         # Store results
         unknowns['stiffener_I_keel'] = unassembleI(I_keel)
         
@@ -695,13 +702,13 @@ class ColumnBuckling(Component):
         R_od        *= 0.5
         h_section    = np.diff( params['z_full'] )
         t_wall,_     = nodal2sectional( params['t_full'] )
-        z_param,_    = nodal2sectional( params['z_param'] )
+        z_param      = params['z_param']
         z_section    = params['z_section']
-        t_web        = np.interp(z_section, z_param, params['stiffener_web_thickness'])
-        t_flange     = np.interp(z_section, z_param, params['stiffener_flange_thickness'])
-        h_web        = np.interp(z_section, z_param, params['stiffener_web_height'])
-        w_flange     = np.interp(z_section, z_param, params['stiffener_flange_width'])
-        L_stiffener  = np.interp(z_section, z_param, params['stiffener_spacing'])
+        t_web        = sectionalInterp(z_section, z_param, params['stiffener_web_thickness'])
+        t_flange     = sectionalInterp(z_section, z_param, params['stiffener_flange_thickness'])
+        h_web        = sectionalInterp(z_section, z_param, params['stiffener_web_height'])
+        w_flange     = sectionalInterp(z_section, z_param, params['stiffener_flange_width'])
+        L_stiffener  = sectionalInterp(z_section, z_param, params['stiffener_spacing'])
         E            = params['E'] # Young's modulus
         nu           = params['nu'] # Poisson ratio
         sigma_y      = params['yield_stress']
@@ -725,8 +732,10 @@ class ColumnBuckling(Component):
 class Column(Group):
     def __init__(self, nSection, nFull):
         super(Column,self).__init__()
+
+        nRefine = (nFull-1)/nSection
         
-        self.add('cyl_geom', CylinderDiscretization(nSection+1, nFull), promotes=['section_height','diameter','wall_thickness',
+        self.add('cyl_geom', CylinderDiscretization(nSection+1, nRefine), promotes=['section_height','diameter','wall_thickness',
                                                                                   'd_full','t_full'])
         
         self.add('cyl_mass', CylinderMass(nFull), promotes=['d_full','t_full','material_density'])
