@@ -1,6 +1,5 @@
 from openmdao.api import Component, Group
 import numpy as np
-from scipy.integrate import cumtrapz
 
 from commonse.utilities import nodal2sectional, assembleI, unassembleI
 import commonse.frustum as frustum
@@ -349,8 +348,8 @@ class ColumnProperties(Component):
         self.add_output('ballast_mass', val=0.0, units='kg', desc='mass of permanent ballast')
         self.add_output('ballast_z_cg', val=0.0, units='m', desc='z-coordinate or permanent ballast center of gravity')
         self.add_output('ballast_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of permanent ballast relative to keel point')
-        self.add_output('variable_ballast_interp_mass', val=np.zeros((nFull,)), units='kg', desc='mass vector of potential ballast mass')
         self.add_output('variable_ballast_interp_zpts', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
+        self.add_output('variable_ballast_interp_radius', val=np.zeros((nFull,)), units='m', desc='inner radius of column at potential ballast mass')
 
         self.add_output('z_center_of_mass', val=0.0, units='m', desc='z-position CofG of column')
         self.add_output('z_center_of_buoyancy', val=0.0, units='m', desc='z-position CofB of column')
@@ -474,6 +473,8 @@ class ColumnProperties(Component):
         
         OUTPUTS:
         ----------
+        variable_ballast_height in 'unknowns' dictionary set
+        variable_ballast_mass   in 'unknowns' dictionary set
         m_ballast     : permanent ballast mass
         z_cg          : center of mass along z-axis for the ballast
         z_ballast_var : z-position of where variable ballast starts
@@ -522,9 +523,8 @@ class ColumnProperties(Component):
         # This step is completed in spar.py or semi.py because we must account for other substructure elements too
         zpts    = np.linspace(z_water_start, z_nodes[-1], npts)
         R_id    = np.interp(zpts, z_nodes, R_od-t_wall)
-        m_water = rho_water * cumtrapz(np.pi*R_id**2, zpts)
-        unknowns['variable_ballast_interp_mass'] = np.r_[0.0, m_water] #cumtrapz has length-1
-        unknowns['variable_ballast_interp_zpts'] = zpts
+        unknowns['variable_ballast_interp_zpts']   = zpts
+        unknowns['variable_ballast_interp_radius'] = R_id
         
         # Save permanent ballast mass and variable height
         unknowns['ballast_mass']   = m_perm
@@ -546,8 +546,6 @@ class ColumnProperties(Component):
         OUTPUTS  : (none)
         ----------
         system_cg class variable set
-        variable_ballast_height in 'unknowns' dictionary set
-        variable_ballast_mass   in 'unknowns' dictionary set
         total_mass              in 'unknowns' dictionary set
         static_stability        in 'unknowns' dictionary set
         metacentric_height      in 'unknowns' dictionary set
@@ -765,7 +763,7 @@ class Column(Group):
                                                            'bulkhead_mass','stiffener_mass','column_mass_factor','outfitting_mass_fraction',
                                                            'bulkhead_I_keel','stiffener_I_keel',
                                                            'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
-                                                           'variable_ballast_interp_mass','variable_ballast_interp_zpts',
+                                                           'variable_ballast_interp_radius','variable_ballast_interp_zpts',
                                                            'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater','I_column',
                                                            'displaced_volume','added_mass','total_mass','total_cost',
                                                            'ballast_mass','ballast_I_keel', 'ballast_z_cg'])

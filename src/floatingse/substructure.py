@@ -1,5 +1,6 @@
 from openmdao.api import Component
 import numpy as np
+from scipy.integrate import cumtrapz
 
 from commonse import gravity, eps, DirectionVector
 from commonse.utilities import assembleI, unassembleI
@@ -113,8 +114,8 @@ class Substructure(Component):
         self.add_param('auxiliary_column_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of column about base [xx yy zz xy xz yz]')
         self.add_param('auxiliary_column_added_mass', val=np.zeros(6), units='kg', desc='Diagonal of added mass matrix- masses are first 3 entries, moments are last 3')
         
-        self.add_param('water_ballast_mass_vector', val=np.zeros((nFull,)), units='kg', desc='mass vector of potential ballast mass')
         self.add_param('water_ballast_zpts_vector', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
+        self.add_param('water_ballast_radius_vector', val=np.zeros((nFull,)), units='m', desc='Inner radius of potential ballast mass')
 
         self.add_param('structural_mass', val=0.0, units='kg', desc='Mass of whole turbine except for mooring lines')
         self.add_param('structure_center_of_mass', val=np.zeros(3), units='m', desc='xyz-position of center of gravity of whole turbine')
@@ -139,6 +140,7 @@ class Substructure(Component):
 
         self.add_output('variable_ballast_mass', val=0.0, units='kg', desc='Amount of variable water ballast')
         self.add_output('variable_ballast_center_of_mass', val=0.0, units='m', desc='Center of mass for variable ballast')
+        self.add_output('variable_ballast_moment_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of variable ballast [xx yy zz xy xz yz]')
         self.add_output('variable_ballast_height_ratio', val=0.0, units='m', desc='height of water ballast to balance spar')
 
         self.add_output('mass_matrix', val=np.zeros(6), units='kg', desc='Summary mass matrix of structure (minus pontoons)')
@@ -184,10 +186,9 @@ class Substructure(Component):
 
         cg_struct    = params['structure_center_of_mass']
         
-        m_water_data = params['water_ballast_mass_vector']
         z_water_data = params['water_ballast_zpts_vector']
+        r_water_data = params['water_ballast_radius_vector']
         rhoWater     = params['water_density']
-        npts         = z_water_data.size
         
         # SEMI TODO: Make water_ballast in base only?  columns too?  How to apportion?
 
@@ -200,6 +201,9 @@ class Substructure(Component):
         unknowns['total_mass'] = m_struct + m_mooring
 
         # Find height given interpolant functions from columns
+        m_water_data = rhoWater * np.pi * cumtrapz(r_water_data**2, z_water_data)
+        m_water_data = np.r_[0.0, m_water_data] #cumtrapz has length-1
+        
         if m_water_data[-1] < m_water:
             # Don't have enough space, so max out variable balast here and constraints will catch this
             z_end = z_water_data[-1]
@@ -213,14 +217,21 @@ class Substructure(Component):
         h_water = z_end - z_water_data[0]
         unknowns['variable_ballast_mass']   = m_water
         unknowns['variable_ballast_height_ratio'] = coeff * h_water / (z_water_data[-1] - z_water_data[0])
-
         
         # Find cg of whole system
         # First find cg of water variable ballast by finding midpoint of mass sum
-        z_water = np.interp(0.5*coeff*m_water, m_water_data, z_water_data)
-        unknowns['center_of_mass'] = (m_struct*cg_struct + m_water*np.r_[0.0, 0.0, z_water]) / m_system
-        unknowns['variable_ballast_center_of_mass'] = z_water
+        z_cg  = np.interp(0.5*coeff*m_water, m_water_data, z_water_data)
+        unknowns['center_of_mass'] = (m_struct*cg_struct + m_water*np.r_[0.0, 0.0, z_cg]) / m_system
+        unknowns['variable_ballast_center_of_mass'] = z_cg
 
+        # Integrate for moment of inertia of variable ballast
+        npts  = 1e2
+        z_int = np.linspace(z_water_data[0], z_end, npts)
+        r_int = np.interp(z_int, z_water_data, r_water_data)
+        Izz   = 0.5 * rhoWater * np.pi * np.trapz(r_int**4, z_int)
+        Ixx   = rhoWater * np.pi * np.trapz(0.25*r_int**4 + r_int**2*(z_int-z_cg)**2, z_int)
+        unknowns['variable_ballast_moment_of_inertia'] = np.array([Ixx, Ixx, Izz, 0.0, 0.0, 0.0])
+            
         
     def compute_stability(self, params, unknowns):
         # Unpack variables
