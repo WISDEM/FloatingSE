@@ -56,7 +56,7 @@ class TestSubs(unittest.TestCase):
         self.params['auxiliary_column_moments_of_inertia'] = 1e1 * np.array([10.0, 10.0, 2.0, 0.0, 0.0, 0.0])
 
         self.params['number_of_auxiliary_columns'] = 3
-        self.params['water_ballast_mass_vector'] = 1e9*np.arange(5)
+        self.params['water_ballast_radius_vector'] = 40.0 * np.ones(5)
         self.params['water_ballast_zpts_vector'] = np.array([-10, -9, -8, -7, -6])
         self.params['radius_to_auxiliary_column'] = 20.0
         self.params['z_center_of_buoyancy'] = -2.0
@@ -94,7 +94,9 @@ class TestSubs(unittest.TestCase):
     def testBalance(self):
         self.mysemi.balance(self.params, self.unknowns)
         m_water = 1e3*1e4 - 1e4 - 15
-        h_expect = np.interp(m_water, self.params['water_ballast_mass_vector'], self.params['water_ballast_zpts_vector']) + 10.0
+        z_data = self.params['water_ballast_zpts_vector']
+        h_data = z_data - z_data[0]
+        h_expect = np.interp(m_water, 1e3*h_data*np.pi*self.params['water_ballast_radius_vector']**2, h_data)
         cg_expect_z = (1e4*40.0 + m_water*(-10 + 0.5*h_expect)) / (1e4+m_water)
         cg_expect_xy = 1e4*40.0/ (1e4+m_water)
 
@@ -164,8 +166,9 @@ class TestSubs(unittest.TestCase):
         npt.assert_almost_equal(self.unknowns['hydrostatic_stiffness'], K_expect)
 
         T_expect = 2 * np.pi * np.sqrt( (M_expect + A_expect) / (K_expect + np.diag(self.params['mooring_stiffness'])) )
-        npt.assert_almost_equal(self.unknowns['natural_periods'], T_expect)
+        npt.assert_almost_equal(self.unknowns['natural_periods'], T_expect, decimal=2)
 
+        
     def testMargins(self):
         self.mysemi.balance(self.params, self.unknowns)
         self.mysemi.compute_stability(self.params, self.unknowns)
