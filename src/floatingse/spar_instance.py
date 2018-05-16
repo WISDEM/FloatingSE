@@ -78,10 +78,10 @@ class SparInstance(FloatingInstance):
             ['base.stiffener_radius_ratio', None, 0.5, None],
             ['base.flange_compactness', 1.0, None, None],
             ['base.web_compactness', 1.0, None, None],
-            ['base.axial_local_unity', None, 1.0, None],
-            ['base.axial_general_unity', None, 1.0, None],
-            ['base.external_local_unity', None, 1.0, None],
-            ['base.external_general_unity', None, 1.0, None],
+            ['base.axial_local_api', None, 1.0, None],
+            ['base.axial_general_api', None, 1.0, None],
+            ['base.external_local_api', None, 1.0, None],
+            ['base.external_general_api', None, 1.0, None],
             
             # Pontoon stress safety factor
             ['load.tower_stress', None, 1.0, None],

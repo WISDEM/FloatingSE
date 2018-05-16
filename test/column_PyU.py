@@ -8,6 +8,7 @@ from commonse import gravity as g
 NPTS = 11
 NSEC = 2
 myones = np.ones((NPTS,))
+secones = np.ones((NPTS-1,))
 
 class TestSectional(unittest.TestCase):
     def testAll(self):
@@ -69,11 +70,11 @@ class TestStiff(unittest.TestCase):
         self.unknowns = {}
         self.resid = None
 
-        self.params['stiffener_web_thickness'] = np.array([0.5, 0.5])
-        self.params['stiffener_flange_thickness'] = np.array([0.3, 0.3])
-        self.params['stiffener_web_height']  = np.array([1.0, 1.0])
-        self.params['stiffener_flange_width'] = np.array([2.0, 2.0])
-        self.params['stiffener_spacing'] = np.array([0.1, 0.05])
+        self.params['t_web'] = 0.5*secones
+        self.params['t_flange'] = 0.3*secones
+        self.params['h_web']  = 1.0*secones
+        self.params['w_flange'] = 2.0*secones
+        self.params['L_stiffener'] = np.r_[0.1*np.ones(5), 0.05*np.ones(5)]
         self.params['rho'] = 1e3
         self.params['ring_mass_factor'] = 1.1
 
@@ -102,7 +103,7 @@ class TestStiff(unittest.TestCase):
         self.assertAlmostEqual(actual.sum(), expect*(0.5/0.1 + 0.5/0.05))
 
         # Test moment
-        self.params['stiffener_spacing'] = np.array([1.2, 1.2])
+        self.params['L_stiffener'] = 1.2*secones
         self.stiff.solve_nonlinear(self.params, self.unknowns, self.resid)
         I_web = column.I_tube(Rwi, Rwo, 0.5, V1*1e3*1.1)
         I_fl  = column.I_tube(Rfi, Rwi, 2.0, V2*1e3*1.1)
@@ -132,6 +133,12 @@ class TestGeometry(unittest.TestCase):
         self.params['freeboard'] = 15.0
         self.params['fairlead'] = 10.0
         self.params['water_depth'] = 100.0
+        self.params['stiffener_web_thickness'] = np.array([0.5, 0.5])
+        self.params['stiffener_flange_thickness'] = np.array([0.3, 0.3])
+        self.params['stiffener_web_height']  = np.array([1.0, 1.0])
+        self.params['stiffener_flange_width'] = np.array([2.0, 2.0])
+        self.params['stiffener_spacing'] = np.array([0.1, 0.1])
+        
 
         self.geom = column.ColumnGeometry(NSEC, NPTS)
 
@@ -146,6 +153,11 @@ class TestGeometry(unittest.TestCase):
         npt.assert_equal(self.unknowns['z_param'], np.array([-35.0, -15.0, 15.0]) )
         npt.assert_equal(self.unknowns['z_full'], self.params['z_full_in']-35)
         npt.assert_equal(self.unknowns['z_section'], self.params['section_center_of_mass']-35)
+        npt.assert_equal(self.unknowns['t_web'], 0.5*secones)
+        npt.assert_equal(self.unknowns['t_flange'], 0.3*secones)
+        npt.assert_equal(self.unknowns['h_web'], 1.0*secones)
+        npt.assert_equal(self.unknowns['w_flange'], 2.0*secones)
+        npt.assert_equal(self.unknowns['L_stiffener'], 0.1*secones)
         
         
         
@@ -191,6 +203,12 @@ class TestProperties(unittest.TestCase):
         self.params['ballast_cost_rate'] = 10.0
         self.params['tapered_col_cost_rate'] = 100.0
         self.params['outfitting_cost_rate'] = 1.0
+
+        self.params['stiffener_web_thickness'] = np.array([0.5, 0.5])
+        self.params['stiffener_flange_thickness'] = np.array([0.3, 0.3])
+        self.params['stiffener_web_height']  = np.array([1.0, 1.0])
+        self.params['stiffener_flange_width'] = np.array([2.0, 2.0])
+        self.params['stiffener_spacing'] = np.array([0.1, 0.1])
         
         self.geom = column.ColumnGeometry(NSEC, NPTS)
         self.set_geometry()
@@ -317,21 +335,21 @@ class TestBuckle(unittest.TestCase):
         in_to_si = ft_to_si / 12.0
         kip_to_si = 4.4482216 * 1e3
 
-        onepts = np.ones((NPTS,))
-        onesec = np.ones((NSEC,))
+        onepts  = np.ones((NPTS,))
+        onesec  = np.ones((NPTS-1,))
+        #onesec0 = np.ones((NSEC,))
         self.params['d_full'] = 600 * onepts * in_to_si
         self.params['t_full'] = 0.75 * onepts * in_to_si
-        self.params['stiffener_web_thickness'] = 5./8. * onesec * in_to_si
-        self.params['stiffener_web_height'] = 14.0 * onesec * in_to_si
-        self.params['stiffener_flange_thickness'] = 1.0 * onesec * in_to_si
-        self.params['stiffener_flange_width'] = 10.0 * onesec * in_to_si
-        self.params['section_height'] = 50.0 * onesec * ft_to_si
-        self.params['stiffener_spacing'] = 5.0 * onesec * ft_to_si
+        self.params['t_web'] = 5./8. * onesec * in_to_si
+        self.params['h_web'] = 14.0 * onesec * in_to_si
+        self.params['t_flange'] = 1.0 * onesec * in_to_si
+        self.params['w_flange'] = 10.0 * onesec * in_to_si
+        self.params['L_stiffener'] = 5.0 * onesec * ft_to_si
+        #self.params['section_height'] = 50.0 * onesec0 * ft_to_si
         self.params['pressure'] = (64.0*lbperft3_to_si) * g * (60*ft_to_si) * onepts
         self.params['E'] = 29e3 * ksi_to_si
         self.params['nu'] = 0.3
         self.params['yield_stress'] = 50 * ksi_to_si
-        self.params['bulkhead_thickness'] = np.zeros(NSEC+1)
         self.params['wave_height'] = 0.0 # gives only static pressure
         self.params['stack_mass_in'] = 9000 * kip_to_si/g
         self.params['section_mass'] = 0.0 * np.ones((NPTS-1,))
@@ -339,6 +357,8 @@ class TestBuckle(unittest.TestCase):
         self.params['z_full'] = np.linspace(0, 1, NPTS)
         self.params['z_section'],_ = nodal2sectional( self.params['z_full'] )
         self.params['z_param'] = np.linspace(0, 1, NSEC+1)
+        self.params['gamma_f'] = 1.0
+        self.params['gamma_b'] = 1.0
 
         self.buckle = column.ColumnBuckling(NSEC, NPTS)
 
@@ -355,10 +375,10 @@ class TestBuckle(unittest.TestCase):
         
         npt.assert_almost_equal(self.unknowns['web_compactness'], 24.1/22.4, decimal=3)
         npt.assert_almost_equal(self.unknowns['flange_compactness'], 9.03/5.0, decimal=3)
-        self.assertAlmostEqual(self.unknowns['axial_local_unity'][1], 1.07, 1)
-        self.assertAlmostEqual(self.unknowns['axial_general_unity'][1], 0.34, 1)
-        self.assertAlmostEqual(self.unknowns['external_local_unity'][1], 1.07, 1)
-        self.assertAlmostEqual(self.unknowns['external_general_unity'][1], 0.59, 1)
+        self.assertAlmostEqual(self.unknowns['axial_local_api'][1], 1.07, 1)
+        self.assertAlmostEqual(self.unknowns['axial_general_api'][1], 0.34, 1)
+        self.assertAlmostEqual(self.unknowns['external_local_api'][1], 1.07, 1)
+        self.assertAlmostEqual(self.unknowns['external_general_api'][1], 0.59, 1)
 
         
 def suite():

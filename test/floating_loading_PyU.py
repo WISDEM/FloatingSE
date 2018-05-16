@@ -9,8 +9,7 @@ from commonse import gravity as g
 
 
 NSECTIONS = 5
-NPTS = 11
-myones = np.ones((NPTS,))
+NPTS = NSECTIONS+1
 
 def DrawTruss(mytruss):
     mynodes = {}
@@ -56,39 +55,41 @@ class TestFrame(unittest.TestCase):
         self.params['pontoon_wall_thickness'] = 1.0
 
         self.params['base_z_full'] = np.array([-15.0, -12.5, -10.0, 0.0, 5.0, 10.0])
-        self.params['base_d_full'] = 2*10.0 * np.ones((NSECTIONS+1,))
-        self.params['base_t_full'] = 0.1 * np.ones((NSECTIONS+1,))
-        self.params['base_column_mass'] = 1e2 * np.ones((NSECTIONS,))
-        self.params['base_column_displaced_volume'] = 1e2 * np.ones((NSECTIONS,))
+        self.params['base_d_full'] = 2*10.0 * np.ones(NPTS)
+        self.params['base_t_full'] = 0.1 * np.ones(NPTS)
+        self.params['base_column_mass'] = 1e2 * np.ones(NSECTIONS)
+        self.params['base_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
+        self.params['base_column_displaced_volume'] = 1e2 * np.ones(NSECTIONS)
         self.params['base_column_center_of_buoyancy'] = -10.0
         self.params['base_column_center_of_mass'] = -6.0
-        self.params['base_column_Px'] = 50.0 * np.ones((NSECTIONS+1,))
-        self.params['base_column_Py'] = np.zeros((NSECTIONS+1,))
-        self.params['base_column_Pz'] = np.zeros((NSECTIONS+1,))
-        self.params['base_column_qdyn'] = 70.0 * np.ones((NSECTIONS+1,))
+        self.params['base_column_Px'] = 50.0 * np.ones(NPTS)
+        self.params['base_column_Py'] = np.zeros(NPTS)
+        self.params['base_column_Pz'] = np.zeros(NPTS)
+        self.params['base_column_qdyn'] = 70.0 * np.ones(NPTS)
 
         self.params['auxiliary_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
-        self.params['auxiliary_d_full'] = 2*2.0 * np.ones((NSECTIONS+1,))
-        self.params['auxiliary_t_full'] = 0.05 * np.ones((NSECTIONS+1,))
-        self.params['auxiliary_column_mass'] = 1e1 * np.ones((NSECTIONS,))
-        self.params['auxiliary_column_displaced_volume'] = 1e1 * np.ones((NSECTIONS,))
+        self.params['auxiliary_d_full'] = 2*2.0 * np.ones(NPTS)
+        self.params['auxiliary_t_full'] = 0.05 * np.ones(NPTS)
+        self.params['auxiliary_column_mass'] = 1e1 * np.ones(NSECTIONS)
+        self.params['auxiliary_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
+        self.params['auxiliary_column_displaced_volume'] = 1e1 * np.ones(NSECTIONS)
         self.params['auxiliary_column_center_of_buoyancy'] = -5.0
         self.params['auxiliary_column_center_of_mass'] = -3.0
-        self.params['auxiliary_column_Px'] = 50.0 * np.ones((NSECTIONS+1,))
-        self.params['auxiliary_column_Py'] = np.zeros((NSECTIONS+1,))
-        self.params['auxiliary_column_Pz'] = np.zeros((NSECTIONS+1,))
-        self.params['auxiliary_column_qdyn'] = 70.0 * np.ones((NSECTIONS+1,))
+        self.params['auxiliary_column_Px'] = 50.0 * np.ones(NPTS)
+        self.params['auxiliary_column_Py'] = np.zeros(NPTS)
+        self.params['auxiliary_column_Pz'] = np.zeros(NPTS)
+        self.params['auxiliary_column_qdyn'] = 70.0 * np.ones(NPTS)
 
-        self.params['tower_z_full'] = np.linspace(0, 90, NSECTIONS+1)
-        self.params['tower_d_full'] = 2*7.0 * np.ones((NSECTIONS+1,))
-        self.params['tower_t_full'] = 0.5 * np.ones((NSECTIONS+1,))
-        self.params['tower_mass'] = 2e2 * np.ones((NSECTIONS,))
+        self.params['tower_z_full'] = np.linspace(0, 90, NPTS)
+        self.params['tower_d_full'] = 2*7.0 * np.ones(NPTS)
+        self.params['tower_t_full'] = 0.5 * np.ones(NPTS)
+        self.params['tower_mass'] = 2e2 * np.ones(NSECTIONS)
         self.params['tower_buckling_length'] = 25.0
         self.params['tower_center_of_mass'] = 50.0
-        self.params['tower_Px'] = 50.0 * np.ones((NSECTIONS+1,))
-        self.params['tower_Py'] = np.zeros((NSECTIONS+1,))
-        self.params['tower_Pz'] = np.zeros((NSECTIONS+1,))
-        self.params['tower_qdyn'] = 70.0 * np.ones((NSECTIONS+1,))
+        self.params['tower_Px'] = 50.0 * np.ones(NPTS)
+        self.params['tower_Py'] = np.zeros(NPTS)
+        self.params['tower_Pz'] = np.zeros(NPTS)
+        self.params['tower_qdyn'] = 70.0 * np.ones(NPTS)
         
         self.params['E'] = 200e9
         self.params['G'] = 79.3e9
@@ -113,7 +114,7 @@ class TestFrame(unittest.TestCase):
 
         self.unknowns['pontoon_stress'] = np.zeros(50)
         
-        self.mytruss = sP.FloatingFrame(NSECTIONS+1)
+        self.mytruss = sP.FloatingFrame(NPTS)
 
 
     def testStandard(self):
@@ -222,28 +223,28 @@ class TestFrame(unittest.TestCase):
         #self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
     def testForces(self):
-        self.params['auxiliary_z_full'] = np.linspace(-1e-4, 0.0, NSECTIONS+1)
-        self.params['base_z_full'] = np.linspace(-1e-4, 0.0, NSECTIONS+1)
-        self.params['tower_z_full'] = np.linspace(0, 1e-4, NSECTIONS+1)
+        self.params['auxiliary_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
+        self.params['base_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
+        self.params['tower_z_full'] = np.linspace(0, 1e-4, NPTS)
         self.params['fairlead'] = 0.0
         self.params['number_of_auxiliary_columns'] = 0
-        self.params['base_column_mass'] = 1.0 * np.ones((NSECTIONS,))
+        self.params['base_column_mass'] = 1.0 * np.ones(NSECTIONS)
         self.params['base_column_center_of_mass'] = 0.0
-        self.params['auxiliary_column_mass'] = 0.0 * np.ones((NSECTIONS,))
+        self.params['auxiliary_column_mass'] = 0.0 * np.ones(NSECTIONS)
         self.params['auxiliary_column_center_of_mass'] = 0.0
-        self.params['tower_mass'] = 1.0 * np.ones((NSECTIONS,))
+        self.params['tower_mass'] = 1.0 * np.ones(NSECTIONS)
         self.params['tower_center_of_mass'] = 0.0
         self.params['rna_mass'] = 1.0
         self.params['rna_force'] = 10.0*np.ones(3)
         self.params['rna_moment'] = 20.0*np.ones(3)
         self.params['rna_cg'] = np.array([0.0, 0.0, 0.0])
         self.params['rna_I'] = np.zeros(6)
-        self.params['base_column_Px'] = 0.0 * np.ones((NSECTIONS,))
-        self.params['auxiliary_column_Px'] = 0.0 * np.ones((NSECTIONS,))
-        self.params['tower_Px'] = 0.0 * np.ones((NSECTIONS,))
-        self.params['base_column_qdyn'] = 0.0 * np.ones((NSECTIONS+1,))
-        self.params['auxiliary_column_qdyn'] = 0.0 * np.ones((NSECTIONS+1,))
-        self.params['tower_qdyn'] = 0.0 * np.ones((NSECTIONS+1,))
+        self.params['base_column_Px'] = 0.0 * np.ones(NSECTIONS)
+        self.params['auxiliary_column_Px'] = 0.0 * np.ones(NSECTIONS)
+        self.params['tower_Px'] = 0.0 * np.ones(NSECTIONS)
+        self.params['base_column_qdyn'] = 0.0 * np.ones(NPTS)
+        self.params['auxiliary_column_qdyn'] = 0.0 * np.ones(NPTS)
+        self.params['tower_qdyn'] = 0.0 * np.ones(NPTS)
         self.params['cross_attachment_pontoons'] = False
         self.params['lower_attachment_pontoons'] = False
         self.params['upper_attachment_pontoons'] = False

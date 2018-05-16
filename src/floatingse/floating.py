@@ -39,11 +39,11 @@ class FloatingSE(Group):
         # Next do base and ballast columns
         # Ballast columns are replicated from same design in the components
         self.add('base', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
-                                                            'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
-                                                            'min_taper','min_d_to_t'])
+                                                                 'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
+                                                                 'min_taper','min_d_to_t','gamma_f','gamma_b'])
         self.add('aux', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
-                                                           'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
-                                                           'min_taper','min_d_to_t'])
+                                                                'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
+                                                                'min_taper','min_d_to_t','gamma_f','gamma_b'])
 
         # Add in the connecting truss
         self.add('load', FloatingLoading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
@@ -189,6 +189,7 @@ class FloatingSE(Group):
         self.connect('base_stiffener_spacing', 'base.stiffener_spacing')
         self.connect('base_bulkhead_thickness', 'base.bulkhead_thickness')
         self.connect('base_permanent_ballast_height', 'base.permanent_ballast_height')
+        self.connect('base.L_stiffener','load.base_column_buckling_length')
         
         self.connect('auxiliary_stiffener_web_height', 'aux.stiffener_web_height')
         self.connect('auxiliary_stiffener_web_thickness', 'aux.stiffener_web_thickness')
@@ -197,6 +198,7 @@ class FloatingSE(Group):
         self.connect('auxiliary_stiffener_spacing', 'aux.stiffener_spacing')
         self.connect('auxiliary_bulkhead_thickness', 'aux.bulkhead_thickness')
         self.connect('auxiliary_permanent_ballast_height', 'aux.permanent_ballast_height')
+        self.connect('aux.L_stiffener','load.auxiliary_column_buckling_length')
         
         self.connect('bulkhead_mass_factor', ['base.bulkhead_mass_factor', 'aux.bulkhead_mass_factor'])
         self.connect('ring_mass_factor', ['base.ring_mass_factor', 'aux.ring_mass_factor'])

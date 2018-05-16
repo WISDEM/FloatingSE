@@ -125,17 +125,17 @@ class StiffenerMass(Component):
     def __init__(self, nSection, nFull):
         super(StiffenerMass,self).__init__()
 
+        self.nSection = nSection
         self.add_param('d_full', val=np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
         self.add_param('t_full', val=np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
-        self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('z_param', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes')
         self.add_param('rho', val=0.0, units='kg/m**3', desc='material density')
 
-        self.add_param('stiffener_web_height', val=np.zeros((nSection,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_web_thickness', val=np.zeros((nSection,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_flange_width', val=np.zeros((nSection,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_flange_thickness', val=np.zeros((nSection,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_spacing', val=np.zeros((nSection,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top (length = nsection)')
+        self.add_param('h_web', val=np.zeros((nFull-1,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top')
+        self.add_param('t_web', val=np.zeros((nFull-1,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top')
+        self.add_param('w_flange', val=np.zeros((nFull-1,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top')
+        self.add_param('t_flange', val=np.zeros((nFull-1,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top')
+        self.add_param('L_stiffener', val=np.zeros((nFull-1,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top')
 
         self.add_param('ring_mass_factor', val=0.0, desc='Stiffener ring mass correction factor')
         
@@ -157,14 +157,14 @@ class StiffenerMass(Component):
         R_od        *= 0.5
         t_wall,_     = nodal2sectional( params['t_full'] ) # at section nodes
         z_full       = params['z_full'] # at section nodes
-        z_param      = params['z_param']
-        z_section,_  = nodal2sectional( params['z_full'] )
         h_section    = np.diff(z_full)
-        t_web        = sectionalInterp(z_section, z_param, params['stiffener_web_thickness'])
-        t_flange     = sectionalInterp(z_section, z_param, params['stiffener_flange_thickness'])
-        h_web        = sectionalInterp(z_section, z_param, params['stiffener_web_height'])
-        w_flange     = sectionalInterp(z_section, z_param, params['stiffener_flange_width'])
-        L_stiffener  = sectionalInterp(z_section, z_param, params['stiffener_spacing'])
+        
+        t_web        = params['t_web']
+        t_flange     = params['t_flange']
+        h_web        = params['h_web']
+        w_flange     = params['w_flange']
+        L_stiffener  = params['L_stiffener']
+
         rho          = params['rho']
         
         # Outer and inner radius of web by section
@@ -183,7 +183,7 @@ class StiffenerMass(Component):
         m_web    = params['ring_mass_factor'] * rho * V_web
         m_flange = params['ring_mass_factor'] * rho * V_flange
         m_ring   = m_web + m_flange
-        n_stiff  = np.zeros(z_section.shape, dtype=np.int_)
+        n_stiff  = np.zeros(h_web.shape, dtype=np.int_)
         
         # Compute moments of inertia for stiffeners (lumped by section for simplicity) at keel
         I_web     = I_tube(R_wi, R_wo, t_web   , m_web)
@@ -219,10 +219,10 @@ class StiffenerMass(Component):
 
         # Number of stiffener rings per section (height of section divided by spacing)
         unknowns['stiffener_mass'] =  n_stiff * m_ring
-        
+
         # Find total number of stiffeners in each original section
-        npts_per    = z_section.size / (z_param.size - 1)
-        n_stiff_sec = np.zeros(z_param.size - 1)
+        npts_per    = h_web.size / self.nSection
+        n_stiff_sec = np.zeros(self.nSection)
         for k in range(npts_per):
             n_stiff_sec += n_stiff[k::npts_per]
         unknowns['number_of_stiffeners'] = n_stiff_sec
@@ -253,12 +253,25 @@ class ColumnGeometry(Component):
         self.add_param('z_param_in', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('section_center_of_mass', val=np.zeros(nFull-1), units='m', desc='z position of center of mass of each can in the cylinder')
 
+        self.add_param('stiffener_web_height', val=np.zeros((nSection,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_web_thickness', val=np.zeros((nSection,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_flange_width', val=np.zeros((nSection,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_flange_thickness', val=np.zeros((nSection,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top (length = nsection)')
+        self.add_param('stiffener_spacing', val=np.zeros((nSection,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top (length = nsection)')
+
         # Outputs
         self.add_output('z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_output('z_param', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_output('draft', val=0.0, units='m', desc='Spar draft (length of body under water)')
         self.add_output('z_section', val=np.zeros((nFull-1,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
 
+
+        self.add_output('h_web', val=np.zeros((nFull-1,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top')
+        self.add_output('t_web', val=np.zeros((nFull-1,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top')
+        self.add_output('w_flange', val=np.zeros((nFull-1,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top')
+        self.add_output('t_flange', val=np.zeros((nFull-1,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top')
+        self.add_output('L_stiffener', val=np.zeros((nFull-1,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top')
+        
         # Output constraints
         self.add_output('draft_depth_ratio', val=0.0, desc='Ratio of draft to water depth')
         self.add_output('fairlead_draft_ratio', val=0.0, desc='Ratio of fairlead to draft')
@@ -287,17 +300,26 @@ class ColumnGeometry(Component):
 
         # With waterline at z=0, set the z-position of section nodes
         # Note sections and nodes start at bottom of spar and move up
-        draft  = params['z_param_in'][-1] - freeboard
-        z_full = params['z_full_in'] - draft 
+        draft     = params['z_param_in'][-1] - freeboard
+        z_full    = params['z_full_in'] - draft 
+        z_param   = params['z_param_in'] - draft 
+        z_section = params['section_center_of_mass'] - draft 
         unknowns['draft']     = draft
         unknowns['z_full']    = z_full
-        unknowns['z_param']   = params['z_param_in'] - draft 
-        unknowns['z_section'] = params['section_center_of_mass'] - draft 
+        unknowns['z_param']   = z_param
+        unknowns['z_section'] = z_section
 
         # Create constraint output that draft is less than water depth and fairlead is less than draft
         unknowns['draft_depth_ratio'] = draft / params['water_depth']
         unknowns['fairlead_draft_ratio'] = 0.0 if z_full[0] == 0.0 else fairlead / draft
 
+        # Sectional stiffener properties
+        unknowns['t_web']        = sectionalInterp(z_section, z_param, params['stiffener_web_thickness'])
+        unknowns['t_flange']     = sectionalInterp(z_section, z_param, params['stiffener_flange_thickness'])
+        unknowns['h_web']        = sectionalInterp(z_section, z_param, params['stiffener_web_height'])
+        unknowns['w_flange']     = sectionalInterp(z_section, z_param, params['stiffener_flange_width'])
+        unknowns['L_stiffener']  = sectionalInterp(z_section, z_param, params['stiffener_spacing'])
+        
 
 
 class ColumnProperties(Component):
@@ -641,28 +663,34 @@ class ColumnBuckling(Component):
         self.add_param('d_full', np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
         self.add_param('t_full', np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
         self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('z_section', val=np.zeros((nFull-1,)), units='m', desc='z-coordinates of section centers of mass (length = nsection)')
-        self.add_param('z_param', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
 
-        self.add_param('stiffener_web_height', val=np.zeros((nSection,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_web_thickness', val=np.zeros((nSection,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_flange_width', val=np.zeros((nSection,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_flange_thickness', val=np.zeros((nSection,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top (length = nsection)')
-        self.add_param('stiffener_spacing', val=np.zeros((nSection,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top (length = nsection)')
+        self.add_param('h_web', val=np.zeros((nFull-1,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top')
+        self.add_param('t_web', val=np.zeros((nFull-1,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top')
+        self.add_param('w_flange', val=np.zeros((nFull-1,)), units='m', desc='height of stiffener flange (top of T) within each section bottom to top')
+        self.add_param('t_flange', val=np.zeros((nFull-1,)), units='m', desc='thickness of stiffener flange (top of T) within each section bottom to top')
+        self.add_param('L_stiffener', val=np.zeros((nFull-1,)), units='m', desc='Axial distance from one ring stiffener to another within each section bottom to top')
 
         self.add_param('E', val=0.0, units='Pa', desc='Modulus of elasticity (Youngs) of material')
         self.add_param('nu', val=0.0, desc='poissons ratio of spar material')
         self.add_param('yield_stress', val=0.0, units='Pa', desc='yield stress of material')
 
         self.add_param('loading', val='hydro', desc='Loading type in API checks [hydro/radial]', pass_by_obj=True)
+        self.add_param('gamma_f', 0.0, desc='safety factor on loads')
+        self.add_param('gamma_b', 0.0, desc='buckling safety factor')
         
         # Output constraints
         self.add_output('flange_compactness', val=np.zeros((nFull-1,)), desc='check for flange compactness')
         self.add_output('web_compactness', val=np.zeros((nFull-1,)), desc='check for web compactness')
-        self.add_output('axial_local_unity', val=np.zeros((nFull-1,)), desc='unity check for axial load - local buckling')
-        self.add_output('axial_general_unity', val=np.zeros((nFull-1,)), desc='unity check for axial load - genenral instability')
-        self.add_output('external_local_unity', val=np.zeros((nFull-1,)), desc='unity check for external pressure - local buckling')
-        self.add_output('external_general_unity', val=np.zeros((nFull-1,)), desc='unity check for external pressure - general instability')
+        
+        self.add_output('axial_local_api', val=np.zeros((nFull-1,)), desc='unity check for axial load with API safety factors - local buckling')
+        self.add_output('axial_general_api', val=np.zeros((nFull-1,)), desc='unity check for axial load with API safety factors- genenral instability')
+        self.add_output('external_local_api', val=np.zeros((nFull-1,)), desc='unity check for external pressure with API safety factors- local buckling')
+        self.add_output('external_general_api', val=np.zeros((nFull-1,)), desc='unity check for external pressure with API safety factors- general instability')
+
+        self.add_output('axial_local_utilization', val=np.zeros((nFull-1,)), desc='utilization check for axial load - local buckling')
+        self.add_output('axial_general_utilization', val=np.zeros((nFull-1,)), desc='utilization check for axial load - genenral instability')
+        self.add_output('external_local_utilization', val=np.zeros((nFull-1,)), desc='utilization check for external pressure - local buckling')
+        self.add_output('external_general_utilization', val=np.zeros((nFull-1,)), desc='utilization check for external pressure - general instability')
         
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -705,31 +733,48 @@ class ColumnBuckling(Component):
         R_od        *= 0.5
         h_section    = np.diff( params['z_full'] )
         t_wall,_     = nodal2sectional( params['t_full'] )
-        z_param      = params['z_param']
-        z_section    = params['z_section']
-        t_web        = sectionalInterp(z_section, z_param, params['stiffener_web_thickness'])
-        t_flange     = sectionalInterp(z_section, z_param, params['stiffener_flange_thickness'])
-        h_web        = sectionalInterp(z_section, z_param, params['stiffener_web_height'])
-        w_flange     = sectionalInterp(z_section, z_param, params['stiffener_flange_width'])
-        L_stiffener  = sectionalInterp(z_section, z_param, params['stiffener_spacing'])
+        
+        t_web        = params['t_web']
+        t_flange     = params['t_flange']
+        h_web        = params['h_web']
+        w_flange     = params['w_flange']
+        L_stiffener  = params['L_stiffener']
+
+        gamma_f      = params['gamma_f']
+        gamma_b      = params['gamma_b']
+        
         E            = params['E'] # Young's modulus
         nu           = params['nu'] # Poisson ratio
         sigma_y      = params['yield_stress']
         loading      = params['loading']
-        pressure,_   = nodal2sectional( params['pressure'] )
+        nodalP,_     = nodal2sectional( params['pressure'] )
+        pressure     = 1e-12 if loading in ['ax','axial','testing','test'] else nodalP
+
+        # Apply quick "compactness" check on stiffener geometry
+        # Constraint is that these must be >= 1
+        flange_compactness = 0.375 * (t_flange / (0.5*w_flange)) * np.sqrt(E / sigma_y)
+        web_compactness    = 1.0   * (t_web    / h_web         ) * np.sqrt(E / sigma_y)
 
         # Compute applied axial stress simply, like API guidelines (as opposed to running frame3dd)
         sigma_ax = self.compute_applied_axial(params)
-        (flange_compactness, web_compactness, axial_local_unity, axial_general_unity,
-         external_local_unity, external_general_unity) = shellBuckling_withStiffeners(pressure, sigma_ax, R_od, t_wall, h_section,
-                                                                                      h_web, t_web, w_flange, t_flange,
-                                                                                      L_stiffener, E, nu, sigma_y, loading)
+        (axial_local_api, axial_general_api, external_local_api, external_general_api,
+         axial_local_raw, axial_general_raw, external_local_raw, external_general_raw) = shellBuckling_withStiffeners(
+             pressure, sigma_ax, R_od, t_wall, h_section,
+             h_web, t_web, w_flange, t_flange,
+             L_stiffener, E, nu, sigma_y, loading)
+        
         unknowns['flange_compactness']     = flange_compactness
         unknowns['web_compactness']        = web_compactness
-        unknowns['axial_local_unity']      = axial_local_unity
-        unknowns['axial_general_unity']    = axial_general_unity
-        unknowns['external_local_unity']   = external_local_unity
-        unknowns['external_general_unity'] = external_general_unity
+        
+        unknowns['axial_local_api']      = axial_local_api
+        unknowns['axial_general_api']    = axial_general_api
+        unknowns['external_local_api']   = external_local_api
+        unknowns['external_general_api'] = external_general_api
+
+        unknowns['axial_local_utilization']      = axial_local_raw * gamma_f*gamma_b
+        unknowns['axial_general_utilization']    = axial_general_raw * gamma_f*gamma_b
+        unknowns['external_local_utilization']   = external_local_raw * gamma_f*gamma_b
+        unknowns['external_general_utilization'] = external_general_raw * gamma_f*gamma_b
 
 
 class Column(Group):
@@ -744,7 +789,10 @@ class Column(Group):
         self.add('cyl_mass', CylinderMass(nFull), promotes=['d_full','t_full','material_density'])
 
         self.add('col_geom', ColumnGeometry(nSection, nFull), promotes=['water_depth','freeboard','fairlead','z_full','z_param','z_section',
-                                                                        'draft','draft_depth_ratio','fairlead_draft_ratio'])
+                                                                        'draft','draft_depth_ratio','fairlead_draft_ratio',
+                                                                        'stiffener_web_height','stiffener_web_thickness','stiffener_flange_width',
+                                                                        'stiffener_flange_thickness','stiffener_spacing',
+                                                                        't_web','h_web','t_flange','w_flange','L_stiffener'])
 
         self.add('gc', GeometricConstraints(nSection+1, diamFlag=True), promotes=['min_taper','min_d_to_t','manufacturability','weldability'])
 
@@ -752,10 +800,9 @@ class Column(Group):
                                                                   'bulkhead_mass_factor','bulkhead_thickness',
                                                                   'bulkhead_mass','bulkhead_I_keel'])
 
-        self.add('stiff', StiffenerMass(nSection,nFull), promotes=['d_full','t_full','z_full','z_param','rho','ring_mass_factor',
-                                                                   'stiffener_mass','stiffener_I_keel','stiffener_web_height',
-                                                                   'stiffener_web_thickness','stiffener_flange_width',
-                                                                   'stiffener_flange_thickness','stiffener_spacing',
+        self.add('stiff', StiffenerMass(nSection,nFull), promotes=['d_full','t_full','z_full','rho','ring_mass_factor',
+                                                                   't_web','h_web','t_flange','w_flange','L_stiffener',
+                                                                   'stiffener_mass','stiffener_I_keel',
                                                                    'flange_spacing_ratio','stiffener_radius_ratio'])
 
         self.add('col', ColumnProperties(nFull), promotes=['water_density','d_full','t_full','z_full','z_section',
@@ -774,13 +821,14 @@ class Column(Group):
         self.add('waveLoads', CylinderWaveDrag(nFull), promotes=['cm','cd_usr'])
         self.add('distLoads', AeroHydroLoads(nFull), promotes=['Px','Py','Pz','qdyn','yaw'])
 
-        self.add('buck', ColumnBuckling(nSection, nFull), promotes=['d_full','t_full','z_full','z_section','z_param','E','nu','yield_stress',
-                                                                    'loading','stack_mass_in','stiffener_web_height',
-                                                                    'stiffener_web_thickness','stiffener_flange_width',
-                                                                    'stiffener_flange_thickness','stiffener_spacing',
+        self.add('buck', ColumnBuckling(nSection, nFull), promotes=['d_full','t_full','z_full','E','nu','yield_stress',
+                                                                    'gamma_f','gamma_b','loading','stack_mass_in',
+                                                                    't_web','h_web','t_flange','w_flange','L_stiffener',
                                                                     'flange_compactness','web_compactness',
-                                                                    'axial_local_unity','axial_general_unity',
-                                                                    'external_local_unity','external_general_unity'])
+                                                                    'axial_local_api','axial_general_api',
+                                                                    'external_local_api','external_general_api',
+                                                                    'axial_local_utilization','axial_general_utilization',
+                                                                    'external_local_utilization','external_general_utilization'])
         
         self.connect('diameter', 'gc.d')
         self.connect('wall_thickness', 'gc.t')
