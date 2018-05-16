@@ -39,6 +39,7 @@ class TestSubs(unittest.TestCase):
         
         self.params['base_column_Iwaterplane'] = 150.0
         self.params['base_column_Awaterplane'] = 20.0
+        self.params['base_column_mass'] = 2.0*np.ones(NPTS-1)
         self.params['base_column_cost'] = 32.0
         self.params['base_freeboard'] = 10.0
         self.params['base_column_center_of_mass'] = -10.0
@@ -142,21 +143,29 @@ class TestSubs(unittest.TestCase):
 
     def testPeriods(self):
         # Spar first
+        self.params['structure_center_of_mass'] = np.array([0.0, 0.0, -40.0])
         self.params['number_of_auxiliary_columns'] = 0
         self.mysemi.balance(self.params, self.unknowns)
+        self.params['base_column_center_of_mass'] = self.unknowns['center_of_mass'][-1]
+        self.params['base_column_center_of_buoyancy'] = self.unknowns['center_of_mass'][-1]+2.0
         self.mysemi.compute_stability(self.params, self.unknowns)
         self.mysemi.compute_natural_periods(self.params, self.unknowns)
 
         m_struct = self.params['structural_mass']
         m_water  = self.unknowns['variable_ballast_mass']
+        z_cg     = self.params['base_column_center_of_mass']
+        z_water  = self.unknowns['variable_ballast_center_of_mass']
+        I_water  = self.unknowns['variable_ballast_moments_of_inertia']
         M_expect = np.zeros(6)
         M_expect[:3] = m_struct + m_water
         M_expect[3:] = self.params['base_column_moments_of_inertia'][:3]
+        M_expect[3:5] += I_water[:2] + m_water*(z_water-z_cg)**2
+        M_expect[-1] += I_water[2]
         npt.assert_equal(self.unknowns['mass_matrix'], M_expect)
 
         A_expect = np.zeros(6)
         A_expect[:3] = self.params['base_column_added_mass'][:3]
-        A_expect[3:5] = self.params['base_column_added_mass'][3:5] + A_expect[0]*(10.0-8.0)**2
+        A_expect[3:5] = self.params['base_column_added_mass'][3:5] + A_expect[0]*(2.0)**2
         npt.assert_equal(self.unknowns['added_mass_matrix'], A_expect)
 
         rho_w = self.params['water_density']
@@ -165,8 +174,8 @@ class TestSubs(unittest.TestCase):
         K_expect[3:5] = rho_w * g * self.unknowns['metacentric_height'] * 1e4 # Total displacement
         npt.assert_almost_equal(self.unknowns['hydrostatic_stiffness'], K_expect)
 
-        T_expect = 2 * np.pi * np.sqrt( (M_expect + A_expect) / (K_expect + np.diag(self.params['mooring_stiffness'])) )
-        npt.assert_almost_equal(self.unknowns['natural_periods'], T_expect, decimal=2)
+        T_expect = 2 * np.pi * np.sqrt( (M_expect + A_expect) / (1e-6 + K_expect + np.diag(self.params['mooring_stiffness'])) )
+        npt.assert_almost_equal(self.unknowns['natural_periods'], T_expect)
 
         
     def testMargins(self):

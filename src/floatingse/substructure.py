@@ -99,6 +99,7 @@ class Substructure(Component):
         self.add_param('base_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
         self.add_param('base_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
         self.add_param('base_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('base_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of base column by section')
         self.add_param('base_freeboard', val=0.0, units='m', desc='Length of spar above water line')
         self.add_param('base_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
         self.add_param('base_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
@@ -140,7 +141,7 @@ class Substructure(Component):
 
         self.add_output('variable_ballast_mass', val=0.0, units='kg', desc='Amount of variable water ballast')
         self.add_output('variable_ballast_center_of_mass', val=0.0, units='m', desc='Center of mass for variable ballast')
-        self.add_output('variable_ballast_moment_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of variable ballast [xx yy zz xy xz yz]')
+        self.add_output('variable_ballast_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of variable ballast [xx yy zz xy xz yz]')
         self.add_output('variable_ballast_height_ratio', val=0.0, units='m', desc='height of water ballast to balance spar')
 
         self.add_output('mass_matrix', val=np.zeros(6), units='kg', desc='Summary mass matrix of structure (minus pontoons)')
@@ -230,7 +231,7 @@ class Substructure(Component):
         r_int = np.interp(z_int, z_water_data, r_water_data)
         Izz   = 0.5 * rhoWater * np.pi * np.trapz(r_int**4, z_int)
         Ixx   = rhoWater * np.pi * np.trapz(0.25*r_int**4 + r_int**2*(z_int-z_cg)**2, z_int)
-        unknowns['variable_ballast_moment_of_inertia'] = np.array([Ixx, Ixx, Izz, 0.0, 0.0, 0.0])
+        unknowns['variable_ballast_moments_of_inertia'] = np.array([Ixx, Ixx, Izz, 0.0, 0.0, 0.0])
             
         
     def compute_stability(self, params, unknowns):
@@ -312,9 +313,10 @@ class Substructure(Component):
         ncolumn         = int(params['number_of_auxiliary_columns'])
         R_semi          = params['radius_to_auxiliary_column']
         
+        m_base          = np.sum(params['base_column_mass'])
         m_column        = np.sum(params['auxiliary_column_mass'])
         m_struct        = params['structural_mass']
-        m_water         = unknowns['variable_ballast_mass']
+        m_water         = np.maximum(0.0, unknowns['variable_ballast_mass'])
         m_a_base        = params['base_column_added_mass']
         m_a_column      = params['auxiliary_column_added_mass']
         
@@ -326,11 +328,14 @@ class Substructure(Component):
         Awater_column   = params['auxiliary_column_Awaterplane']
         I_base          = params['base_column_moments_of_inertia']
         I_column        = params['auxiliary_column_moments_of_inertia']
+        I_water         = unknowns['variable_ballast_moments_of_inertia']
 
         z_cg_base       = params['base_column_center_of_mass']
         z_cb_base       = params['base_column_center_of_buoyancy']
         z_cg_column     = params['auxiliary_column_center_of_mass']
         z_cb_column     = params['auxiliary_column_center_of_buoyancy']
+        z_cg_water      = unknowns['variable_ballast_center_of_mass']
+        r_cg            = unknowns['center_of_mass']
         
         K_moor          = np.diag( params['mooring_stiffness'] )
 
@@ -341,16 +346,23 @@ class Substructure(Component):
         # Compute elements on mass matrix diagonal
         M_mat = np.zeros((nDOF,))
         # Surge, sway, heave just use normal inertia
-        M_mat[:3] = m_struct + np.maximum(m_water, 0.0)
-        # Add up moments of intertia of all columns for other entries
+        M_mat[:3] = m_struct + m_water
+        # Add in moments of inertia of primary column
+        I_total = assembleI( np.zeros(6) )
+        I_base  = assembleI( I_base )
+        R       = np.array([0.0, 0.0, z_cg_base]) - r_cg
+        I_total += I_base + m_base*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        # Add up moments of intertia of other columns
         radii_x   = R_semi * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
         radii_y   = R_semi * np.sin( np.linspace(0, 2*np.pi, ncolumn+1) )
-        dz_cg     = z_cg_column - z_cg_base
-        I_total   = assembleI( I_base )
         I_column  = assembleI( I_column )
         for k in xrange(ncolumn):
-            R        = np.array([radii_x[k], radii_y[k], dz_cg])
+            R        = np.array([radii_x[k], radii_y[k], z_cg_column]) - r_cg
             I_total += I_column + m_column*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        # Add in variable ballast
+        R         = np.array([0.0, 0.0, z_cg_water]) - r_cg
+        I_total  += assembleI(I_water) + m_water*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        # Stuff moments of inertia into mass matrix
         M_mat[3:] = unassembleI( I_total )[:3]
         unknowns['mass_matrix'] = M_mat
         
@@ -358,18 +370,14 @@ class Substructure(Component):
         A_mat = np.zeros((nDOF,))
         # Surge, sway, heave just use normal inertia
         A_mat[:3] = m_a_base[:3] + ncolumn*m_a_column[:3]
-
         # Add up moments of inertia, move added mass moments from CofB to CofG
-        dz_cgcb   = z_cb_base - z_cg_base
         I_base    = assembleI( np.r_[m_a_base[3:]  , np.zeros(3)] )
-        R         = np.array([0.0, 0.0, dz_cgcb])
+        R         = np.array([0.0, 0.0, z_cb_base]) - r_cg
         I_total   = I_base + m_a_base[0]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
-
         # Add up added moments of intertia of all columns for other entries
-        dz_cgcb   = z_cb_column - z_cg_base
         I_column  = assembleI( np.r_[m_a_column[3:], np.zeros(3)] )
         for k in xrange(ncolumn):
-            R        = np.array([radii_x[k], radii_y[k], dz_cgcb])
+            R        = np.array([radii_x[k], radii_y[k], z_cb_column]) - r_cg
             I_total += I_column + m_a_column[0]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
         A_mat[3:] = unassembleI( I_total )[:3]
         unknowns['added_mass_matrix'] = A_mat

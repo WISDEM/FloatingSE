@@ -234,7 +234,7 @@ class FloatingSE(Group):
         self.connect('base.Awater', 'subs.base_column_Awaterplane')
         self.connect('base.displaced_volume', 'load.base_column_displaced_volume')
         self.connect('base.added_mass', 'subs.base_column_added_mass')
-        self.connect('base.total_mass', 'load.base_column_mass')
+        self.connect('base.total_mass', ['load.base_column_mass', 'subs.base_column_mass'])
         self.connect('base.total_cost', 'subs.base_column_cost')
         self.connect('base.variable_ballast_interp_zpts', 'subs.water_ballast_zpts_vector')
         self.connect('base.variable_ballast_interp_radius', 'subs.water_ballast_radius_vector')
