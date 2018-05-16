@@ -149,7 +149,7 @@ class TestSubs(unittest.TestCase):
         self.params['base_column_center_of_mass'] = self.unknowns['center_of_mass'][-1]
         self.params['base_column_center_of_buoyancy'] = self.unknowns['center_of_mass'][-1]+2.0
         self.mysemi.compute_stability(self.params, self.unknowns)
-        self.mysemi.compute_natural_periods(self.params, self.unknowns)
+        self.mysemi.compute_rigid_body_periods(self.params, self.unknowns)
 
         m_struct = self.params['structural_mass']
         m_water  = self.unknowns['variable_ballast_mass']
@@ -175,16 +175,16 @@ class TestSubs(unittest.TestCase):
         npt.assert_almost_equal(self.unknowns['hydrostatic_stiffness'], K_expect)
 
         T_expect = 2 * np.pi * np.sqrt( (M_expect + A_expect) / (1e-6 + K_expect + np.diag(self.params['mooring_stiffness'])) )
-        npt.assert_almost_equal(self.unknowns['natural_periods'], T_expect)
+        npt.assert_almost_equal(self.unknowns['rigid_body_periods'], T_expect)
 
         
     def testMargins(self):
         self.mysemi.balance(self.params, self.unknowns)
         self.mysemi.compute_stability(self.params, self.unknowns)
-        self.mysemi.compute_natural_periods(self.params, self.unknowns)
+        self.mysemi.compute_rigid_body_periods(self.params, self.unknowns)
         self.mysemi.check_frequency_margins(self.params, self.unknowns)
 
-        T_sys    = self.unknowns['natural_periods']
+        T_sys    = self.unknowns['rigid_body_periods']
         T_wave   = 50.0
         T_struct = 0.01
 

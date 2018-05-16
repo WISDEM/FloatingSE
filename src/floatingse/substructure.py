@@ -147,7 +147,7 @@ class Substructure(Component):
         self.add_output('mass_matrix', val=np.zeros(6), units='kg', desc='Summary mass matrix of structure (minus pontoons)')
         self.add_output('added_mass_matrix', val=np.zeros(6), units='kg', desc='Summary hydrodynamic added mass matrix of structure (minus pontoons)')
         self.add_output('hydrostatic_stiffness', val=np.zeros(6), units='N/m', desc='Summary hydrostatic stiffness of structure')
-        self.add_output('natural_periods', val=np.zeros(6), units='s', desc='Natural periods of oscillation in 6 DOF')
+        self.add_output('rigid_body_periods', val=np.zeros(6), units='s', desc='Natural periods of oscillation in 6 DOF')
         self.add_output('period_margin', val=np.zeros(6), desc='Margin between natural periods and wave periods')
         self.add_output('modal_margin', val=np.zeros(6), desc='Margin between structural modes and wave periods')
         
@@ -168,7 +168,7 @@ class Substructure(Component):
         self.compute_stability(params, unknowns)
 
         # Compute natural periods of osciallation
-        self.compute_natural_periods(params, unknowns)
+        self.compute_rigid_body_periods(params, unknowns)
         
         # Check margins of natural and eigenfrequencies against waves
         self.check_frequency_margins(params, unknowns)
@@ -308,7 +308,7 @@ class Substructure(Component):
         unknowns['offset_force_ratio'] = np.abs(F_surge / F_restore)
 
 
-    def compute_natural_periods(self, params, unknowns):
+    def compute_rigid_body_periods(self, params, unknowns):
         # Unpack variables
         ncolumn         = int(params['number_of_auxiliary_columns'])
         R_semi          = params['radius_to_auxiliary_column']
@@ -392,12 +392,12 @@ class Substructure(Component):
         # Now compute all six natural periods at once
         epsilon = 1e-6 # Avoids numerical issues
         K_total = np.maximum(K_hydro + K_moor, 0.0)
-        unknowns['natural_periods'] = 2*np.pi * np.sqrt( (M_mat + A_mat) / (K_total + epsilon) )
+        unknowns['rigid_body_periods'] = 2*np.pi * np.sqrt( (M_mat + A_mat) / (K_total + epsilon) )
 
         
     def check_frequency_margins(self, params, unknowns):
         # Unpack variables
-        T_sys    = unknowns['natural_periods']
+        T_sys    = unknowns['rigid_body_periods']
         T_wave   = params['wave_period']
         f_struct = params['structural_frequencies']
 
