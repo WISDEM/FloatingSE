@@ -177,7 +177,7 @@ class FloatingInstance(object):
         self.params['auxiliary_section_height'] = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
         self.params['auxiliary_outer_diameter'] = 2*np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
 
-        self.params['scope_ratio'] = 835.5 / (self.params['water_depth']-self.params['fairlead']) 
+        self.params['mooring_line_length'] = 835.5
         self.params['anchor_radius'] = 837.6
         self.params['mooring_diameter'] = 0.0766
 

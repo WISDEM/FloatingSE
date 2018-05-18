@@ -43,7 +43,6 @@ class SemiInstance(FloatingInstance):
             ['mm.axial_unity', 0.0, 1.0, None],
             
             # Ensure there is sufficient mooring line length, MAP doesn't give an error about this
-            ['mm.mooring_length_min', 1.0, None, None],
             ['mm.mooring_length_max', None, 1.0, None],
             
             # API Bulletin 2U constraints

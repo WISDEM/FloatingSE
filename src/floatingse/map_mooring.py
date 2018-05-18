@@ -21,7 +21,6 @@ class MapMooring(Component):
         super(MapMooring,self).__init__()
     
         # Variables local to the class and not OpenMDAO
-        self.scope               = None
         self.min_break_load      = None
         self.wet_mass_per_length = None
         self.axial_stiffness     = None
@@ -40,7 +39,7 @@ class MapMooring(Component):
         
         # Design variables
         self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
-        self.add_param('scope_ratio', val=0.0, units='m',desc='total mooring line length (scope) to fairlead depth (fairlead anchor to sea floor)')
+        self.add_param('mooring_line_length', val=0.0, units='m',desc='Unstretched total mooring line length')
         self.add_param('anchor_radius', val=0.0, units='m', desc='radius from center of spar to mooring anchor point')
         self.add_param('mooring_diameter', val=0.0, units='m',desc='diameter of mooring line')
 
@@ -57,7 +56,6 @@ class MapMooring(Component):
         self.add_param('mooring_cost_rate', val=0.0, desc='miscellaneous cost factor in percent')
 
         # Outputs
-        self.add_output('mooring_length', val=0.0, units='m',desc='total length of a single mooring line (scope)')
         self.add_output('mooring_mass', val=0.0, units='kg',desc='total mass of mooring')
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
         self.add_output('mooring_stiffness', val=np.zeros((6,6)), units='N/m', desc='Linearized stiffness matrix of mooring system at neutral (no offset) conditions.')
@@ -69,7 +67,6 @@ class MapMooring(Component):
 
         # Output constriants
         self.add_output('axial_unity', val=0.0, units='m',desc='range of damaged mooring')
-        self.add_output('mooring_length_min', val=0.0, desc='mooring line length ratio to nodal distance')
         self.add_output('mooring_length_max', val=0.0, desc='mooring line length ratio to nodal distance')
         
         # Derivatives
@@ -177,23 +174,12 @@ class MapMooring(Component):
     def set_geometry(self, params, unknowns):
         # Unpack variables
         fairleadDepth = params['fairlead']
-        R_fairlead    = params['fairlead_radius']
         R_anchor      = params['anchor_radius']
         waterDepth    = params['water_depth']
-        scopeRatio    = params['scope_ratio']
-
-        # Define total length of mooring line
-        self.scope = scopeRatio * (waterDepth - fairleadDepth)
-
-        # Check that there is enough mooring line between anchor point and attachment point
-        vessel_node = np.array([R_fairlead, -fairleadDepth])
-        anchor_node = np.array([R_anchor, -waterDepth])
-        node_dist   = np.sqrt( np.sum( (anchor_node - vessel_node)**2) )
+        L_mooring     = params['mooring_line_length']
 
         # Create constraint that there is at least enough line to cover this distance
-        unknowns['mooring_length']     = self.scope
-        unknowns['mooring_length_min'] = self.scope / node_dist
-        unknowns['mooring_length_max'] = self.scope / (R_anchor + waterDepth - fairleadDepth)
+        unknowns['mooring_length_max'] = L_mooring / (R_anchor + waterDepth - fairleadDepth)
         
     
     def write_line_dictionary(self, params, cable_sea_friction_coefficient=0.65):
@@ -301,7 +287,7 @@ class MapMooring(Component):
         self.finput.append('Line    LineType  UnstrLen  NodeAnch  NodeFair  Flags')
         self.finput.append('(-)      (-)       (m)       (-)       (-)       (-)')
         self.finput.append('%d   %s   %f   %d   %d   %s' %
-                          (line_number, params['mooring_type'], self.scope, anchor_node, fairlead_node, flags) )
+                          (line_number, params['mooring_type'], params['mooring_line_length'], anchor_node, fairlead_node, flags) )
 
         
     def write_solver_options(self, params):
@@ -515,7 +501,8 @@ class MapMooring(Component):
         # Unpack variables
         nlines        = int(params['number_of_mooring_lines'])
         rhoWater      = params['water_density']
-        Dmooring      = params['mooring_diameter']
+        D_mooring     = params['mooring_diameter']
+        L_mooring     = params['mooring_line_length']
         anchorType    = params['anchor_type']
         costFact      = params['mooring_cost_rate']
         
@@ -532,10 +519,10 @@ class MapMooring(Component):
         anchor_total = anchor_rate*nlines
 
         # Cost of all of the mooring lines
-        legs_total = nlines * self.cost_per_length * (self.scope + extraLength)
+        legs_total = nlines * self.cost_per_length * (L_mooring + extraLength)
 
         # Total summations
         unknowns['anchor_cost']  = anchor_total
         unknowns['mooring_cost'] = costFact*(legs_total + anchor_total)
-        unknowns['mooring_mass'] = (self.wet_mass_per_length + rhoWater*0.25*np.pi*Dmooring**2)*self.scope*nlines
+        unknowns['mooring_mass'] = (self.wet_mass_per_length + rhoWater*0.25*np.pi*D_mooring**2)*L_mooring*nlines
         

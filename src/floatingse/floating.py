@@ -87,7 +87,7 @@ class FloatingSE(Group):
         self.add('auxiliary_wall_thickness',     IndepVarComp('auxiliary_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
 
         # Mooring
-        self.add('scope_ratio',                IndepVarComp('scope_ratio', 0.0), promotes=['*'])
+        self.add('mooring_line_length',        IndepVarComp('mooring_line_length', 0.0), promotes=['*'])
         self.add('anchor_radius',              IndepVarComp('anchor_radius', 0.0), promotes=['*'])
         self.add('mooring_diameter',           IndepVarComp('mooring_diameter', 0.0), promotes=['*'])
         self.add('number_of_mooring_lines',    IndepVarComp('number_of_mooring_lines', 0), promotes=['*'])
@@ -159,7 +159,7 @@ class FloatingSE(Group):
         self.connect('fairlead', ['base.fairlead','aux.fairlead','sg.fairlead','mm.fairlead','subs.fairlead','load.fairlead'])
         self.connect('fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell')
 
-        self.connect('scope_ratio', 'mm.scope_ratio')
+        self.connect('mooring_line_length', 'mm.mooring_line_length')
         self.connect('anchor_radius', 'mm.anchor_radius')
         self.connect('mooring_diameter', 'mm.mooring_diameter')
         self.connect('number_of_mooring_lines', ['mm.number_of_mooring_lines','load.number_of_mooring_lines'])
@@ -365,7 +365,7 @@ def sparExample():
     prob['mooring_diameter']           = 0.09          # Diameter of mooring line/chain [m]
     prob['fairlead']                   = 70.0          # Distance below waterline for attachment [m]
     prob['fairlead_offset_from_shell'] = 0.5           # Offset from shell surface for mooring attachment [m]
-    prob['scope_ratio']                = 3.6088        # Ratio of line length to distance to sea floor (from fairlead)
+    prob['mooring_line_length']        = 902.2         # Unstretched mooring line length
     prob['anchor_radius']              = 853.87        # Distance from centerline to sea floor landing [m]
     prob['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
 
@@ -538,7 +538,7 @@ def semiExample():
     prob['mooring_diameter']           = 0.0766        # Diameter of mooring line/chain [m]
     prob['fairlead']                   = 14.0          # Distance below waterline for attachment [m]
     prob['fairlead_offset_from_shell'] = 0.5           # Offset from shell surface for mooring attachment [m]
-    prob['scope_ratio']                = 4.4919        # Ratio of line length to distance to sea floor (from fairlead)
+    prob['mooring_line_length']        = 835.5         # Unstretched mooring line length
     prob['anchor_radius']              = 837.6         # Distance from centerline to sea floor landing [m]
     prob['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
 

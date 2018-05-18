@@ -37,7 +37,7 @@ class SparInstance(FloatingInstance):
         self.params['cm'] = 2.0
 
         self.params['number_of_mooring_lines'] = 3
-        self.params['scope_ratio'] = 902.2 / (self.params['water_depth']-self.params['fairlead']) 
+        self.params['mooring_line_length'] = 902.2
         self.params['anchor_radius'] = 853.87
         self.params['mooring_diameter'] = 0.09
         
@@ -70,7 +70,6 @@ class SparInstance(FloatingInstance):
             ['mm.axial_unity', 0.0, 1.0, None],
             
             # Ensure there is sufficient mooring line length, MAP doesn't give an error about this
-            ['mm.mooring_length_min', 1.0, None, None],
             ['mm.mooring_length_max', None, 1.0, None],
             
             # API Bulletin 2U constraints
