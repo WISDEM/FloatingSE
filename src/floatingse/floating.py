@@ -65,7 +65,7 @@ class FloatingSE(Group):
 
         # Run main Semi analysis
         self.add('subs', Substructure(self.nFull), promotes=['water_density','total_cost','total_mass','number_of_auxiliary_columns',
-                                                             'structural_frequencies','natural_periods'])
+                                                             'structural_frequencies','rigid_body_periods'])
 
         # Define all input variables from all models
         
@@ -220,7 +220,7 @@ class FloatingSE(Group):
         self.connect('aux.t_full', 'load.auxiliary_t_full')
 
         self.connect('mm.mooring_mass', 'subs.mooring_mass')
-        self.connect('mm.neutral_load', ['load.mooring_vertical_load','subs.mooring_vertical_load'])
+        self.connect('mm.neutral_load', ['load.mooring_neutral_load','subs.mooring_neutral_load'])
         self.connect('mm.mooring_stiffness', 'subs.mooring_stiffness')
         self.connect('mm.mooring_cost', 'subs.mooring_cost')
         self.connect('mm.max_offset_restoring_force', 'subs.mooring_surge_restoring_force')

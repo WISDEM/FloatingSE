@@ -87,7 +87,7 @@ class Substructure(Component):
         self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
         self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
         self.add_param('mooring_surge_restoring_force', val=0.0, units='N', desc='Restoring force from mooring system after surge motion')
-        self.add_param('mooring_pitch_restoring_force', val=np.zeros((10,3)), units='N', desc='Restoring force from mooring system after pitch motion')
+        self.add_param('mooring_pitch_restoring_force', val=np.zeros((NLINES_MAX,3)), units='N', desc='Restoring force from mooring system after pitch motion')
         self.add_param('mooring_cost', val=0.0, units='USD', desc='Cost of mooring system')
         self.add_param('mooring_stiffness', val=np.zeros((6,6)), units='N/m', desc='Linearized stiffness matrix of mooring system at neutral (no offset) conditions.')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')

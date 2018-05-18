@@ -763,16 +763,6 @@ class FloatingFrame(Component):
         unknowns['structural_mass'] = mass.total_mass
         unknowns['center_of_mass']  = (m_rna*cg_rna + m_tower.sum()*cg_tower +
                                        unknowns['substructure_mass']*unknowns['substructure_center_of_mass']) / mass.total_mass
-        Fsum = np.zeros(3)
-        Msum = np.zeros(3)
-        for k in xrange(len(rid)):
-            idx = reactions.node[iCase, k] - 1
-            pk  = np.array([xnode[idx], ynode[idx], znode[idx]])
-            rk  = pk - unknowns['center_of_mass']
-            F   = -1*np.array([reactions.Fx[iCase, k], reactions.Fy[iCase, k], reactions.Fz[iCase, k]])
-            M   = -1*np.array([reactions.Mxx[iCase, k], reactions.Myy[iCase, k], reactions.Mzz[iCase, k]])
-            Fsum += F
-            Msum += M + np.cross(rk,F)
         unknowns['total_force'] = -1.0 * np.array([reactions.Fx.sum(), reactions.Fy.sum(), reactions.Fz.sum()])
         unknowns['total_moment'] = -1.0 * np.array([reactions.Mxx.sum(), reactions.Myy.sum(), reactions.Mzz.sum()])
 
