@@ -21,7 +21,8 @@ class TestSubs(unittest.TestCase):
         self.params['total_displacement'] = 1e4
         
         self.params['mooring_mass'] = 20.0
-        self.params['mooring_effective_mass'] = 15.0
+        self.params['mooring_neutral_load'] = np.zeros((15,3))
+        self.params['mooring_neutral_load'][:3,:] = 5.0*g
         self.params['mooring_surge_restoring_force'] = 1e2
         self.params['mooring_pitch_restoring_force'] = 1e5 * np.ones((10,3))
         self.params['mooring_pitch_restoring_force'][3:,:] = 0.0

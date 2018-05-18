@@ -60,7 +60,7 @@ class TestMapMooring(unittest.TestCase):
         self.params['wall_thickness'] = np.array([0.5, 0.5, 0.5])
         self.params['outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['section_height'] = np.array([20.0, 30.0])
-        self.params['z_param_in'] = self.params['z_full_in'] = np.r_[0.0, np.cumsum(self.params['section_height'])]
+        self.params['z_param_in'] = self.params['z_full_in'] = np.r_[0.0, np.cumsum(self.params['section_height'])]-15.0
         self.params['section_center_of_mass'] = np.array([10.0, 35.0])
         self.params['freeboard'] = 15.0
         self.params['fairlead'] = 10.0
@@ -80,12 +80,16 @@ class TestMapMooring(unittest.TestCase):
         self.params['max_heel'] = 10.0
         self.params['gamma'] = 1.35
 
+        # Needed for geometry prep
+        self.params['stiffener_web_thickness'] = np.array([0.5, 0.5])
+        self.params['stiffener_flange_thickness'] = np.array([0.3, 0.3])
+        self.params['stiffener_web_height']  = np.array([1.0, 1.0])
+        self.params['stiffener_flange_width'] = np.array([2.0, 2.0])
+        self.params['stiffener_spacing'] = np.array([0.1, 0.1])
+        
         self.params['mooring_cost_rate'] = 1.1
 
         self.params['tower_base_radius'] = 4.0
-
-        # Initialize an unknown
-        self.unknowns['plot_matrix'] = np.zeros((15,20,3))
         
         self.set_geometry()
 
@@ -148,6 +152,10 @@ class TestMapMooring(unittest.TestCase):
             
     def testRunMap(self):
         self.mymap.runMAP(self.params, self.unknowns)
+
+        self.assertEqual(np.count_nonzero(self.unknowns['neutral_load']), 9)
+        self.assertEqual(np.count_nonzero(self.unknowns['max_heel_restoring_force']), 9)
+        self.assertGreater(np.count_nonzero(self.unknowns['plot_matrix']), 9*20-3)
 
     def testCost(self):
         self.mymap.compute_cost(self.params, self.unknowns)

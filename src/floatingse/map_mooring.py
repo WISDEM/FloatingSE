@@ -8,6 +8,8 @@ from commonse import gravity
 from commonse import Enum
 
 Anchor    = Enum('DRAGEMBEDMENT SUCTIONPILE')
+NLINES_MAX = 15
+NPTS_PLOT = 20
 
 class MapMooring(Component):
     """
@@ -55,16 +57,15 @@ class MapMooring(Component):
         self.add_param('mooring_cost_rate', val=0.0, desc='miscellaneous cost factor in percent')
 
         # Outputs
-        self.add_output('mooring_effective_mass', val=0.0, units='kg',desc='total effective mass of mooring based on vertical loading')
         self.add_output('mooring_length', val=0.0, units='m',desc='total length of a single mooring line (scope)')
         self.add_output('mooring_mass', val=0.0, units='kg',desc='total mass of mooring')
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
         self.add_output('mooring_stiffness', val=np.zeros((6,6)), units='N/m', desc='Linearized stiffness matrix of mooring system at neutral (no offset) conditions.')
         self.add_output('anchor_cost', val=0.0, units='USD',desc='total cost for anchor')
-        self.add_output('vertical_load', val=0.0, units='N',desc='mooring vertical load in all mooring lines')
+        self.add_output('neutral_load', val=np.zeros((NLINES_MAX,3)), units='N',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='N',desc='sum of forces in x direction after max offset')
-        self.add_output('max_heel_restoring_force', val=np.zeros((10,3)), units='N',desc='forces for all mooring lines after max heel')
-        self.add_output('plot_matrix', val=np.zeros((15, 20, 3)), units='m', desc='data matrix for plotting') 
+        self.add_output('max_heel_restoring_force', val=np.zeros((NLINES_MAX,3)), units='N',desc='forces for all mooring lines after max heel')
+        self.add_output('plot_matrix', val=np.zeros((NLINES_MAX, NPTS_PLOT, 3)), units='m', desc='data matrix for plotting') 
 
         # Output constriants
         self.add_output('axial_unity', val=0.0, units='m',desc='range of damaged mooring')
@@ -421,19 +422,16 @@ class MapMooring(Component):
         mymap.displace_vessel(0, 0, 0, 0, 0, 0)
         mymap.update_states(0.0, 0)
         
-        # Get the vertical load on the spar and plotting data
-        Fz = 0.0
-        npltpts = 20
-        plotMat = np.zeros((nlines, npltpts, 3))
+        # Get the vertical load on the structure and plotting data
+        F_neutral = np.zeros((NLINES_MAX, 3))
+        plotMat   = np.zeros((NLINES_MAX, NPTS_PLOT, 3))
         for k in xrange(nlines):
-            _,_,fz = mymap.get_fairlead_force_3d(k)
-            Fz += fz
-            plotMat[k,:,0] = mymap.plot_x(k, npltpts)
-            plotMat[k,:,1] = mymap.plot_y(k, npltpts)
-            plotMat[k,:,2] = mymap.plot_z(k, npltpts)
-        unknowns['vertical_load'] = Fz
-        unknowns['mooring_effective_mass'] = Fz / gravity
-        unknowns['plot_matrix'][:nlines,:,:] = plotMat
+            (F_neutral[k,0], F_neutral[k,1], F_neutral[k,2]) = mymap.get_fairlead_force_3d(k)
+            plotMat[k,:,0] = mymap.plot_x(k, NPTS_PLOT)
+            plotMat[k,:,1] = mymap.plot_y(k, NPTS_PLOT)
+            plotMat[k,:,2] = mymap.plot_z(k, NPTS_PLOT)
+        unknowns['neutral_load'] = F_neutral
+        unknowns['plot_matrix']  = plotMat
 
         # Get the restoring moment at maximum angle of heel
         # Since we don't know the substucture CG, have to just get the forces of the lines now and do the cross product later
@@ -441,13 +439,13 @@ class MapMooring(Component):
         # pitch and roll forces as extremes
         # TODO: This still isgn't quite the same as clocking the mooring lines in different directions,
         # which is what we want to do, but that requires multiple input files and solutions
-        Fh1 = np.zeros((10,3))
+        Fh1 = np.zeros((NLINES_MAX,3))
         mymap.displace_vessel(0, 0, 0, 0, heel, 0)
         mymap.update_states(0.0, 0)
         for k in xrange(nlines):
             Fh1[k][0], Fh1[k][1], Fh1[k][2] = mymap.get_fairlead_force_3d(k)
 
-        Fh2 = np.zeros((10,3))
+        Fh2 = np.zeros((NLINES_MAX,3))
         mymap.displace_vessel(0, 0, 0, heel, 0, 0)
         mymap.update_states(0.0, 0)
         for k in xrange(nlines):

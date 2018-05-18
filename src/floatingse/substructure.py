@@ -4,7 +4,7 @@ from scipy.integrate import cumtrapz
 
 from commonse import gravity, eps, DirectionVector
 from commonse.utilities import assembleI, unassembleI
-
+from map_mooring import NLINES_MAX
         
 class SubstructureGeometry(Component):
     """
@@ -85,7 +85,7 @@ class Substructure(Component):
         # From other components
         self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
         self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
-        self.add_param('mooring_effective_mass', val=0.0, units='kg', desc='Mass of mooring lines that weigh on structure, ignoring mass of mooring lines on sea floor')
+        self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
         self.add_param('mooring_surge_restoring_force', val=0.0, units='N', desc='Restoring force from mooring system after surge motion')
         self.add_param('mooring_pitch_restoring_force', val=np.zeros((10,3)), units='N', desc='Restoring force from mooring system after pitch motion')
         self.add_param('mooring_cost', val=0.0, units='USD', desc='Cost of mooring system')
@@ -180,7 +180,7 @@ class Substructure(Component):
     def balance(self, params, unknowns):
         # Unpack variables
         m_struct     = params['structural_mass']
-        m_mooringE   = params['mooring_effective_mass']
+        Fz_mooring   = np.sum( params['mooring_neutral_load'][:,-1] )
         m_mooring    = params['mooring_mass']
         
         V_system     = params['total_displacement']
@@ -195,7 +195,7 @@ class Substructure(Component):
 
         # Make sure total mass of system with variable water ballast balances against displaced volume
         # Water ballast should be buried in m_column
-        m_water  = V_system*rhoWater - (m_struct + m_mooringE)
+        m_water  = V_system*rhoWater - (m_struct + Fz_mooring/gravity)
         m_system = m_struct + m_water
 
         # Output substructure total turbine mass

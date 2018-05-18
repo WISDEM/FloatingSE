@@ -45,6 +45,12 @@ class FloatingSE(Group):
                                                                 'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
                                                                 'min_taper','min_d_to_t','gamma_f','gamma_b'])
 
+        # Run Semi Geometry for interfaces
+        self.add('sg', SubstructureGeometry(self.nFull), promotes=['number_of_auxiliary_columns'])
+
+        # Next run MapMooring
+        self.add('mm', MapMooring(), promotes=['water_density','water_depth'])
+        
         # Add in the connecting truss
         self.add('load', FloatingLoading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
                                                                           'z0','beta','Uref','zref','shearExp','beta','cd_usr',
@@ -57,13 +63,6 @@ class FloatingSE(Group):
                                                                           'rna_I','rna_cg','rna_force','rna_moment','rna_mass',
                                                                           'number_of_auxiliary_columns','structural_frequencies'])
 
-
-        # Run Semi Geometry for interfaces
-        self.add('sg', SubstructureGeometry(self.nFull), promotes=['number_of_auxiliary_columns'])
-
-        # Next run MapMooring
-        self.add('mm', MapMooring(), promotes=['water_density','water_depth'])
-        
         # Run main Semi analysis
         self.add('subs', Substructure(self.nFull), promotes=['water_density','total_cost','total_mass','number_of_auxiliary_columns',
                                                              'structural_frequencies','natural_periods'])
@@ -163,7 +162,7 @@ class FloatingSE(Group):
         self.connect('scope_ratio', 'mm.scope_ratio')
         self.connect('anchor_radius', 'mm.anchor_radius')
         self.connect('mooring_diameter', 'mm.mooring_diameter')
-        self.connect('number_of_mooring_lines', 'mm.number_of_mooring_lines')
+        self.connect('number_of_mooring_lines', ['mm.number_of_mooring_lines','load.number_of_mooring_lines'])
         self.connect('mooring_type', 'mm.mooring_type')
         self.connect('anchor_type', 'mm.anchor_type')
         self.connect('drag_embedment_extra_length', 'mm.drag_embedment_extra_length')
@@ -221,7 +220,7 @@ class FloatingSE(Group):
         self.connect('aux.t_full', 'load.auxiliary_t_full')
 
         self.connect('mm.mooring_mass', 'subs.mooring_mass')
-        self.connect('mm.mooring_effective_mass', 'subs.mooring_effective_mass')
+        self.connect('mm.neutral_load', ['load.mooring_vertical_load','subs.mooring_vertical_load'])
         self.connect('mm.mooring_stiffness', 'subs.mooring_stiffness')
         self.connect('mm.mooring_cost', 'subs.mooring_cost')
         self.connect('mm.max_offset_restoring_force', 'subs.mooring_surge_restoring_force')

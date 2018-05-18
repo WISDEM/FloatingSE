@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.testing as npt
 import unittest
+import time
 import floatingse.floating_loading as sP
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -30,93 +31,103 @@ def DrawTruss(mytruss):
     plt.show()
 
 
+def getParams():
+    params = {}
+
+    params['cross_attachment_pontoons'] = True
+    params['lower_attachment_pontoons'] = True
+    params['upper_attachment_pontoons'] = True
+    params['lower_ring_pontoons'] = True
+    params['upper_ring_pontoons'] = True
+    params['outer_cross_pontoons'] = True
+
+    params['number_of_auxiliary_columns'] = 3
+    params['connection_ratio_max'] = 0.25
+
+    params['number_of_mooring_lines'] = 3
+    params['mooring_neutral_load'] = 1e2*np.ones((15,3))
+    
+    params['fairlead'] = 7.5
+    params['base_pontoon_attach_upper'] = 8.0
+    params['base_pontoon_attach_lower'] = -14.0
+
+    params['radius_to_auxiliary_column'] = 10.0
+    params['pontoon_outer_diameter'] = 2.0
+    params['pontoon_wall_thickness'] = 1.0
+
+    params['base_z_full'] = np.array([-15.0, -12.5, -10.0, 0.0, 5.0, 10.0])
+    params['base_d_full'] = 2*10.0 * np.ones(NPTS)
+    params['base_t_full'] = 0.1 * np.ones(NPTS)
+    params['base_column_mass'] = 1e2 * np.ones(NSECTIONS)
+    params['base_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
+    params['base_column_displaced_volume'] = 1e2 * np.ones(NSECTIONS)
+    params['base_column_center_of_buoyancy'] = -10.0
+    params['base_column_center_of_mass'] = -6.0
+    params['base_column_Px'] = 50.0 * np.ones(NPTS)
+    params['base_column_Py'] = np.zeros(NPTS)
+    params['base_column_Pz'] = np.zeros(NPTS)
+    params['base_column_qdyn'] = 70.0 * np.ones(NPTS)
+
+    params['auxiliary_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
+    params['auxiliary_d_full'] = 2*2.0 * np.ones(NPTS)
+    params['auxiliary_t_full'] = 0.05 * np.ones(NPTS)
+    params['auxiliary_column_mass'] = 1e1 * np.ones(NSECTIONS)
+    params['auxiliary_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
+    params['auxiliary_column_displaced_volume'] = 1e1 * np.ones(NSECTIONS)
+    params['auxiliary_column_center_of_buoyancy'] = -5.0
+    params['auxiliary_column_center_of_mass'] = -3.0
+    params['auxiliary_column_Px'] = 50.0 * np.ones(NPTS)
+    params['auxiliary_column_Py'] = np.zeros(NPTS)
+    params['auxiliary_column_Pz'] = np.zeros(NPTS)
+    params['auxiliary_column_qdyn'] = 70.0 * np.ones(NPTS)
+
+    params['tower_z_full'] = np.linspace(0, 90, NPTS)
+    params['tower_d_full'] = 2*7.0 * np.ones(NPTS)
+    params['tower_t_full'] = 0.5 * np.ones(NPTS)
+    params['tower_mass'] = 2e2 * np.ones(NSECTIONS)
+    params['tower_buckling_length'] = 25.0
+    params['tower_center_of_mass'] = 50.0
+    params['tower_Px'] = 50.0 * np.ones(NPTS)
+    params['tower_Py'] = np.zeros(NPTS)
+    params['tower_Pz'] = np.zeros(NPTS)
+    params['tower_qdyn'] = 70.0 * np.ones(NPTS)
+
+    params['E'] = 200e9
+    params['G'] = 79.3e9
+    params['material_density'] = 7850.0
+    params['yield_stress'] = 345e6
+
+    params['rna_force'] = 6e1*np.ones(3)
+    params['rna_moment'] = 7e2*np.ones(3)
+    params['rna_mass'] = 6e1
+    params['rna_cg'] = np.array([3.05, 2.96, 2.13])
+    params['rna_I'] = np.array([3.05284574e9, 2.96031642e9, 2.13639924e7, 0.0, 2.89884849e7, 0.0])
+
+    params['water_density'] = 1025.0
+
+    params['gamma_f'] = 1.35
+    params['gamma_m'] = 1.1
+    params['gamma_n'] = 1.0
+    params['gamma_b'] = 1.1
+    params['gamma_fatigue'] = 1.755
+
+    params['pontoon_cost_rate'] = 6.250
+    return params
+
+    
 class TestFrame(unittest.TestCase):
     def setUp(self):
-        self.params = {}
+        self.params = getParams()
         self.unknowns = {}
         self.resid = None
-
-        self.params['cross_attachment_pontoons'] = True
-        self.params['lower_attachment_pontoons'] = True
-        self.params['upper_attachment_pontoons'] = True
-        self.params['lower_ring_pontoons'] = True
-        self.params['upper_ring_pontoons'] = True
-        self.params['outer_cross_pontoons'] = True
-
-        self.params['number_of_auxiliary_columns'] = 3
-        self.params['connection_ratio_max'] = 0.25
-
-        self.params['fairlead'] = 7.5
-        self.params['base_pontoon_attach_upper'] = 8.0
-        self.params['base_pontoon_attach_lower'] = -14.0
-        
-        self.params['radius_to_auxiliary_column'] = 10.0
-        self.params['pontoon_outer_diameter'] = 2.0
-        self.params['pontoon_wall_thickness'] = 1.0
-
-        self.params['base_z_full'] = np.array([-15.0, -12.5, -10.0, 0.0, 5.0, 10.0])
-        self.params['base_d_full'] = 2*10.0 * np.ones(NPTS)
-        self.params['base_t_full'] = 0.1 * np.ones(NPTS)
-        self.params['base_column_mass'] = 1e2 * np.ones(NSECTIONS)
-        self.params['base_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
-        self.params['base_column_displaced_volume'] = 1e2 * np.ones(NSECTIONS)
-        self.params['base_column_center_of_buoyancy'] = -10.0
-        self.params['base_column_center_of_mass'] = -6.0
-        self.params['base_column_Px'] = 50.0 * np.ones(NPTS)
-        self.params['base_column_Py'] = np.zeros(NPTS)
-        self.params['base_column_Pz'] = np.zeros(NPTS)
-        self.params['base_column_qdyn'] = 70.0 * np.ones(NPTS)
-
-        self.params['auxiliary_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
-        self.params['auxiliary_d_full'] = 2*2.0 * np.ones(NPTS)
-        self.params['auxiliary_t_full'] = 0.05 * np.ones(NPTS)
-        self.params['auxiliary_column_mass'] = 1e1 * np.ones(NSECTIONS)
-        self.params['auxiliary_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
-        self.params['auxiliary_column_displaced_volume'] = 1e1 * np.ones(NSECTIONS)
-        self.params['auxiliary_column_center_of_buoyancy'] = -5.0
-        self.params['auxiliary_column_center_of_mass'] = -3.0
-        self.params['auxiliary_column_Px'] = 50.0 * np.ones(NPTS)
-        self.params['auxiliary_column_Py'] = np.zeros(NPTS)
-        self.params['auxiliary_column_Pz'] = np.zeros(NPTS)
-        self.params['auxiliary_column_qdyn'] = 70.0 * np.ones(NPTS)
-
-        self.params['tower_z_full'] = np.linspace(0, 90, NPTS)
-        self.params['tower_d_full'] = 2*7.0 * np.ones(NPTS)
-        self.params['tower_t_full'] = 0.5 * np.ones(NPTS)
-        self.params['tower_mass'] = 2e2 * np.ones(NSECTIONS)
-        self.params['tower_buckling_length'] = 25.0
-        self.params['tower_center_of_mass'] = 50.0
-        self.params['tower_Px'] = 50.0 * np.ones(NPTS)
-        self.params['tower_Py'] = np.zeros(NPTS)
-        self.params['tower_Pz'] = np.zeros(NPTS)
-        self.params['tower_qdyn'] = 70.0 * np.ones(NPTS)
-        
-        self.params['E'] = 200e9
-        self.params['G'] = 79.3e9
-        self.params['material_density'] = 7850.0
-        self.params['yield_stress'] = 345e6
-
-        self.params['rna_force'] = 6e1*np.ones(3)
-        self.params['rna_moment'] = 7e2*np.ones(3)
-        self.params['rna_mass'] = 6e1
-        self.params['rna_cg'] = np.array([3.05, 2.96, 2.13])
-        self.params['rna_I'] = np.array([3.05284574e9, 2.96031642e9, 2.13639924e7, 0.0, 2.89884849e7, 0.0])
-
-        self.params['water_density'] = 1025.0
-
-        self.params['gamma_f'] = 1.35
-        self.params['gamma_m'] = 1.1
-        self.params['gamma_n'] = 1.0
-        self.params['gamma_b'] = 1.1
-        self.params['gamma_fatigue'] = 1.755
-
-        self.params['pontoon_cost_rate'] = 6.250
 
         self.unknowns['pontoon_stress'] = np.zeros(50)
         
         self.mytruss = sP.FloatingFrame(NPTS)
 
-
+    def tearDown(self):
+        self.mytruss = None
+        
     def testStandard(self):
         self.params['auxiliary_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 3.0])
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
@@ -222,6 +233,7 @@ class TestFrame(unittest.TestCase):
         #self.params['outer_cross_pontoons'] = True
         #self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
+
     def testForces(self):
         self.params['auxiliary_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
         self.params['base_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
@@ -254,18 +266,33 @@ class TestFrame(unittest.TestCase):
         self.params['base_pontoon_attach_upper'] = 0.0
         self.params['base_pontoon_attach_lower'] = 0.0
         self.params['water_density'] = 1e-12
+        self.params['number_of_mooring_lines'] = 3
+        self.params['mooring_neutral_load'] = 10.0*np.ones((15,3))
+        
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         m = NSECTIONS*2 + 1
         self.assertAlmostEqual(self.unknowns['structural_mass'], m, 4)
         self.assertAlmostEqual(self.unknowns['substructure_mass'], NSECTIONS, 5)
-        npt.assert_almost_equal(self.unknowns['total_force'], np.array([10.0, 10.0, 10-m*g]), decimal=1)
+        npt.assert_almost_equal(self.unknowns['total_force'], 3*10 + np.array([10.0, 10.0, 10-m*g]), decimal=1)
         npt.assert_almost_equal(self.unknowns['total_moment'], np.array([20.0, 20.0, 20.0]), decimal=2)
 
         self.params['rna_cg'] = np.array([5.0, 5.0, 5.0])
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
-        npt.assert_almost_equal(self.unknowns['total_force'], np.array([10.0, 10.0, 10-m*g]), decimal=1)
-        self.assertEqual(self.unknowns['total_moment'][-1], 20.0)
+        npt.assert_almost_equal(self.unknowns['total_force'], 3*10 + np.array([10.0, 10.0, 10-m*g]), decimal=1)
+        self.assertAlmostEqual(self.unknowns['total_moment'][-1], 20.0)
+        
+
+class TestSandbox(unittest.TestCase):
+    def setUp(self):
+        self.params = getParams()
+        self.unknowns = {}
+        self.resid = None
+        self.unknowns['pontoon_stress'] = np.zeros(50)
+        self.mytruss = sP.FloatingFrame(NPTS)
+
+    def tearDown(self):
+        self.mytruss = None
 
         
     def testBadInput(self):
@@ -285,7 +312,7 @@ class TestFrame(unittest.TestCase):
         self.params['base_z_full'][-2] = self.params['base_z_full'][-3] + 1e-12
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
         self.assertEqual(self.unknowns['substructure_mass'], 1e30)
-        
+
     def testCombinations(self):
         self.params['radius_to_auxiliary_column'] = 30.0
         
@@ -303,6 +330,7 @@ class TestFrame(unittest.TestCase):
                                 
                                 for ocp in [True, False]:
                                     self.params['number_of_auxiliary_columns'] = nc
+                                    self.params['number_of_mooring_lines'] = np.maximum(nc, 3)
                                     self.params['cross_attachment_pontoons'] = cap
                                     self.params['lower_attachment_pontoons'] = lap
                                     self.params['upper_attachment_pontoons'] = uap
@@ -315,10 +343,12 @@ class TestFrame(unittest.TestCase):
                                     if self.unknowns['substructure_mass'] == 1e30:
                                         print nc, cap, lap, uap, lrp, urp, ocp
                                     self.assertNotEqual(self.unknowns['substructure_mass'], 1e30)
-
+                                    time.sleep(1e-3)
+        
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestFrame))
+    suite.addTest(unittest.makeSuite(TestSandbox))
     return suite
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@ import commonse.UtilizationSupplement as util
 from commonse.WindWaveDrag import AeroHydroLoads, CylinderWindDrag, CylinderWaveDrag
 from commonse.environment import WaveBase, PowerWind
 from commonse.vertical_cylinder import CylinderDiscretization, CylinderMass
+from map_mooring import NLINES_MAX
 
 
 def find_nearest(array,value):
@@ -98,6 +99,10 @@ class FloatingFrame(Component):
         self.add_param('rna_moment', val=np.zeros(3), units='N*m', desc='Moments about turbine base')
         self.add_param('rna_I', val=np.zeros(6), units='kg*m**2', desc='Moments about turbine base')
 
+        # Mooting parameters for loading
+        self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines')
+        self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
+        
         # safety factors
         self.add_param('gamma_f', 0.0, desc='safety factor on loads')
         self.add_param('gamma_m', 0.0, desc='safety factor on materials')
@@ -229,6 +234,9 @@ class FloatingFrame(Component):
         cg_tower       = np.r_[0.0, 0.0, params['tower_center_of_mass']]
         
         coeff          = params['pontoon_cost_rate']
+
+        nlines         = int(params['number_of_mooring_lines'])
+        F_mooring      = params['mooring_neutral_load']
         
         gamma_f        = params['gamma_f']
         gamma_m        = params['gamma_m']
@@ -259,9 +267,6 @@ class FloatingFrame(Component):
             return
             
         # ---NODES---
-        # Senu TODO: Should tower and rna have nodes at their CGs?
-        # Senu TODO: Mooring tension on column nodes?
-
         # Add nodes for base column: Using 4 nodes/3 elements per section
         # Make sure there is a node at upper and lower attachment points
         baseBeginID = 0 + 1
@@ -278,7 +283,7 @@ class FloatingFrame(Component):
         freeboard = z_base[-1]
 
         fairleadID  = []
-        # Need reaction attachment point if just running a spar
+        # Need mooring attachment point if just running a spar
         if ncolumn == 0:
             idx = find_nearest(z_base, z_fairlead)
             z_base[idx] = z_fairlead
@@ -342,24 +347,6 @@ class FloatingFrame(Component):
         nodes = frame3dd.NodeData(nnode, xnode, ynode, znode, rnode)
 
         
-        # ---REACTIONS---
-        # Pin (3DOF) the nodes at the mooring connections.  Otherwise free
-        # Free=0, Rigid=1
-        rid = np.array(fairleadID)
-        Rx = Ry = Rz = Rxx = Ryy = Rzz = np.ones(rid.shape)
-        #if ncolumn > 0:
-        #    Rxx[1:] = Ryy[1:] = Rzz[1:] = 0.0
-        # First approach
-        # Pinned windward column lower node (first ballastLowerID)
-        #rid = ballastLowerID[0]
-        #Rx = Ry = Rz = Rxx = Ryy = Rzz = 1
-        # Rollers for other lower column nodes, restrict motion
-        #rid = ballastLowerID[1:]
-        #Rz = Rxx = Ryy = Rzz = 1
-
-        # Get reactions object from frame3dd
-        reactions = frame3dd.ReactionData(rid, Rx, Ry, Rz, Rxx, Ryy, Rzz, rigid=1)
-
 
         # ---ELEMENTS / EDGES---
         N1 = np.array([], dtype=np.int32)
@@ -517,6 +504,7 @@ class FloatingFrame(Component):
         plotMat = np.zeros((nelem.size, 3, 2))
         plotMat[:,:,0] = np.c_[xnode[N1-1], ynode[N1-1], znode[N1-1]]
         plotMat[:,:,1] = np.c_[xnode[N2-1], ynode[N2-1], znode[N2-1]]
+        unknowns['plot_matrix'] = plotMat
         
         # Compute length and center of gravity for each element for use below
         elemL   = np.sqrt( np.sum( np.diff(plotMat, axis=2)**2.0, axis=1) ).flatten()
@@ -527,23 +515,6 @@ class FloatingFrame(Component):
         geom = False               # 1: include geometric stiffness
         dx = -1                    # x-axis increment for internal forces, -1 to skip
         other = frame3dd.Options(shear, geom, dx)
-
-        # Initialize frame3dd object
-        myframe = frame3dd.Frame(nodes, reactions, elements, other)
-
-        # Add in extra mass of rna
-        inode   = np.array([towerEndID], dtype=np.int32) # rna
-        m_extra = np.array([m_rna])
-        Ixx = np.array([ I_rna[0] ])
-        Iyy = np.array([ I_rna[1] ])
-        Izz = np.array([ I_rna[2] ])
-        Ixy = np.array([ I_rna[3] ])
-        Ixz = np.array([ I_rna[4] ])
-        Iyz = np.array([ I_rna[5] ])
-        rhox = np.array([ cg_rna[0] ])
-        rhoy = np.array([ cg_rna[1] ])
-        rhoz = np.array([ cg_rna[2] ])
-        myframe.changeExtraNodeMass(inode, m_extra, Ixx, Iyy, Izz, Ixy, Ixz, Iyz, rhox, rhoy, rhoz, True)
 
         # ---LOAD CASES---
         # Extreme loading
@@ -598,7 +569,6 @@ class FloatingFrame(Component):
             
         # Add mass of base and ballast columns while we've already done the element enumeration
         Uz = Uy = np.zeros(Ux.shape)
-        load.changeUniformLoads(EL, Ux, Uy, Uz)
         xx1 = xy1 = xz1 = x1
         xx2 = xy2 = xz2 = x2
         load.changeTrapezoidalLoads(EL, xx1, xx2, wx1, wx2, xy1, xy2, wy1, wy2, xz1, xz2, wz1, wz2)
@@ -611,92 +581,89 @@ class FloatingFrame(Component):
         z_cb    = np.zeros((3,))
         if ncolumn > 0 and znode[ballastLowerID[0]-1] < 0.0:
             if lowerAttachFlag:
-                EL       = lowerAttachEID + nrange
-                Uz       = Frange * np.ones(nrange.shape)
+                EL       = np.append(EL, lowerAttachEID + nrange)
+                Ux       = np.append(Ux, np.zeros(nrange.shape))
+                Uy       = np.append(Uy, np.zeros(nrange.shape))
+                Uz       = np.append(Uz, Frange * np.ones(nrange.shape))
                 F_truss += Frange * elemL[lowerAttachEID-1] * ncolumn
                 z_cb    += Frange * elemL[lowerAttachEID-1] * ncolumn * elemCoG[lowerAttachEID-1,:]
-                Ux = Uy = np.zeros(Uz.shape)
-                load.changeUniformLoads(EL, Ux, Uy, Uz)
             if lowerRingFlag:
-                EL       = lowerRingEID + nrange
-                Uz       = Frange * np.ones(nrange.shape)
+                EL       = np.append(EL, lowerRingEID + nrange)
+                Ux       = np.append(Ux, np.zeros(nrange.shape))
+                Uy       = np.append(Uy, np.zeros(nrange.shape))
+                Uz       = np.append(Uz, Frange * np.ones(nrange.shape))
                 F_truss += Frange * elemL[lowerRingEID-1] * ncolumn
                 z_cb    += Frange * elemL[lowerRingEID-1] * ncolumn * elemCoG[lowerRingEID-1]
-                Ux = Uy = np.zeros(Uz.shape)
-                load.changeUniformLoads(EL, Ux, Uy, Uz)
             if crossAttachFlag:
                 factor   = np.minimum(1.0, (0.0 - z_attach_lower) / (znode[ballastUpperID[0]-1] - z_attach_lower) )
-                EL       = crossAttachEID + nrange
-                Ux       = factor * Frange * np.sin(cross_angle) * np.ones(nrange.shape)
-                Uz       = factor * Frange * np.cos(cross_angle) * np.ones(nrange.shape)
+                EL       = np.append(EL, crossAttachEID + nrange)
+                Ux       = np.append(Ux,  factor * Frange * np.sin(cross_angle) * np.ones(nrange.shape))
+                Uy       = np.append(Uy, np.zeros(nrange.shape))
+                Uz       = np.append(Uz, factor * Frange * np.cos(cross_angle) * np.ones(nrange.shape))
                 F_truss += factor * Frange * elemL[crossAttachEID-1] * ncolumn
                 z_cb    += factor * Frange * elemL[crossAttachEID-1] * ncolumn * elemCoG[crossAttachEID-1,:]
-                Uy = np.zeros(Uz.shape)
-                load.changeUniformLoads(EL, Ux, Uy, Uz)
             if outerCrossFlag:
                 factor   = np.minimum(1.0, (0.0 - znode[baseLowerID-1]) / (znode[ballastUpperID[0]-1] - znode[baseLowerID-1]) )
                 # TODO: This one will take a little more math
-                #EL       = outerCrossEID + np.arange(2*ncolumn, dtype=np.int32) 
-                #Uz       = factor * Frange * np.ones(nrange.shape)
+                #EL       = np.append(EL, outerCrossEID + np.arange(2*ncolumn, dtype=np.int32))
+                #Ux       = np.append(Ux, np.zeros(nrange.shape))
+                #Uy       = np.append(Uy, np.zeros(nrange.shape))
+                #Uz       = np.append(Uz, factor * Frange * np.ones(nrange.shape))
                 F_truss += factor * Frange * elemL[outerCrossEID-1] * ncolumn
                 z_cb    += factor * Frange * elemL[outerCrossEID-1] * ncolumn * elemCoG[outerCrossEID-1,:]
-                #Ux = Uy = np.zeros(Uz.shape)
-                #load.changeUniformLoads(EL, Ux, Uy, Uz)
+                #Ux = Uy = np.append(Ux,  np.zeros(Uz.shape)
         if ncolumn > 0 and znode[ballastUpperID[0]-1] < 0.0:
             if upperAttachFlag:
-                EL       = upperAttachEID + nrange
-                Uz       = Frange * np.ones(nrange.shape)
+                EL       = np.append(EL, upperAttachEID + nrange)
+                Ux       = np.append(Ux, np.zeros(nrange.shape))
+                Uy       = np.append(Uy, np.zeros(nrange.shape))
+                Uz       = np.append(Uz, Frange * np.ones(nrange.shape))
                 F_truss += Frange * elemL[upperAttachEID-1] * ncolumn
                 z_cb    += Frange * elemL[upperAttachEID-1] * ncolumn * elemCoG[upperAttachEID-1,:]
-                Ux = Uy = np.zeros(Uz.shape)
-                load.changeUniformLoads(EL, Ux, Uy, Uz)
             if upperRingFlag:
-                EL       = upperRingEID + nrange
-                Uz       = Frange * np.ones(nrange.shape)
+                EL       = np.append(EL, upperRingEID + nrange)
+                Ux       = np.append(Ux, np.zeros(nrange.shape))
+                Uy       = np.append(Uy, np.zeros(nrange.shape))
+                Uz       = np.append(Uz, Frange * np.ones(nrange.shape))
                 F_truss += Frange * elemL[upperRingEID-1] * ncolumn
                 z_cb    += Frange * elemL[upperRingEID-1] * ncolumn * elemCoG[upperRingEID-1,:]
                 Ux = Uy = np.zeros(Uz.shape)
-                load.changeUniformLoads(EL, Ux, Uy, Uz)
 
+        # Finally add in all the uniform loads on buoyancy
+        load.changeUniformLoads(EL, Ux, Uy, Uz)
+
+        # Point loads for mooring loading
+        nattach = len(fairleadID)
+        nlines_per_column = nlines / nattach
+        nF  = np.array(fairleadID, dtype=np.int32)
+        Fx  = np.zeros(nattach)
+        Fy  = np.zeros(nattach)
+        Fz  = np.zeros(nattach)
+        Mxx = np.zeros(nattach)
+        Myy = np.zeros(nattach)
+        Mzz = np.zeros(nattach)
+        for k in range(len(fairleadID)):
+            idx = k*nlines_per_column + np.arange(nlines_per_column)
+            Fx[k] = F_mooring[idx,0].sum()
+            Fy[k] = F_mooring[idx,1].sum()
+            Fz[k] = F_mooring[idx,2].sum()
+            
         # Point loading for rotor thrust and wind loads at CG
         # Note: extra momemt from mass accounted for below
-        nF  = np.array([ baseEndID ], dtype=np.int32)
-        Fx  = np.array([ F_rna[0] ])
-        Fy  = np.array([ F_rna[1] ])
-        Fz  = np.array([ F_rna[2] ])
-        Mxx = np.array([ M_rna[0] ])
-        Myy = np.array([ M_rna[1] ])
-        Mzz = np.array([ M_rna[2] ])
+        nF  = np.append(nF , towerEndID)
+        Fx  = np.append(Fx , F_rna[0] )
+        Fy  = np.append(Fy , F_rna[1] )
+        Fz  = np.append(Fz , F_rna[2] )
+        Mxx = np.append(Mxx, M_rna[0] )
+        Myy = np.append(Myy, M_rna[1] )
+        Mzz = np.append(Mzz, M_rna[2] )
+        
+        # Add in all point loads
         load.changePointLoads(nF, Fx, Fy, Fz, Mxx, Myy, Mzz)
 
-        # Store load case into frame 3dd object
-        myframe.addLoadCase(load)
 
-
-        # ---DYNAMIC ANALYSIS---
-        nM = 6              # number of desired dynamic modes of vibration
-        Mmethod = 1         # 1: subspace Jacobi     2: Stodola
-        lump = 0            # 0: consistent mass ... 1: lumped mass matrix
-        tol = 1e-5          # mode shape tolerance
-        shift = 0.0         # shift value ... for unrestrained structures
-        
-        myframe.enableDynamics(nM, Mmethod, lump, tol, shift)
-
-        # ---DEBUGGING---
-        #myframe.write('debug.3dd') # For debugging
-
-        # ---RUN ANALYSIS---
-        try:
-            displacements, forces, reactions, internalForces, mass, modal = myframe.run()
-        except:
-            bad_input()
-            return
-            
-        # --OUTPUTS--
-        nE    = nelem.size
-        iCase = 0
-        unknowns['plot_matrix'] = plotMat
-        
+        # ---MASS SUMMARIES---
+        # Mass summaries now that we've tabulated all of the pontoons
         if ncolumn > 0:
             # Buoyancy assembly from incremental calculations above
             V_pontoon = F_truss/rhoWater/gravity
@@ -717,26 +684,85 @@ class FloatingFrame(Component):
             V_pontoon = z_cb = m_pontoon = 0.0
             cg_pontoon = np.zeros(3)
             
+        # Summary of mass and volumes
+        unknowns['total_displacement'] = V_base.sum() + ncolumn*V_ballast.sum() + V_pontoon
+        unknowns['substructure_mass']  = m_pontoon + m_base.sum() + ncolumn*m_ballast.sum()
+        unknowns['substructure_center_of_mass'] = (ncolumn*m_ballast.sum()*cg_ballast + m_base.sum()*cg_base +
+                                                   m_pontoon*cg_pontoon) / unknowns['substructure_mass']
+
+        # Find cb (center of buoyancy) for whole system
+        z_cb = (V_base.sum()*z_cb_base + ncolumn*V_ballast.sum()*z_cb_ballast + V_pontoon*z_cb) / unknowns['total_displacement']
+        unknowns['z_center_of_buoyancy'] = z_cb
+
+
+        # ---REACTIONS---
+        # Find node closest to CG
+        cg_dist = np.sum( (np.c_[xnode, ynode, znode] - unknowns['substructure_center_of_mass'][np.newaxis,:])**2, axis=1 )
+        cg_node = np.argmin(cg_dist)
+        # Free=0, Rigid=1
+        rid = np.array([cg_node+1]) #np.array(fairleadID)
+        Rx = Ry = Rz = Rxx = Ryy = Rzz = np.ones(rid.shape)
+
+        # Get reactions object from frame3dd
+        reactions = frame3dd.ReactionData(rid, Rx, Ry, Rz, Rxx, Ryy, Rzz, rigid=1)
+
+        
+        # ---FRAME3DD INSTANCE---
+
+        # Initialize frame3dd object
+        myframe = frame3dd.Frame(nodes, reactions, elements, other)
+
+        # Add in extra mass of rna
+        inode   = np.array([towerEndID], dtype=np.int32) # rna
+        m_extra = np.array([m_rna])
+        Ixx = np.array([ I_rna[0] ])
+        Iyy = np.array([ I_rna[1] ])
+        Izz = np.array([ I_rna[2] ])
+        Ixy = np.array([ I_rna[3] ])
+        Ixz = np.array([ I_rna[4] ])
+        Iyz = np.array([ I_rna[5] ])
+        rhox = np.array([ cg_rna[0] ])
+        rhoy = np.array([ cg_rna[1] ])
+        rhoz = np.array([ cg_rna[2] ])
+        myframe.changeExtraNodeMass(inode, m_extra, Ixx, Iyy, Izz, Ixy, Ixz, Iyz, rhox, rhoy, rhoz, True)
+        
+        # Store load case into frame 3dd object
+        myframe.addLoadCase(load)
+
+
+        # ---DYNAMIC ANALYSIS---
+        nM = 6              # number of desired dynamic modes of vibration
+        Mmethod = 1         # 1: subspace Jacobi     2: Stodola
+        lump = 0            # 0: consistent mass ... 1: lumped mass matrix
+        tol = 1e-6          # mode shape tolerance
+        shift = 0.0         # shift value ... for unrestrained structures
+        
+        myframe.enableDynamics(nM, Mmethod, lump, tol, shift)
+
+        # ---DEBUGGING---
+        #myframe.write('debug.3dd') # For debugging
+
+        # ---RUN ANALYSIS---
+        try:
+            displacements, forces, reactions, internalForces, mass, modal = myframe.run()
+        except:
+            bad_input()
+            return
+            
+        # --OUTPUTS--
+        nE    = nelem.size
+        iCase = 0
+
         # natural frequncies
         unknowns['structural_frequencies'] = np.array( modal.freq )
 
         # deflections due to loading (from cylinder top and wind/wave loads)
         unknowns['top_deflection'] = displacements.dx[iCase, towerEndID-1]  # in yaw-aligned direction
 
-        # Summary of mass and volumes
-        unknowns['substructure_mass']  = m_pontoon + m_base.sum() + ncolumn*m_ballast.sum()
-        unknowns['structural_mass']    = mass.total_mass
-        unknowns['total_displacement'] = V_base.sum() + ncolumn*V_ballast.sum() + V_pontoon
-
-        # Find cb (center of buoyancy) for whole system
-        z_cb = (V_base.sum()*z_cb_base + ncolumn*V_ballast.sum()*z_cb_ballast + V_pontoon*z_cb) / unknowns['total_displacement']
-        unknowns['z_center_of_buoyancy'] = z_cb
-
         # Find cg (center of gravity) for whole system
-        unknowns['substructure_center_of_mass'] = (ncolumn*m_ballast.sum()*cg_ballast + m_base.sum()*cg_base +
-                                                   m_pontoon*cg_pontoon) / unknowns['substructure_mass']
-        unknowns['center_of_mass'] = (m_rna*cg_rna + m_tower.sum()*cg_tower +
-                                      unknowns['substructure_mass']*unknowns['substructure_center_of_mass']) / mass.total_mass
+        unknowns['structural_mass'] = mass.total_mass
+        unknowns['center_of_mass']  = (m_rna*cg_rna + m_tower.sum()*cg_tower +
+                                       unknowns['substructure_mass']*unknowns['substructure_center_of_mass']) / mass.total_mass
         Fsum = np.zeros(3)
         Msum = np.zeros(3)
         for k in xrange(len(rid)):
