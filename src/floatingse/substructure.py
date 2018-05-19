@@ -342,7 +342,8 @@ class Substructure(Component):
         
         # Number of degrees of freedom
         nDOF = 6
-        
+
+        # TODO: TOWER & RNA MASS AND MOI
         # Compute elements on mass matrix diagonal
         M_mat = np.zeros((nDOF,))
         # Surge, sway, heave just use normal inertia

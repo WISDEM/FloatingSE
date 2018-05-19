@@ -165,6 +165,8 @@ class FloatingInstance(object):
         self.params['auxiliary_stiffener_flange_width'] = 0.1
         self.params['auxiliary_stiffener_flange_thickness'] = 0.02
         self.params['auxiliary_stiffener_spacing'] = 0.4
+        self.params['fairlead_support_outer_diameter'] = 2*1.6
+        self.params['fairlead_support_wall_thickness'] = 0.0175
         self.params['pontoon_outer_diameter'] = 2*1.6
         self.params['pontoon_wall_thickness'] = 0.0175
         self.params['connection_ratio_max'] = 0.25

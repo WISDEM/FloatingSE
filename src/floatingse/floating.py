@@ -54,6 +54,7 @@ class FloatingSE(Group):
         # Add in the connecting truss
         self.add('load', FloatingLoading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
                                                                           'z0','beta','Uref','zref','shearExp','beta','cd_usr',
+                                                                          'fairlead_support_outer_diameter','fairlead_support_wall_thickness',
                                                                           'pontoon_outer_diameter','pontoon_wall_thickness','outer_cross_pontoons_int',
                                                                           'cross_attachment_pontoons_int','lower_attachment_pontoons_int',
                                                                           'upper_attachment_pontoons_int','lower_ring_pontoons_int',
@@ -157,7 +158,7 @@ class FloatingSE(Group):
         self.connect('auxiliary_wall_thickness', 'aux.wall_thickness')
 
         self.connect('fairlead', ['base.fairlead','aux.fairlead','sg.fairlead','mm.fairlead','subs.fairlead','load.fairlead'])
-        self.connect('fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell')
+        self.connect('fairlead_offset_from_shell', ['sg.fairlead_offset_from_shell','load.fairlead_offset_from_shell'])
 
         self.connect('mooring_line_length', 'mm.mooring_line_length')
         self.connect('anchor_radius', 'mm.anchor_radius')
@@ -368,6 +369,8 @@ def sparExample():
     prob['mooring_line_length']        = 902.2         # Unstretched mooring line length
     prob['anchor_radius']              = 853.87        # Distance from centerline to sea floor landing [m]
     prob['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
+    prob['fairlead_support_outer_diameter'] = 3.2    # Diameter of all fairlead support elements [m]
+    prob['fairlead_support_wall_thickness'] = 0.0175 # Thickness of all fairlead support elements [m]
 
     # Porperties of turbine tower
     prob['hub_height']              = 77.6                              # Length from tower base to top (not including freeboard) [m]
@@ -541,6 +544,8 @@ def semiExample():
     prob['mooring_line_length']        = 835.5         # Unstretched mooring line length
     prob['anchor_radius']              = 837.6         # Distance from centerline to sea floor landing [m]
     prob['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
+    prob['fairlead_support_outer_diameter'] = 3.2    # Diameter of all fairlead support elements [m]
+    prob['fairlead_support_wall_thickness'] = 0.0175 # Thickness of all fairlead support elements [m]
 
     # Porperties of turbine tower
     prob['hub_height']              = 77.6                              # Length from tower base to top (not including freeboard) [m]

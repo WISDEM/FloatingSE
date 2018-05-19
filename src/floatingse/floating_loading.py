@@ -64,8 +64,6 @@ class FloatingFrame(Component):
         self.add_param('auxiliary_column_Pz', np.zeros(nFull), units='N/m', desc='force per unit length in z-direction on ballast')
         self.add_param('auxiliary_column_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on ballast')
 
-        self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
-
         # Tower
         self.add_param('tower_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('tower_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
@@ -102,6 +100,10 @@ class FloatingFrame(Component):
         # Mooting parameters for loading
         self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines')
         self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
+        self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
+        self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
+        self.add_param('fairlead_support_outer_diameter', val=0.0, units='m',desc='fairlead support outer diameter')
+        self.add_param('fairlead_support_wall_thickness', val=0.0, units='m',desc='fairlead support wall thickness')
         
         # safety factors
         self.add_param('gamma_f', 0.0, desc='safety factor on loads')
@@ -124,7 +126,7 @@ class FloatingFrame(Component):
         self.add_output('pontoon_center_of_mass', val=0.0, units='m', desc='z-position of center of pontoon mass')
 
         self.add_output('top_deflection', 0.0, units='m', desc='Deflection of tower top in yaw-aligned +x direction')
-        self.add_output('pontoon_stress', val=np.zeros((60,)), desc='Utilization (<1) of von Mises stress by yield stress and safety factor for all pontoon elements')
+        self.add_output('pontoon_stress', val=np.zeros((70,)), desc='Utilization (<1) of von Mises stress by yield stress and safety factor for all pontoon elements')
 
         self.add_output('base_column_stress', np.zeros(nFull-1), desc='Von Mises stress utilization along base column at specified locations. Incudes safety factor.')
         self.add_output('base_column_shell_buckling', np.zeros(nFull-1), desc='Shell buckling constraint. Should be < 1 for feasibility. Includes safety factors')
@@ -180,6 +182,7 @@ class FloatingFrame(Component):
             return
         
         # Unpack variables
+        ncolumn         = int(params['number_of_auxiliary_columns'])
         crossAttachFlag = params['cross_attachment_pontoons']
         lowerAttachFlag = params['lower_attachment_pontoons']
         upperAttachFlag = params['upper_attachment_pontoons']
@@ -187,23 +190,24 @@ class FloatingFrame(Component):
         upperRingFlag   = params['upper_ring_pontoons']
         outerCrossFlag  = params['outer_cross_pontoons']
         
-        R_semi         = params['radius_to_auxiliary_column']
+        R_semi         = params['radius_to_auxiliary_column'] if ncolumn>0 else 0.0
         R_od_pontoon   = 0.5*params['pontoon_outer_diameter']
         R_od_base      = 0.5*params['base_d_full']
         R_od_ballast   = 0.5*params['auxiliary_d_full']
         R_od_tower     = 0.5*params['tower_d_full']
+        R_od_fairlead  = 0.5*params['fairlead_support_outer_diameter']
 
-        t_wall_base    = params['base_t_full']
-        t_wall_ballast = params['auxiliary_t_full']
-        t_wall_pontoon = params['pontoon_wall_thickness']
-        t_wall_tower   = params['tower_t_full']
+        t_wall_base     = params['base_t_full']
+        t_wall_ballast  = params['auxiliary_t_full']
+        t_wall_pontoon  = params['pontoon_wall_thickness']
+        t_wall_tower    = params['tower_t_full']
+        t_wall_fairlead = params['fairlead_support_wall_thickness']
 
         E              = params['E']
         G              = params['G']
         rho            = params['material_density']
         sigma_y        = params['yield_stress']
         
-        ncolumn        = int(params['number_of_auxiliary_columns'])
         z_base         = params['base_z_full']
         z_ballast      = params['auxiliary_z_full']
         z_tower        = params['tower_z_full']
@@ -237,6 +241,7 @@ class FloatingFrame(Component):
 
         nlines         = int(params['number_of_mooring_lines'])
         F_mooring      = params['mooring_neutral_load']
+        R_fairlead     = params['fairlead_offset_from_shell']
         
         gamma_f        = params['gamma_f']
         gamma_m        = params['gamma_m']
@@ -326,6 +331,16 @@ class FloatingFrame(Component):
             znode = np.append(znode, z_ballast )
             ballastUpperID.append( xnode.size )
 
+        # Add nodes where mooring lines attach, which may be offset from columns
+        mooringx  = (R_semi + R_fairlead) * np.cos( np.linspace(0, 2*np.pi, nlines+1) )
+        mooringy  = (R_semi + R_fairlead) * np.sin( np.linspace(0, 2*np.pi, nlines+1) )
+        mooringx  = mooringx[:-1]
+        mooringy  = mooringy[:-1]
+        mooringID = xnode.size + 1 + np.arange(nlines, dtype=np.int32)
+        xnode     = np.append(xnode, mooringx)
+        ynode     = np.append(ynode, mooringy)
+        znode     = np.append(znode, z_fairlead*np.ones(nlines) )
+            
         # Add nodes midway around outer ring for cross bracing
         if outerCrossFlag and ncolumn > 0:
             crossx = 0.5*(ballastx + np.roll(ballastx,1))
@@ -412,6 +427,27 @@ class FloatingFrame(Component):
         modG  = G   * np.ones(N1.shape)
         roll  = 0.0 * np.ones(N1.shape)
         dens  = rho * np.ones(N1.shape)
+
+        # Add in fairlead support elements
+        mooringEID = N1.size + 1
+        mytube  = Tube(2.0*R_od_fairlead, t_wall_fairlead)
+        nattach = len(fairleadID)
+        nlines_per_column = nlines / nattach
+        for k in xrange(nlines):
+            ifairlead = 0 if nattach==1 else k/nlines_per_column
+            N1   = np.append(N1  , fairleadID[ifairlead] )
+            N2   = np.append(N2  , mooringID[k] )
+            Ax   = np.append(Ax  , mytube.Area )
+            As   = np.append(As  , mytube.Asx )
+            Jx   = np.append(Jx  , mytube.J0 )
+            I    = np.append(I   , mytube.Jxx )
+            S    = np.append(S   , mytube.S )
+            C    = np.append(C   , mytube.C )
+            modE = np.append(modE, E )
+            modG = np.append(modG, G )
+            roll = np.append(roll, 0.0 )
+            dens = np.append(dens, rho )
+            
 
         # Now mock up cylindrical columns as truss members even though long, slender assumption breaks down
         # Will set density = 0.0 so that we don't double count the mass
@@ -611,7 +647,6 @@ class FloatingFrame(Component):
                 #Uz       = np.append(Uz, factor * Frange * np.ones(nrange.shape))
                 F_truss += factor * Frange * elemL[outerCrossEID-1] * ncolumn
                 z_cb    += factor * Frange * elemL[outerCrossEID-1] * ncolumn * elemCoG[outerCrossEID-1,:]
-                #Ux = Uy = np.append(Ux,  np.zeros(Uz.shape)
         if ncolumn > 0 and znode[ballastUpperID[0]-1] < 0.0:
             if upperAttachFlag:
                 EL       = np.append(EL, upperAttachEID + nrange)
@@ -627,8 +662,15 @@ class FloatingFrame(Component):
                 Uz       = np.append(Uz, Frange * np.ones(nrange.shape))
                 F_truss += Frange * elemL[upperRingEID-1] * ncolumn
                 z_cb    += Frange * elemL[upperRingEID-1] * ncolumn * elemCoG[upperRingEID-1,:]
-                Ux = Uy = np.zeros(Uz.shape)
-
+        # Now do fairlead supports
+        nrange   = np.arange(nlines, dtype=np.int32)
+        Frange   = np.pi * R_od_fairlead**2 * rhoWater * gravity
+        EL       = np.append(EL, mooringEID + nrange)
+        Ux       = np.append(Ux, np.zeros(nrange.shape))
+        Uy       = np.append(Uy, np.zeros(nrange.shape))
+        Uz       = np.append(Uz, Frange * np.ones(nrange.shape))
+        F_truss += Frange * elemL[mooringEID-1] * nlines
+        z_cb    += Frange * elemL[mooringEID-1] * nlines * elemCoG[mooringEID-1,:]
         # Finally add in all the uniform loads on buoyancy
         load.changeUniformLoads(EL, Ux, Uy, Uz)
 
@@ -791,6 +833,8 @@ class FloatingFrame(Component):
             sigma_sh_pon = sigma_sh[idx]
             sigma_h_pon  = util.hoopStress(2*R_od_pontoon, t_wall_pontoon, qdyn_pontoon) * np.ones(sigma_ax_pon.shape)
 
+            a = unknowns['pontoon_stress']
+            b = unknowns['pontoon_stress'][:npon]
             unknowns['pontoon_stress'][:npon] = util.vonMisesStressUtilization(sigma_ax_pon, sigma_h_pon, sigma_sh_pon,
                                                                                gamma_f*gamma_m*gamma_n, sigma_y)
         
@@ -905,6 +949,8 @@ class FloatingLoading(Group):
         self.add('upper_ring_pontoons_int',        IndepVarComp('upper_ring_pontoons_int', 1), promotes=['*'])
         self.add('pontoon_cost_rate',          IndepVarComp('pontoon_cost_rate', 0.0), promotes=['*'])
         self.add('connection_ratio_max',       IndepVarComp('connection_ratio_max', 0.0), promotes=['*'])
+        self.add('fairlead_support_outer_diameter',     IndepVarComp('fairlead_support_outer_diameter', 0.0), promotes=['*'])
+        self.add('fairlead_support_wall_thickness',     IndepVarComp('fairlead_support_wall_thickness', 0.0), promotes=['*'])
 
         # All the components
         self.add('wind', PowerWind(nFull), promotes=['z0','Uref','shearExp','zref'])

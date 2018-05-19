@@ -48,6 +48,10 @@ def getParams():
     params['mooring_neutral_load'] = 1e2*np.ones((15,3))
     
     params['fairlead'] = 7.5
+    params['fairlead_offset_from_shell'] = 0.5
+    params['fairlead_support_outer_diameter'] = 2.0
+    params['fairlead_support_wall_thickness'] = 1.0
+    
     params['base_pontoon_attach_upper'] = 8.0
     params['base_pontoon_attach_lower'] = -14.0
 
@@ -121,7 +125,7 @@ class TestFrame(unittest.TestCase):
         self.unknowns = {}
         self.resid = None
 
-        self.unknowns['pontoon_stress'] = np.zeros(50)
+        self.unknowns['pontoon_stress'] = np.zeros(70)
         
         self.mytruss = sP.FloatingFrame(NPTS)
 
@@ -162,6 +166,7 @@ class TestFrame(unittest.TestCase):
         rho    = self.params['material_density']
         rhoW   = self.params['water_density']
 
+        self.params['number_of_mooring_lines'] = 0.0
         self.params['cross_attachment_pontoons'] = False
         self.params['lower_attachment_pontoons'] = True
         self.params['upper_attachment_pontoons'] = False
@@ -268,10 +273,15 @@ class TestFrame(unittest.TestCase):
         self.params['water_density'] = 1e-12
         self.params['number_of_mooring_lines'] = 3
         self.params['mooring_neutral_load'] = 10.0*np.ones((15,3))
-        
+        self.params['fairlead_offset_from_shell'] = 0.1
+        self.params['fairlead_support_outer_diameter'] = 2*np.sqrt(2.0/np.pi)
+        self.params['fairlead_support_wall_thickness'] = np.sqrt(2.0/np.pi) - np.sqrt(1.0/np.pi)
+        self.params['material_density'] = 20.0
+        self.params['radius_to_auxiliary_column'] = 1.0
+
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
-        m = NSECTIONS*2 + 1
+        m = NSECTIONS*2 + 1 + 3*20.0*1.0*0.1
         self.assertAlmostEqual(self.unknowns['structural_mass'], m, 4)
         self.assertAlmostEqual(self.unknowns['substructure_mass'], NSECTIONS, 5)
         npt.assert_almost_equal(self.unknowns['total_force'], 3*10 + np.array([10.0, 10.0, 10-m*g]), decimal=1)
@@ -288,7 +298,7 @@ class TestSandbox(unittest.TestCase):
         self.params = getParams()
         self.unknowns = {}
         self.resid = None
-        self.unknowns['pontoon_stress'] = np.zeros(50)
+        self.unknowns['pontoon_stress'] = np.zeros(70)
         self.mytruss = sP.FloatingFrame(NPTS)
 
     def tearDown(self):

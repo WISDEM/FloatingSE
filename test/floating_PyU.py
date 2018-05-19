@@ -78,6 +78,8 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['mooring_line_length']        = 902.2         # Unstretched mooring line length
         self.myfloat['anchor_radius']              = 853.87        # Distance from centerline to sea floor landing [m]
         self.myfloat['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
+        self.myfloat['fairlead_support_outer_diameter'] = 3.2    # Diameter of all fairlead support elements [m]
+        self.myfloat['fairlead_support_wall_thickness'] = 0.0175 # Thickness of all fairlead support elements [m]
 
         # Mooring constraints
         self.myfloat['mooring_max_offset'] = 0.1*self.myfloat['water_depth'] # Max surge/sway offset [m]      
