@@ -33,8 +33,9 @@ class FloatingSE(Group):
         self.add('hub', NewHubHeight(), promotes=['*'])
 
         self.add('tow', TowerLeanSE(nSection+1,self.nFull), promotes=['material_density','tower_section_height',
-                                                                 'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
-                                                                 'tower_buckling_length','min_taper','min_d_to_t','rna_mass','rna_cg','rna_I','tower_mass'])
+                                                                      'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
+                                                                      'tower_buckling_length','min_taper','min_d_to_t','rna_mass','rna_cg','rna_I',
+                                                                      'tower_mass','tower_I_base'])
         
         # Next do base and ballast columns
         # Ballast columns are replicated from same design in the components
@@ -66,7 +67,8 @@ class FloatingSE(Group):
 
         # Run main Semi analysis
         self.add('subs', Substructure(self.nFull), promotes=['water_density','total_cost','total_mass','number_of_auxiliary_columns',
-                                                             'structural_frequencies','rigid_body_periods'])
+                                                             'structural_frequencies','rigid_body_periods','rna_I','rna_cg','rna_mass',
+                                                             'tower_I_base','tower_mass'])
 
         # Define all input variables from all models
         
@@ -143,9 +145,9 @@ class FloatingSE(Group):
         self.connect('base_outer_diameter', 'base.diameter')
         self.connect('base_wall_thickness', 'base.wall_thickness')
 
-        self.connect('tow.d_full', 'load.windLoads.d')
+        self.connect('tow.d_full', 'load.windLoads.d') # includes tower_d_full
         self.connect('tow.t_full', 'load.tower_t_full')
-        self.connect('tow.z_full', 'load.wind.z')
+        self.connect('tow.z_full', ['load.wind.z','subs.tower_z_full']) # includes tower_z_full
         self.connect('tower_outer_diameter','sg.tower_base',src_indices=[0])
         self.connect('tow.cm.mass','load.tower_mass')
         self.connect('tower_buckling_length','load.tower_buckling_length')
@@ -227,8 +229,8 @@ class FloatingSE(Group):
         self.connect('mm.max_offset_restoring_force', 'subs.mooring_surge_restoring_force')
         self.connect('mm.max_heel_restoring_force', 'subs.mooring_pitch_restoring_force')
         
-        self.connect('base.z_center_of_mass', 'load.base_column_center_of_mass')
-        self.connect('base.z_center_of_buoyancy', 'load.base_column_center_of_buoyancy')
+        self.connect('base.z_center_of_mass', ['load.base_column_center_of_mass','subs.base_column_center_of_mass'])
+        self.connect('base.z_center_of_buoyancy', ['load.base_column_center_of_buoyancy','subs.base_column_center_of_buoyancy'])
         self.connect('base.I_column', 'subs.base_column_moments_of_inertia')
         self.connect('base.Iwater', 'subs.base_column_Iwaterplane')
         self.connect('base.Awater', 'subs.base_column_Awaterplane')
@@ -243,8 +245,8 @@ class FloatingSE(Group):
         self.connect('base.Pz', 'load.base_column_Pz')
         self.connect('base.qdyn', 'load.base_column_qdyn')
 
-        self.connect('aux.z_center_of_mass', 'load.auxiliary_column_center_of_mass')
-        self.connect('aux.z_center_of_buoyancy', 'load.auxiliary_column_center_of_buoyancy')
+        self.connect('aux.z_center_of_mass', ['load.auxiliary_column_center_of_mass','subs.auxiliary_column_center_of_mass'])
+        self.connect('aux.z_center_of_buoyancy', ['load.auxiliary_column_center_of_buoyancy','subs.auxiliary_column_center_of_buoyancy'])
         self.connect('aux.I_column', 'subs.auxiliary_column_moments_of_inertia')
         self.connect('aux.Iwater', 'subs.auxiliary_column_Iwaterplane')
         self.connect('aux.Awater', 'subs.auxiliary_column_Awaterplane')

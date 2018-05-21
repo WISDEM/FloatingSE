@@ -57,6 +57,13 @@ class TestSubs(unittest.TestCase):
         self.params['auxiliary_column_added_mass'] = np.array([10.0, 10.0, 2.0, 30.0, 30.0, 0.0])
         self.params['auxiliary_column_moments_of_inertia'] = 1e1 * np.array([10.0, 10.0, 2.0, 0.0, 0.0, 0.0])
 
+        self.params['tower_z_full'] = np.linspace(0, 90, 3*NSECTIONS+1)
+        self.params['tower_mass'] = 2e2
+        self.params['rna_mass'] = 6e1
+        self.params['rna_cg'] = np.array([0.0, 0.0, 5.0])
+        self.params['rna_I'] = 1e5*np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        self.params['tower_I_base'] = 1e5*np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        
         self.params['number_of_auxiliary_columns'] = 3
         self.params['water_ballast_radius_vector'] = 40.0 * np.ones(5)
         self.params['water_ballast_zpts_vector'] = np.array([-10, -9, -8, -7, -6])
@@ -149,6 +156,10 @@ class TestSubs(unittest.TestCase):
         self.mysemi.balance(self.params, self.unknowns)
         self.params['base_column_center_of_mass'] = self.unknowns['center_of_mass'][-1]
         self.params['base_column_center_of_buoyancy'] = self.unknowns['center_of_mass'][-1]+2.0
+        self.params['tower_mass'] = 0.0
+        self.params['rna_mass'] = 0.0
+        self.params['rna_I'] = 1e2*np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        self.params['tower_I_base'] = 1e2*np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
         self.mysemi.compute_stability(self.params, self.unknowns)
         self.mysemi.compute_rigid_body_periods(self.params, self.unknowns)
 
@@ -162,6 +173,7 @@ class TestSubs(unittest.TestCase):
         M_expect[3:] = self.params['base_column_moments_of_inertia'][:3]
         M_expect[3:5] += I_water[:2] + m_water*(z_water-z_cg)**2
         M_expect[-1] += I_water[2]
+        M_expect[3:] += 2e2
         npt.assert_equal(self.unknowns['mass_matrix'], M_expect)
 
         A_expect = np.zeros(6)

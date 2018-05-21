@@ -114,6 +114,13 @@ class Substructure(Component):
         self.add_param('auxiliary_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
         self.add_param('auxiliary_column_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of column about base [xx yy zz xy xz yz]')
         self.add_param('auxiliary_column_added_mass', val=np.zeros(6), units='kg', desc='Diagonal of added mass matrix- masses are first 3 entries, moments are last 3')
+
+        self.add_param('tower_mass', val=0.0, units='kg', desc='Mass of tower')
+        self.add_param('tower_I_base', val=np.zeros(6), units='kg*m**2', desc='Moments about tower base')
+        self.add_param('tower_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('rna_mass', val=0.0, units='kg', desc='Mass of RNA')
+        self.add_param('rna_cg', val=np.zeros(3), units='m', desc='Location of RNA center of mass relative to tower top')
+        self.add_param('rna_I', val=np.zeros(6), units='kg*m**2', desc='Moments about turbine base')
         
         self.add_param('water_ballast_zpts_vector', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
         self.add_param('water_ballast_radius_vector', val=np.zeros((nFull,)), units='m', desc='Inner radius of potential ballast mass')
@@ -315,6 +322,8 @@ class Substructure(Component):
         
         m_base          = np.sum(params['base_column_mass'])
         m_column        = np.sum(params['auxiliary_column_mass'])
+        m_tower         = np.sum(params['tower_mass'])
+        m_rna           = params['rna_mass']
         m_struct        = params['structural_mass']
         m_water         = np.maximum(0.0, unknowns['variable_ballast_mass'])
         m_a_base        = params['base_column_added_mass']
@@ -329,6 +338,8 @@ class Substructure(Component):
         I_base          = params['base_column_moments_of_inertia']
         I_column        = params['auxiliary_column_moments_of_inertia']
         I_water         = unknowns['variable_ballast_moments_of_inertia']
+        I_tower         = params['tower_I_base']
+        I_rna           = params['rna_I']
 
         z_cg_base       = params['base_column_center_of_mass']
         z_cb_base       = params['base_column_center_of_buoyancy']
@@ -336,6 +347,8 @@ class Substructure(Component):
         z_cb_column     = params['auxiliary_column_center_of_buoyancy']
         z_cg_water      = unknowns['variable_ballast_center_of_mass']
         r_cg            = unknowns['center_of_mass']
+        cg_rna          = params['rna_cg']
+        z_tower         = params['tower_z_full']
         
         K_moor          = np.diag( params['mooring_stiffness'] )
 
@@ -343,7 +356,6 @@ class Substructure(Component):
         # Number of degrees of freedom
         nDOF = 6
 
-        # TODO: TOWER & RNA MASS AND MOI
         # Compute elements on mass matrix diagonal
         M_mat = np.zeros((nDOF,))
         # Surge, sway, heave just use normal inertia
@@ -363,6 +375,12 @@ class Substructure(Component):
         # Add in variable ballast
         R         = np.array([0.0, 0.0, z_cg_water]) - r_cg
         I_total  += assembleI(I_water) + m_water*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        # Add in tower
+        R         = np.array([0.0, 0.0, z_tower[0]]) - r_cg
+        I_total  += assembleI(I_tower) + m_tower*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        # Add in RNA
+        R         = np.array([0.0, 0.0, z_tower[-1]]) + cg_rna - r_cg
+        I_total  += assembleI(I_rna) + m_rna*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
         # Stuff moments of inertia into mass matrix
         M_mat[3:] = unassembleI( I_total )[:3]
         unknowns['mass_matrix'] = M_mat
