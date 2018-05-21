@@ -153,14 +153,14 @@ class MapMooring(Component):
             self.area                = 0.25 * np.pi * Dmooring2
             self.cost_per_length     = 3.415e4  * Dmooring2 #0.42059603*1e-3*self.min_break_load/gravity + 109.5
 
-        elif lineType == 'FIBER': 
+        elif lineType == 'FIBER': # Wire rope with fiber rope
             self.min_break_load      = 584175e3 * Dmooring2
             self.wet_mass_per_length = 3.6109e3 * Dmooring2
             self.axial_stiffness     = 3.67e10  * Dmooring2
             self.area                = 0.455 * 0.25 * np.pi * Dmooring2
             self.cost_per_length     = 2.0 * 6.32e4  * Dmooring2 #0.53676471*1e-3*self.min_break_load/gravity
 
-        elif lineType == 'IWRC':
+        elif lineType == 'IWRC': # Wire rope with steel core
             self.min_break_load      = 633358e3 * Dmooring2
             self.wet_mass_per_length = 3.9897e3 * Dmooring2
             self.axial_stiffness     = 4.04e10  * Dmooring2
