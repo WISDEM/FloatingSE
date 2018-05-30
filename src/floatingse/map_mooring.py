@@ -301,7 +301,7 @@ class MapMooring(Component):
         OUTPUTS  : none
         """
         # Unpack variables
-        nlines = int(params['number_of_mooring_lines'])
+        nlines = max(1, int(params['number_of_mooring_lines']))
         
         self.finput.append('---------------------- SOLVER OPTIONS-----------------------------------------')
         self.finput.append('Option')
@@ -452,8 +452,8 @@ class MapMooring(Component):
         min_angle     = None
         F_max_tension = None
         F_min         = np.inf
-        T = np.zeros((nlines,))
-        F = np.zeros((nlines,))
+        T = np.zeros((NLINES_MAX,))
+        F = np.zeros((NLINES_MAX,))
         # Loop around all angles to find weakest point
         for a in angles:
             # Unit vector and offset in x-y components
