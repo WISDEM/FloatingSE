@@ -742,7 +742,7 @@ class FloatingFrame(Component):
         cg_dist = np.sum( (np.c_[xnode, ynode, znode] - unknowns['substructure_center_of_mass'][np.newaxis,:])**2, axis=1 )
         cg_node = np.argmin(cg_dist)
         # Free=0, Rigid=1
-        rid = np.array([cg_node+1]) #np.array(fairleadID)
+        rid = np.array([baseBeginID]) #np.array([cg_node+1]) #np.array(fairleadID)
         Rx = Ry = Rz = Rxx = Ryy = Rzz = np.ones(rid.shape)
 
         # Get reactions object from frame3dd
