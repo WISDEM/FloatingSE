@@ -129,14 +129,23 @@ class FloatingFrame(Component):
         self.add_output('pontoon_stress', val=np.zeros((70,)), desc='Utilization (<1) of von Mises stress by yield stress and safety factor for all pontoon elements')
 
         self.add_output('base_column_stress', np.zeros(nFull-1), desc='Von Mises stress utilization along base column at specified locations. Incudes safety factor.')
+        self.add_output('base_column_stress:axial', np.zeros(nFull-1), desc='Axial stress along base column at specified locations.')
+        self.add_output('base_column_stress:shear', np.zeros(nFull-1), desc='Shear stress along base column at specified locations.')
+        self.add_output('base_column_stress:hoop', np.zeros(nFull-1), desc='Hoop stress along base column at specified locations.')
         self.add_output('base_column_shell_buckling', np.zeros(nFull-1), desc='Shell buckling constraint. Should be < 1 for feasibility. Includes safety factors')
         self.add_output('base_column_global_buckling', np.zeros(nFull-1), desc='Global buckling constraint. Should be < 1 for feasibility. Includes safety factors')
 
-        self.add_output('auxiliary_column_stress', np.zeros(nFull-1), desc='Von Mises stress utilization along base column at specified locations. Incudes safety factor.')
+        self.add_output('auxiliary_column_stress', np.zeros(nFull-1), desc='Von Mises stress utilization along auxiliary column at specified locations. Incudes safety factor.')
+        self.add_output('auxiliary_column_stress:axial', np.zeros(nFull-1), desc='Axial stress along auxiliary column at specified locations.')
+        self.add_output('auxiliary_column_stress:shear', np.zeros(nFull-1), desc='Shear stress along auxiliary column at specified locations.')
+        self.add_output('auxiliary_column_stress:hoop', np.zeros(nFull-1), desc='Hoop stress along auxiliary column at specified locations.')
         self.add_output('auxiliary_column_shell_buckling', np.zeros(nFull-1), desc='Shell buckling constraint. Should be < 1 for feasibility. Includes safety factors')
         self.add_output('auxiliary_column_global_buckling', np.zeros(nFull-1), desc='Global buckling constraint. Should be < 1 for feasibility. Includes safety factors')
 
         self.add_output('tower_stress', np.zeros(nFull-1), desc='Von Mises stress utilization along tower at specified locations.  incudes safety factor.')
+        self.add_output('tower_column_stress:axial', np.zeros(nFull-1), desc='Axial stress along tower column at specified locations.')
+        self.add_output('tower_column_stress:shear', np.zeros(nFull-1), desc='Shear stress along tower column at specified locations.')
+        self.add_output('tower_column_stress:hoop', np.zeros(nFull-1), desc='Hoop stress along tower column at specified locations.')
         self.add_output('tower_shell_buckling', np.zeros(nFull-1), desc='Shell buckling constraint.  Should be < 1 for feasibility.  Includes safety factors')
         self.add_output('tower_global_buckling', np.zeros(nFull-1), desc='Global buckling constraint.  Should be < 1 for feasibility.  Includes safety factors')
 
@@ -833,8 +842,6 @@ class FloatingFrame(Component):
             sigma_sh_pon = sigma_sh[idx]
             sigma_h_pon  = util.hoopStress(2*R_od_pontoon, t_wall_pontoon, qdyn_pontoon) * np.ones(sigma_ax_pon.shape)
 
-            a = unknowns['pontoon_stress']
-            b = unknowns['pontoon_stress'][:npon]
             unknowns['pontoon_stress'][:npon] = util.vonMisesStressUtilization(sigma_ax_pon, sigma_h_pon, sigma_sh_pon,
                                                                                gamma_f*gamma_m*gamma_n, sigma_y)
         
@@ -846,6 +853,9 @@ class FloatingFrame(Component):
         qdyn_tower,_   = nodal2sectional( params['tower_qdyn'] )
         sigma_h_tower  = util.hoopStressEurocode(z_tower, 2*R_od_tower, t_wall_tower, L_reinforced, qdyn_tower)
 
+        unknowns['tower_column_stress:axial'] = sigma_ax_tower
+        unknowns['tower_column_stress:shear'] = sigma_sh_tower
+        unknowns['tower_column_stress:hoop']  = sigma_h_tower
         unknowns['tower_stress'] = util.vonMisesStressUtilization(sigma_ax_tower, sigma_h_tower, sigma_sh_tower,
                                                                   gamma_f*gamma_m*gamma_n, sigma_y)
 
@@ -865,6 +875,9 @@ class FloatingFrame(Component):
         qdyn_base,_   = nodal2sectional( params['base_column_qdyn'] )
         sigma_h_base  = util.hoopStressEurocode(z_base, 2*R_od_base, t_wall_base, L_reinforced, qdyn_base)
 
+        unknowns['base_column_stress:axial'] = sigma_ax_base
+        unknowns['base_column_stress:shear'] = sigma_sh_base
+        unknowns['base_column_stress:hoop']  = sigma_h_base
         unknowns['base_column_stress'] = util.vonMisesStressUtilization(sigma_ax_base, sigma_h_base, sigma_sh_base,
                                                                         gamma_f*gamma_m*gamma_n, sigma_y)
 
@@ -885,6 +898,9 @@ class FloatingFrame(Component):
             qdyn_ballast,_   = nodal2sectional( params['auxiliary_column_qdyn'] )
             sigma_h_ballast  = util.hoopStressEurocode(z_ballast, 2*R_od_ballast, t_wall_ballast, L_reinforced, qdyn_ballast)
 
+            unknowns['auxiliary_column_stress:axial'] = sigma_ax_ballast
+            unknowns['auxiliary_column_stress:shear'] = sigma_sh_ballast
+            unknowns['auxiliary_column_stress:hoop']  = sigma_h_ballast
             unknowns['auxiliary_column_stress'] = util.vonMisesStressUtilization(sigma_ax_ballast, sigma_h_ballast, sigma_sh_ballast,
                                                                             gamma_f*gamma_m*gamma_n, sigma_y)
 
