@@ -887,7 +887,7 @@ class FloatingFrame(Component):
         unknowns['base_column_stress:axial'] = sigma_ax_base
         unknowns['base_column_stress:shear'] = sigma_sh_base
         unknowns['base_column_stress:hoopStiffen']  = sigma_h_base
-        unknowns['base_column_stress:hoop']  = util.hoopStressEurocode(2*R_od_base, t_wall_base, qdyn_base)
+        unknowns['base_column_stress:hoop']  = util.hoopStress(2*R_od_base, t_wall_base, qdyn_base)
         unknowns['base_column_stress'] = util.vonMisesStressUtilization(sigma_ax_base, sigma_h_base, sigma_sh_base,
                                                                         gamma_f*gamma_m*gamma_n, sigma_y)
 
