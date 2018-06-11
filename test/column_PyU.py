@@ -267,6 +267,8 @@ class TestProperties(unittest.TestCase):
 
 
     def testBalance(self):
+        rho_w = self.params['water_density']
+
         self.myspar.balance_column(self.params, self.unknowns)
         m_spar, cg_spar, I_spar = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
         m_ballast, cg_ballast, I_ballast = self.myspar.compute_ballast_mass_cg(self.params, self.unknowns)
@@ -282,6 +284,7 @@ class TestProperties(unittest.TestCase):
         Ixx = 0.25 * np.pi * 1e4
         Axx = np.pi * 1e2
         self.assertAlmostEqual(self.unknowns['displaced_volume'].sum(), V_expect)
+        self.assertAlmostEqual(self.unknowns['hydrostatic_force'].sum(), V_expect*rho_w*g)
         self.assertAlmostEqual(self.unknowns['z_center_of_buoyancy'], cb_expect)
         self.assertAlmostEqual(self.unknowns['Iwater'], Ixx)
         self.assertAlmostEqual(self.unknowns['Awater'], Axx)
@@ -293,7 +296,6 @@ class TestProperties(unittest.TestCase):
         npt.assert_almost_equal(self.unknowns['I_column'], I_expect)
 
         m_a = np.zeros(6)
-        rho_w = self.params['water_density']
         m_a[:2] = V_expect * rho_w
         m_a[2]  = 0.5 * (8.0/3.0) * rho_w * 10.0**3
         m_a[3:5] = np.pi * rho_w * 100.0 * 2.0 * 17.5**3.0 / 3.0
@@ -307,8 +309,13 @@ class TestProperties(unittest.TestCase):
         V_expect = np.pi * 100.0 * 50.0
         cb_expect = -25.0 + self.params['z_full'][-1]
         self.assertAlmostEqual(self.unknowns['displaced_volume'].sum(), V_expect)
+        self.assertAlmostEqual(self.unknowns['hydrostatic_force'].sum(), V_expect*rho_w*g)
         self.assertAlmostEqual(self.unknowns['z_center_of_buoyancy'], cb_expect)
 
+        # Test taper- check hydrostatic via Archimedes within 1%
+        self.params['d_full'][5] -= 8.0
+        self.myspar.balance_column(self.params, self.unknowns)
+        self.assertAlmostEqual(self.unknowns['hydrostatic_force'].sum() / (self.unknowns['displaced_volume'].sum()*rho_w*g), 1.0, delta=1e-2)
         
     def testCheckCost(self):
         self.unknowns['ballast_mass'] = 50.0

@@ -34,6 +34,13 @@ def DrawTruss(mytruss):
 def getParams():
     params = {}
 
+    params['E'] = 200e9
+    params['G'] = 79.3e9
+    params['material_density'] = 7850.0
+    params['yield_stress'] = 345e6
+
+    params['water_density'] = 1025.0
+
     params['cross_attachment_pontoons'] = True
     params['lower_attachment_pontoons'] = True
     params['upper_attachment_pontoons'] = True
@@ -65,6 +72,8 @@ def getParams():
     params['base_column_mass'] = 1e2 * np.ones(NSECTIONS)
     params['base_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
     params['base_column_displaced_volume'] = 1e2 * np.ones(NSECTIONS)
+    params['base_column_hydrostatic_force'] = np.zeros(NSECTIONS)
+    params['base_column_hydrostatic_force'][0] = params['base_column_displaced_volume'].sum()*g*params['water_density']
     params['base_column_center_of_buoyancy'] = -10.0
     params['base_column_center_of_mass'] = -6.0
     params['base_column_Px'] = 50.0 * np.ones(NPTS)
@@ -78,6 +87,8 @@ def getParams():
     params['auxiliary_column_mass'] = 1e1 * np.ones(NSECTIONS)
     params['auxiliary_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
     params['auxiliary_column_displaced_volume'] = 1e1 * np.ones(NSECTIONS)
+    params['auxiliary_column_hydrostatic_force'] = np.zeros(NSECTIONS)
+    params['auxiliary_column_hydrostatic_force'][0] = params['base_column_displaced_volume'].sum()*g*params['water_density']
     params['auxiliary_column_center_of_buoyancy'] = -5.0
     params['auxiliary_column_center_of_mass'] = -3.0
     params['auxiliary_column_Px'] = 50.0 * np.ones(NPTS)
@@ -96,18 +107,11 @@ def getParams():
     params['tower_Pz'] = np.zeros(NPTS)
     params['tower_qdyn'] = 70.0 * np.ones(NPTS)
 
-    params['E'] = 200e9
-    params['G'] = 79.3e9
-    params['material_density'] = 7850.0
-    params['yield_stress'] = 345e6
-
     params['rna_force'] = 6e1*np.ones(3)
     params['rna_moment'] = 7e2*np.ones(3)
     params['rna_mass'] = 6e1
     params['rna_cg'] = np.array([3.05, 2.96, 2.13])
     params['rna_I'] = np.array([3.05284574e9, 2.96031642e9, 2.13639924e7, 0.0, 2.89884849e7, 0.0])
-
-    params['water_density'] = 1025.0
 
     params['gamma_f'] = 1.35
     params['gamma_m'] = 1.1
@@ -247,8 +251,10 @@ class TestFrame(unittest.TestCase):
         self.params['number_of_auxiliary_columns'] = 0
         self.params['base_column_mass'] = 1.0 * np.ones(NSECTIONS)
         self.params['base_column_center_of_mass'] = 0.0
+        self.params['base_column_hydrostatic_force'] = 1e-12 * np.ones(NSECTIONS)
         self.params['auxiliary_column_mass'] = 0.0 * np.ones(NSECTIONS)
         self.params['auxiliary_column_center_of_mass'] = 0.0
+        self.params['auxiliary_column_hydrostatic_force'] = 1e-12 * np.ones(NSECTIONS)
         self.params['tower_mass'] = 1.0 * np.ones(NSECTIONS)
         self.params['tower_center_of_mass'] = 0.0
         self.params['rna_mass'] = 1.0

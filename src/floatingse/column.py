@@ -379,6 +379,7 @@ class ColumnProperties(Component):
         self.add_output('Iwater', val=0.0, units='m**4', desc='Second moment of area of waterplace cross section')
         self.add_output('I_column', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of whole column relative to keel point')
         self.add_output('displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='Volume of water displaced by column by section')
+        self.add_output('hydrostatic_force', val=np.zeros((nFull-1,)), units='N', desc='Net z-force on column sections')
  
         self.add_output('spar_cost', val=0.0, units='USD', desc='cost of spar structure')
         self.add_output('spar_mass', val=0.0, units='kg', desc='mass of spar structure')
@@ -604,23 +605,30 @@ class ColumnProperties(Component):
             r_waterline = R_od[-1]
             r_under     = R_od
             z_under     = z_nodes
-            
-        V_under     = frustum.frustumVol(r_under[:-1], r_under[1:], np.diff(z_under))
-        # 0-pad so that it has the length of sections
-        add0        = np.maximum(0, self.section_mass.size-V_under.size)
-        V_under     = np.r_[V_under, np.zeros((add0,))]
-        unknowns['displaced_volume'] = V_under
+
+        # Submerged volume (with zero-padding)
+        V_under = frustum.frustumVol(r_under[:-1], r_under[1:], np.diff(z_under))
+        add0    = np.maximum(0, self.section_mass.size-V_under.size)
+        unknowns['displaced_volume'] = np.r_[V_under, np.zeros(add0)]
 
         # Compute Center of Buoyancy in z-coordinates (0=waterline)
         # First get z-coordinates of CG of all frustums
         z_cg_under  = frustum.frustumCG(r_under[:-1], r_under[1:], np.diff(z_under))
         z_cg_under += z_under[:-1]
-        z_cg_under  = np.r_[z_cg_under, np.zeros((add0,))]
         # Now take weighted average of these CG points with volume
         V_under += eps
         z_cb     = np.dot(V_under, z_cg_under) / V_under.sum()
         unknowns['z_center_of_buoyancy'] = z_cb
 
+        # Find total hydrostatic force by section- sign says in which direction force acts
+        z_section,_ = nodal2sectional(z_under)
+        F_hydro     = np.pi * np.diff(r_under**2.0) * np.maximum(0.0, -z_section) #cg_under))
+        F_hydro[0] += np.pi * r_under[0]**2 * (-z_under[0])
+        if z_nodes[-1] < 0.0:
+            F_hydro[-1] -= np.pi * r_under[-1]**2 * (-z_under[-1])
+        F_hydro    *= rho_water * gravity
+        unknowns['hydrostatic_force'] = np.r_[F_hydro, np.zeros(add0)]
+        
         # 2nd moment of area for circular cross section
         # Note: Assuming Iwater here depends on "water displacement" cross-section
         # and not actual moment of inertia type of cross section (thin hoop)
@@ -812,7 +820,7 @@ class Column(Group):
                                                            'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
                                                            'variable_ballast_interp_radius','variable_ballast_interp_zpts',
                                                            'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater','I_column',
-                                                           'displaced_volume','added_mass','total_mass','total_cost',
+                                                           'displaced_volume','hydrostatic_force','added_mass','total_mass','total_cost',
                                                            'ballast_mass','ballast_I_keel', 'ballast_z_cg'])
 
         self.add('wind', PowerWind(nFull), promotes=['Uref','zref','shearExp','z0'])

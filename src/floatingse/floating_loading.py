@@ -40,6 +40,7 @@ class FloatingFrame(Component):
         self.add_param('base_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of base column by section')
         self.add_param('base_column_buckling_length', val=np.zeros((nFull-1,)), units='m', desc='distance between ring stiffeners')
         self.add_param('base_column_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
+        self.add_param('base_column_hydrostatic_force', val=np.zeros((nFull-1,)), units='N', desc='Net z-force of hydrostatic pressure by section')
         self.add_param('base_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
         self.add_param('base_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
         self.add_param('base_column_Px', np.zeros(nFull), units='N/m', desc='force per unit length in x-direction on base')
@@ -57,6 +58,7 @@ class FloatingFrame(Component):
         self.add_param('auxiliary_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
         self.add_param('auxiliary_column_buckling_length', val=np.zeros((nFull-1,)), units='m', desc='distance between ring stiffeners')
         self.add_param('auxiliary_column_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
+        self.add_param('auxiliary_column_hydrostatic_force', val=np.zeros((nFull-1,)), units='N', desc='Net z-force of hydrostatic pressure by section')
         self.add_param('auxiliary_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
         self.add_param('auxiliary_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
         self.add_param('auxiliary_column_Px', np.zeros(nFull), units='N/m', desc='force per unit length in x-direction on ballast')
@@ -239,6 +241,9 @@ class FloatingFrame(Component):
         V_base         = params['base_column_displaced_volume']
         V_ballast      = params['auxiliary_column_displaced_volume']
 
+        F_hydro_base    = params['base_column_hydrostatic_force']
+        F_hydro_ballast = params['auxiliary_column_hydrostatic_force']
+
         z_cb_base      = params['base_column_center_of_buoyancy']
         z_cb_ballast   = params['auxiliary_column_center_of_buoyancy']
         
@@ -279,7 +284,7 @@ class FloatingFrame(Component):
         if (ncolumn > 0) and (not crossAttachFlag) and (not lowerAttachFlag) and (not upperAttachFlag):
             bad_input()
             return
-            
+        
         # ---NODES---
         # Add nodes for base column: Using 4 nodes/3 elements per section
         # Make sure there is a node at upper and lower attachment points
@@ -580,7 +585,7 @@ class FloatingFrame(Component):
         # Base
         nrange  = np.arange(R_od_base.size, dtype=np.int32)
         EL      = baseEID + nrange
-        Ux      = V_base * rhoWater * gravity / np.diff(z_base)
+        Ux      = F_hydro_base / np.diff(z_base)
         x1 = np.zeros(nrange.shape)
         x2 = np.diff(z_base) - epsOff  # subtract small number b.c. of precision
         wx1, wx2 = Px_base[:-1], Px_base[1:]
@@ -602,7 +607,7 @@ class FloatingFrame(Component):
         nrange  = np.arange(R_od_ballast.size, dtype=np.int32)
         for k in xrange(ncolumn):
             EL      = np.append(EL, ballastEID[k] + nrange)
-            Ux      = np.append(Ux,  V_ballast * rhoWater * gravity / np.diff(z_ballast) )
+            Ux      = np.append(Ux,  F_hydro_ballast / np.diff(z_ballast) )
             x1      = np.append(x1, np.zeros(nrange.shape))
             x2      = np.append(x2, np.diff(z_ballast) - epsOff)
             wx1     = np.append(wx1, Px_ballast[:-1])
