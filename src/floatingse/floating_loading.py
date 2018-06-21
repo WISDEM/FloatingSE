@@ -287,6 +287,12 @@ class FloatingFrame(Component):
         if (ncolumn > 0) and (not crossAttachFlag) and (not lowerAttachFlag) and (not upperAttachFlag):
             bad_input()
             return
+
+        # ---GEOMETRY---
+        # Compute frustum angles
+        angle_tower   = np.arctan( np.diff(R_od_tower)   / np.diff(z_tower)   )
+        angle_base    = np.arctan( np.diff(R_od_base)    / np.diff(z_base)    )
+        angle_ballast = np.arctan( np.diff(R_od_ballast) / np.diff(z_ballast) )
         
         # ---NODES---
         # Add nodes for base column: Using 4 nodes/3 elements per section
@@ -859,12 +865,12 @@ class FloatingFrame(Component):
         sigma_ax_tower = sigma_ax[idx]
         sigma_sh_tower = sigma_sh[idx]
         qdyn_tower,_   = nodal2sectional( params['tower_qdyn'] )
-        sigma_h_tower  = util.hoopStressEurocode(z_tower, 2*R_od_tower, t_wall_tower, L_reinforced, qdyn_tower)
+        sigma_h_tower  = util.hoopStress(2*R_od_tower, t_wall_tower*np.cos(angle_tower), qdyn_tower)
 
         unknowns['tower_column_stress:axial'] = sigma_ax_tower
         unknowns['tower_column_stress:shear'] = sigma_sh_tower
-        unknowns['tower_column_stress:hoopStiffen']  = sigma_h_tower
-        unknowns['tower_column_stress:hoop']  = util.hoopStress(2*R_od_tower, t_wall_tower, qdyn_tower)
+        unknowns['tower_column_stress:hoop']  = sigma_h_tower
+        unknowns['tower_column_stress:hoopStiffen'] = util.hoopStressEurocode(z_tower, 2*R_od_tower, t_wall_tower, L_reinforced, qdyn_tower)
         unknowns['tower_stress'] = util.vonMisesStressUtilization(sigma_ax_tower, sigma_h_tower, sigma_sh_tower,
                                                                   gamma_f*gamma_m*gamma_n, sigma_y)
 
@@ -882,12 +888,12 @@ class FloatingFrame(Component):
         sigma_ax_base = sigma_ax[idx]
         sigma_sh_base = sigma_sh[idx]
         qdyn_base,_   = nodal2sectional( params['base_column_qdyn'] )
-        sigma_h_base  = util.hoopStressEurocode(z_base, 2*R_od_base, t_wall_base, L_reinforced, qdyn_base)
+        sigma_h_base  = util.hoopStress(2*R_od_base, t_wall_base*np.cos(angle_base), qdyn_base)
 
         unknowns['base_column_stress:axial'] = sigma_ax_base
         unknowns['base_column_stress:shear'] = sigma_sh_base
-        unknowns['base_column_stress:hoopStiffen']  = sigma_h_base
-        unknowns['base_column_stress:hoop']  = util.hoopStress(2*R_od_base, t_wall_base, qdyn_base)
+        unknowns['base_column_stress:hoop']  = sigma_h_base
+        unknowns['base_column_stress:hoopStiffen'] = util.hoopStressEurocode(z_base, 2*R_od_base, t_wall_base, L_reinforced, qdyn_base)
         unknowns['base_column_stress'] = util.vonMisesStressUtilization(sigma_ax_base, sigma_h_base, sigma_sh_base,
                                                                         gamma_f*gamma_m*gamma_n, sigma_y)
 
@@ -906,12 +912,12 @@ class FloatingFrame(Component):
             sigma_ax_ballast = sigma_ax[idx]
             sigma_sh_ballast = sigma_sh[idx]
             qdyn_ballast,_   = nodal2sectional( params['auxiliary_column_qdyn'] )
-            sigma_h_ballast  = util.hoopStressEurocode(z_ballast, 2*R_od_ballast, t_wall_ballast, L_reinforced, qdyn_ballast)
+            sigma_h_ballast  = util.hoopStress(2*R_od_ballast, t_wall_ballast*np.cos(angle_ballast), qdyn_ballast)
 
             unknowns['auxiliary_column_stress:axial'] = sigma_ax_ballast
             unknowns['auxiliary_column_stress:shear'] = sigma_sh_ballast
-            unknowns['auxiliary_column_stress:hoopStiffen']  = sigma_h_ballast
-            unknowns['auxiliary_column_stress:hoop']  = util.hoopStress(2*R_od_ballast, t_wall_ballast, qdyn_ballast)
+            unknowns['auxiliary_column_stress:hoop']  = sigma_h_ballast
+            unknowns['auxiliary_column_stress:hoopStiffen'] = util.hoopStressEurocode(z_ballast, 2*R_od_ballast, t_wall_ballast, L_reinforced, qdyn_ballast)
             unknowns['auxiliary_column_stress'] = util.vonMisesStressUtilization(sigma_ax_ballast, sigma_h_ballast, sigma_sh_ballast,
                                                                             gamma_f*gamma_m*gamma_n, sigma_y)
 
