@@ -756,7 +756,7 @@ class ColumnBuckling(Component):
         sigma_y      = params['yield_stress']
         loading      = params['loading']
         nodalP,_     = nodal2sectional( params['pressure'] )
-        pressure     = 1e-12 if loading in ['ax','axial','testing','test'] else nodalP
+        pressure     = 1e-12 if loading in ['ax','axial','testing','test'] else nodalP+1e-12
 
         # Apply quick "compactness" check on stiffener geometry
         # Constraint is that these must be >= 1
