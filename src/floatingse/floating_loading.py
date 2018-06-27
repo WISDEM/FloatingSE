@@ -3,7 +3,7 @@ import numpy as np
 import pyframe3dd.frame3dd as frame3dd
 from commonse.utilities import nodal2sectional
 
-from commonse import gravity, eps, Tube
+from commonse import gravity, eps, Tube, NFREQ
 import commonse.UtilizationSupplement as util
 from commonse.WindWaveDrag import AeroHydroLoads, CylinderWindDrag, CylinderWaveDrag
 from commonse.environment import WaveBase, PowerWind
@@ -160,7 +160,7 @@ class FloatingFrame(Component):
         self.add_output('pontoon_base_attach_upper', val=0.0, desc='Fractional distance along base column for upper truss attachment')
         self.add_output('pontoon_base_attach_lower', val=0.0, desc='Fractional distance along base column for lower truss attachment')
 
-        self.add_output('structural_frequencies', np.zeros(6), units='Hz', desc='First six natural frequencies')
+        self.add_output('structural_frequencies', np.zeros(NFREQ), units='Hz', desc='First six natural frequencies')
         self.add_output('substructure_mass', val=0.0, units='kg', desc='Mass of substructure elements and connecting truss')
         self.add_output('structural_mass', val=0.0, units='kg', desc='Mass of whole turbine except for mooring lines')
         self.add_output('total_displacement', val=0.0, units='m**3', desc='Total volume of water displaced by floating turbine (except for mooring lines)')
@@ -180,7 +180,7 @@ class FloatingFrame(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         # If something fails, we have to tell the optimizer this design is no good
         def bad_input():
-            unknowns['structural_frequencies'] = 1e30 * np.ones(6)
+            unknowns['structural_frequencies'] = 1e30 * np.ones(NFREQ)
             unknowns['top_deflection'] = 1e30
             unknowns['substructure_mass']  = 1e30
             unknowns['structural_mass']    = 1e30
@@ -796,7 +796,7 @@ class FloatingFrame(Component):
 
 
         # ---DYNAMIC ANALYSIS---
-        nM = 6              # number of desired dynamic modes of vibration
+        nM = NFREQ          # number of desired dynamic modes of vibration
         Mmethod = 1         # 1: subspace Jacobi     2: Stodola
         lump = 0            # 0: consistent mass ... 1: lumped mass matrix
         tol = 1e-6          # mode shape tolerance
