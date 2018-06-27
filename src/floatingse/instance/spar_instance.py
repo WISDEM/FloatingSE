@@ -1,5 +1,5 @@
 from floating_instance import FloatingInstance, NSECTIONS, NPTS, vecOption
-from floating import FloatingSE
+from floatingse.floating import FloatingSE
 from commonse import eps
 import numpy as np
 import time
@@ -44,8 +44,6 @@ class SparInstance(FloatingInstance):
         # Change scalars to vectors where needed
         self.check_vectors()
         
-    def get_assembly(self): return FloatingSE(NSECTIONS)
-
 
     def get_constraints(self):
 
@@ -108,10 +106,6 @@ class SparInstance(FloatingInstance):
             ['subs.modal_margin', 0.1, None, None]
         ]
         return conlist
-
-    def add_objective(self):
-        # OBJECTIVE FUNCTION: Minimize total cost!
-        self.prob.driver.add_objective('total_cost', scaler=1e-9)
 
 
         

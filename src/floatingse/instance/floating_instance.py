@@ -2,6 +2,7 @@ from __future__ import print_function
 from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver, SOGADriver, SOGADriverParallel, DumpRecorder
 import numpy as np
 import cPickle as pickle        
+from StringIO import StringIO
 
 #import matplotlib.pyplot as plt
 #from mpl_toolkits.mplot3d import Axes3D
@@ -10,6 +11,43 @@ from mayavi import mlab
 
 NSECTIONS = 5
 NPTS = 100
+
+#z Do Di Ixx= Iyy J
+#[m] [m] [m] [m4] [m4]
+dtuTowerData = StringIO("""
+145.63 5.50 5.44 2.03 4.07
+134.55 5.79 5.73 2.76 5.52
+124.04 6.07 6.00 3.63 7.26
+113.54 6.35 6.26 4.67 9.35
+103.03 6.63 6.53 5.90 11.80
+92.53 6.91 6.80 7.33 14.67
+82.02 7.19 7.07 8.99 17.98
+71.52 7.46 7.34 10.9 21.80
+61.01 7.74 7.61 13.08 26.15
+50.51 8.02 7.88 15.55 31.09
+40.00 8.30 8.16 15.55 31.09
+40.00 9.00 8.70 34.84 69.68
+38.00 9.00 8.70 35.74 71.48
+36.00 9.00 8.70 36.66 73.32
+34.00 9.00 8.70 37.59 75.18
+32.00 9.00 8.69 38.54 77.08
+30.00 9.00 8.69 39.51 79.01
+28.00 9.00 8.69 40.49 80.97
+26.00 9.00 8.69 41.48 82.97
+24.00 9.00 8.69 42.5 85.00
+22.00 9.00 8.69 43.53 87.05
+20.00 9.00 8.69 44.05 88.10
+16.00 9.00 8.80 28.09 56.18
+12.00 9.00 8.80 28.09 56.18
+8.00 9.00 8.80 28.09 56.18
+4.00 9.00 8.80 28.09 56.18
+0.00 9.00 8.80 28.09 56.18
+-8.400 9.00 8.80 28.09 56.18
+-16.800 9.00 8.80 28.09 56.18
+-25.20 9.00 8.80 28.09 56.18
+-33.60 9.00 8.80 28.09 56.18
+-42.60 9.00 8.80 28.09 56.18
+""")
 
 def vecOption(x, in1s):
     myones = in1s if type(in1s) == type(np.array([])) else np.ones((in1s,))
@@ -53,135 +91,141 @@ class FloatingInstance(object):
         self.optimizer = None
 
         # Environmental parameters
-        self.params['water_depth'] = 200.0
-        #self.params['air_density'] = 1.198
-        self.params['base.windLoads.rho'] = 1.198
-        #self.params['air_viscosity'] = 1.81e-5
-        self.params['base.windLoads.mu'] = 1.81e-5
-        self.params['water_density'] = 1025.0
-        #self.params['water_viscosity'] = 8.9e-4
-        self.params['base.waveLoads.mu'] = 8.9e-4
-        #self.params['wave_height'] = 10.8
-        self.params['hmax'] = 10.8
-        #self.params['wave_period'] = 9.8
-        self.params['T'] = 9.8
-        self.params['Uc'] = 0.0
-        #self.params['wind_reference_speed'] = 11.0
-        self.params['Uref'] = 11.0
-        #self.params['wind_reference_height'] = 90.0
-        self.params['zref'] = 119.0
-        #self.params['alpha'] = 0.11
-        self.params['shearExp'] = 0.11
+        self.params['water_depth']               = 200.0
+        #self.params['air_density']              = 1.198
+        self.params['base.windLoads.rho']        = 1.198
+        #self.params['air_viscosity']            = 1.81e-5
+        self.params['base.windLoads.mu']         = 1.81e-5
+        self.params['water_density']             = 1025.0
+        #self.params['water_viscosity']          = 8.9e-4
+        self.params['base.waveLoads.mu']         = 8.9e-4
+        #self.params['wave_height']              = 10.8
+        self.params['hmax']                      = 10.8
+        #self.params['wave_period']              = 9.8
+        self.params['T']                         = 9.8
+        self.params['Uc']                        = 0.0
+        #self.params['wind_reference_speed']     = 11.0
+        self.params['Uref']                      = 11.0
+        #self.params['wind_reference_height']    = 90.0
+        self.params['zref']                      = 119.0
+        #self.params['alpha']                    = 0.11
+        self.params['shearExp']                  = 0.11
         #self.params['morison_mass_coefficient'] = 2.0
-        self.params['cm'] = 2.0
-        self.params['z0'] = 0.0
-        self.params['yaw'] = 0.0
-        self.params['beta'] = 0.0
-        self.params['cd_usr'] = np.inf
+        self.params['cm']                        = 2.0
+        self.params['z0']                        = 0.0
+        self.params['yaw']                       = 0.0
+        self.params['beta']                      = 0.0
+        self.params['cd_usr']                    = np.inf
 
+        # Encironmental constaints
+        self.params['wave_period_range_low']                = 2.0
+        self.params['wave_period_range_high']               = 20.0
+        
         # Mooring parameters
-        self.params['mooring_max_offset'] = 0.1*self.params['water_depth'] # Assumption        
-        self.params['mooring_max_heel'] = 10.0
-        self.params['number_of_mooring_lines'] = 3
-        self.params['mooring_type'] = 'chain'
-        self.params['anchor_type'] = 'suctionpile'
-        self.params['mooring_cost_rate'] = 1.1
-        self.params['drag_embedment_extra_length'] = 300.0
-        self.params['number_of_mooring_lines'] = 3
+        self.params['mooring_max_offset']                   = 0.1*self.params['water_depth'] # Assumption        
+        self.params['mooring_max_heel']                     = 10.0
+        self.params['number_of_mooring_lines']              = 3
+        self.params['mooring_type']                         = 'chain'
+        self.params['anchor_type']                          = 'suctionpile'
+        self.params['mooring_cost_rate']                    = 1.1
+        self.params['drag_embedment_extra_length']          = 300.0
+        self.params['number_of_mooring_lines']              = 3
 
         # Steel properties
-        self.params['material_density'] = 7850.0
-        self.params['E'] = 200e9
-        self.params['G'] = 79.3e9
-        self.params['nu'] = 0.26
-        self.params['yield_stress'] = 3.45e8
-        self.params['loading'] = 'hydrostatic'
+        self.params['material_density']                     = 7850.0
+        self.params['E']                                    = 200e9
+        self.params['G']                                    = 79.3e9
+        self.params['nu']                                   = 0.26
+        self.params['yield_stress']                         = 3.45e8
+        self.params['loading']                              = 'hydrostatic'
 
         # Design constraints
-        self.params['min_taper_ratio'] = 0.4
-        self.params['min_diameter_thickness_ratio'] = 120.0
+        self.params['min_taper_ratio']                      = 0.4
+        self.params['min_diameter_thickness_ratio']         = 120.0
 
         # Safety factors
-        self.params['gamma_f'] = 1.35
-        self.params['gamma_b'] = 1.1
-        self.params['gamma_m'] = 1.1
-        self.params['gamma_n'] = 1.0
-        self.params['gamma_fatigue'] = 1.755
+        self.params['gamma_f']                              = 1.35
+        self.params['gamma_b']                              = 1.1
+        self.params['gamma_m']                              = 1.1
+        self.params['gamma_n']                              = 1.0
+        self.params['gamma_fatigue']                        = 1.755
         
         # Typically static- set defaults
-        self.params['permanent_ballast_density'] = 4492.0
-        self.params['bulkhead_mass_factor'] = 1.0
-        self.params['ring_mass_factor'] = 1.0
-        self.params['shell_mass_factor'] = 1.0
-        self.params['column_mass_factor'] = 1.05
-        self.params['outfitting_mass_fraction'] = 0.06
-        self.params['ballast_cost_rate'] = 100.0
-        self.params['tapered_col_cost_rate'] = 4720.0
-        self.params['outfitting_cost_rate'] = 6980.0
-        self.params['cross_attachment_pontoons_int'] = 1
-        self.params['lower_attachment_pontoons_int'] = 1
-        self.params['upper_attachment_pontoons_int'] = 1
-        self.params['lower_ring_pontoons_int'] = 1
-        self.params['upper_ring_pontoons_int'] = 1
-        self.params['outer_cross_pontoons_int'] = 1 #False
-        self.params['pontoon_cost_rate'] = 6.250
+        self.params['permanent_ballast_density']            = 4492.0
+        self.params['bulkhead_mass_factor']                 = 1.0
+        self.params['ring_mass_factor']                     = 1.0
+        self.params['shell_mass_factor']                    = 1.0
+        self.params['column_mass_factor']                   = 1.05
+        self.params['outfitting_mass_fraction']             = 0.06
+        self.params['ballast_cost_rate']                    = 100.0
+        self.params['tapered_col_cost_rate']                = 4720.0
+        self.params['outfitting_cost_rate']                 = 6980.0
+        self.params['cross_attachment_pontoons_int']        = 1
+        self.params['lower_attachment_pontoons_int']        = 1
+        self.params['upper_attachment_pontoons_int']        = 1
+        self.params['lower_ring_pontoons_int']              = 1
+        self.params['upper_ring_pontoons_int']              = 1
+        self.params['outer_cross_pontoons_int']             = 1 #False
+        self.params['pontoon_cost_rate']                    = 6.250
 
         # OC4 Tower
-        self.params['hub_height'] = 87.6
-        self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
-        self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
-        self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
-        self.params['tower_buckling_length']   = 30.0
-        self.params['tower_outfitting_factor'] = 1.07
-        self.params['rna_mass'] = 350e3 #285598.8
-        self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
-        self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
+        self.params['hub_height']                           = 87.6
+        self.params['tower_outer_diameter']                 = np.linspace(6.5, 3.87, NSECTIONS+1)
+        self.params['tower_section_height']                 = vecOption(77.6/NSECTIONS, NSECTIONS)
+        self.params['tower_wall_thickness']                 = np.linspace(0.027, 0.019, NSECTIONS+1)
+        self.params['tower_buckling_length']                = 30.0
+        self.params['tower_outfitting_factor']              = 1.07
+        self.params['rna_mass']                             = 350e3 #285598.8
+        self.params['rna_I']                                = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
+        self.params['rna_cg']                               = np.array([-1.13197635, 0.0, 0.50875268])
         # Max thrust
-        self.params['rna_force']  = np.array([1284744.196, 0.0,  -112400.5527])
-        self.params['rna_moment'] = np.array([3963732.762, 896380.8464,  -346781.6819])
+        self.params['rna_force']                            = np.array([1284744.196, 0.0,  -112400.5527])
+        self.params['rna_moment']                           = np.array([3963732.762, 896380.8464,  -346781.6819])
         # Max wind speed
-        #self.params['rna_force']  = np.array([188038.8045, 0,  -16451.2637])
-        #self.params['rna_moment'] = np.array([0.0, 131196.8431,  0.0])
+        #self.params['rna_force']                           = np.array([188038.8045, 0,  -16451.2637])
+        #self.params['rna_moment']                          = np.array([0.0, 131196.8431,  0.0])
+        self.params['base_bulkhead_thickness']              = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
+        self.params['auxiliary_bulkhead_thickness']         = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
         
         # Typically design (start at OC4 semi)
-        self.params['radius_to_auxiliary_column'] = 28.867513459481287
-        self.params['number_of_auxiliary_columns'] = 3
-        self.params['base_freeboard'] = 10.0
-        self.params['auxiliary_freeboard'] = 12.0
-        self.params['fairlead'] = 14.0
-        self.params['fairlead_offset_from_shell'] = 40.868-28.867513459481287-6.0
-        self.params['base_outer_diameter'] = 6.5
-        self.params['base_wall_thickness'] = 0.03
-        self.params['auxiliary_wall_thickness'] = 0.06
-        self.params['base_permanent_ballast_height'] = 1.0
-        self.params['base_stiffener_web_height'] = 0.1
-        self.params['base_stiffener_web_thickness'] = 0.04
-        self.params['base_stiffener_flange_width'] = 0.1
-        self.params['base_stiffener_flange_thickness'] = 0.02
-        self.params['base_stiffener_spacing'] = 0.4
-        self.params['auxiliary_permanent_ballast_height'] = 0.1
-        self.params['auxiliary_stiffener_web_height'] = 0.1
-        self.params['auxiliary_stiffener_web_thickness'] = 0.04
-        self.params['auxiliary_stiffener_flange_width'] = 0.1
+        self.params['radius_to_auxiliary_column']           = 28.867513459481287
+        self.params['number_of_auxiliary_columns']          = 3
+        self.params['base_freeboard']                       = 10.0
+        self.params['auxiliary_freeboard']                  = 12.0
+        self.params['fairlead']                             = 14.0
+        self.params['fairlead_offset_from_shell']           = 40.868-28.867513459481287-6.0
+        self.params['base_outer_diameter']                  = 6.5
+        self.params['base_wall_thickness']                  = 0.03
+        self.params['auxiliary_wall_thickness']             = 0.06
+        self.params['base_permanent_ballast_height']        = 1.0
+        self.params['base_stiffener_web_height']            = 0.1
+        self.params['base_stiffener_web_thickness']         = 0.04
+        self.params['base_stiffener_flange_width']          = 0.1
+        self.params['base_stiffener_flange_thickness']      = 0.02
+        self.params['base_stiffener_spacing']               = 0.4
+        self.params['auxiliary_permanent_ballast_height']   = 0.1
+        self.params['auxiliary_stiffener_web_height']       = 0.1
+        self.params['auxiliary_stiffener_web_thickness']    = 0.04
+        self.params['auxiliary_stiffener_flange_width']     = 0.1
         self.params['auxiliary_stiffener_flange_thickness'] = 0.02
-        self.params['auxiliary_stiffener_spacing'] = 0.4
-        self.params['fairlead_support_outer_diameter'] = 2*1.6
-        self.params['fairlead_support_wall_thickness'] = 0.0175
-        self.params['pontoon_outer_diameter'] = 2*1.6
-        self.params['pontoon_wall_thickness'] = 0.0175
-        self.params['connection_ratio_max'] = 0.25
-        self.params['base_pontoon_attach_lower'] = -20.0
-        self.params['base_pontoon_attach_upper'] = 10.0
+        self.params['auxiliary_stiffener_spacing']          = 0.4
+        self.params['fairlead_support_outer_diameter']      = 2*1.6
+        self.params['fairlead_support_wall_thickness']      = 0.0175
+        self.params['pontoon_outer_diameter']               = 2*1.6
+        self.params['pontoon_wall_thickness']               = 0.0175
+        self.params['connection_ratio_max']                 = 0.25
+        self.params['base_pontoon_attach_lower']            = -20.0
+        self.params['base_pontoon_attach_upper']            = 10.0
         
         self.set_length_base( 30.0 )
         self.set_length_aux( 32.0 )
 
-        self.params['auxiliary_section_height'] = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
-        self.params['auxiliary_outer_diameter'] = 2*np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
+        self.params['auxiliary_section_height']             = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
+        self.params['auxiliary_outer_diameter']             = 2*np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
 
-        self.params['mooring_line_length'] = 835.5
-        self.params['anchor_radius'] = 837.6
-        self.params['mooring_diameter'] = 0.0766
+        self.params['mooring_line_length']                  = 835.5
+        self.params['anchor_radius']                        = 837.6
+        self.params['mooring_diameter']                     = 0.0766
 
     def set_length_base(self, inval):
         self.params['base_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
@@ -214,6 +258,39 @@ class FloatingInstance(object):
         #self.params['auxiliary_bulkhead_thickness'][:2] = 0.05
 
 
+    def set_reference(self, instr):
+        if instr.upper() in ['NREL', 'NREL5', 'NREL5MW', '5', '5MW', 'NREL-5', 'NREL-5MW']:
+
+            self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
+            self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
+            self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
+
+            if self.params.has_key('rna_mass'):
+                self.params['rna_mass'] = 350e3 #285598.8
+                self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
+                self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
+            
+        elif instr.upper() in ['DTU', 'DTU10', 'DTU10MW', '10', '10MW', 'DTU-10', 'DTU-10MW']:
+
+            towerData = np.loadtxt(dtuTowerData)
+            towerData = towerData[(towerData[:,0] >= 30.0),:]
+            towerData = np.vstack((towerData[0,:], towerData))
+            towerData[0,0] = 30.0 + self.params['hub_height']
+            towerData[(towerData[:,0] == 40.0),0] += np.array([0.01, 0.0])
+            trans_idx = np.where(towerData[:,1] == towerData[-1,1])[0]
+            idx = [0, 1, trans_idx[0]/2, trans_idx[0]-1, trans_idx[0], trans_idx[-1]]
+            self.params['tower_section_height'] = np.diff( np.flipud( towerData[idx,0] ) )
+            self.params['tower_outer_diameter'] = np.flipud( towerData[idx, 1] )
+            self.params['tower_wall_thickness'] = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
+
+            if self.params.has_key('rna_mass'):
+                self.params['rna_mass'] = 350e3 #285598.8
+                self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
+                self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
+            
+        else:
+            raise ValueError('Inputs must be either NREL5MW or DTU10MW')
+
     def save(self, fname):
         assert type(fname) == type(''), 'Input filename must be a string'
         with open(fname,'wb') as fp:
@@ -225,7 +302,7 @@ class FloatingInstance(object):
             self.params = pickle.load(fp)
         
     def get_assembly(self):
-        raise NotImplementedError("Subclasses should implement this!")
+        return FloatingSE(NSECTIONS)
 
     
     def add_design_variable(self, varStr, lowVal, highVal):
@@ -304,12 +381,15 @@ class FloatingInstance(object):
     def get_constraints(self):
         raise NotImplementedError("Subclasses should implement this!")
 
+
     def add_objective(self):
-        raise NotImplementedError("Subclasses should implement this!")
+        self.prob.driver.add_objective('total_cost', scaler=1e-9)
+
 
     def set_inputs(self):
         # Load all variables from local params dictionary
         localnames = self.params.keys()
+
         for ivar in localnames:
             try:
                 self.prob[ivar] = self.params[ivar]
