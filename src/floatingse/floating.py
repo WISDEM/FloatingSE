@@ -68,7 +68,8 @@ class FloatingSE(Group):
         # Run main Semi analysis
         self.add('subs', Substructure(self.nFull), promotes=['water_density','total_cost','total_mass','number_of_auxiliary_columns',
                                                              'structural_frequencies','rigid_body_periods','rna_I','rna_cg','rna_mass',
-                                                             'tower_I_base','tower_mass'])
+                                                             'tower_I_base','tower_mass',
+                                                             'wave_period_range_low','wave_period_range_high'])
 
         # Define all input variables from all models
         
@@ -135,6 +136,10 @@ class FloatingSE(Group):
 
         # Pontoons
         #self.add('G',                          IndepVarComp('G', 0.0), promotes=['*'])
+
+        # Other Constraints
+        self.add('wave_period_range_low',   IndepVarComp('wave_period_range_low', 2.0), promotes=['*'])
+        self.add('wave_period_range_high',  IndepVarComp('wave_period_range_high', 20.0), promotes=['*'])
 
         # Connect all input variables from all models
         self.connect('radius_to_auxiliary_column', ['sg.radius_to_auxiliary_column', 'load.radius_to_auxiliary_column', 'subs.radius_to_auxiliary_column'])
@@ -268,8 +273,6 @@ class FloatingSE(Group):
         self.connect('load.total_force', 'subs.total_force')
         self.connect('load.total_moment', 'subs.total_moment')
         self.connect('load.pontoon_cost', 'subs.pontoon_cost')
-
-        self.connect('T','subs.wave_period')
 
          # Use complex number finite differences
         typeStr = 'fd'

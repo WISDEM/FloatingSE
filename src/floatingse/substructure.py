@@ -2,7 +2,7 @@ from openmdao.api import Component
 import numpy as np
 from scipy.integrate import cumtrapz
 
-from commonse import gravity, eps, DirectionVector
+from commonse import gravity, eps, DirectionVector, NFREQ
 from commonse.utilities import assembleI, unassembleI
 from map_mooring import NLINES_MAX
         
@@ -80,7 +80,8 @@ class Substructure(Component):
         super(Substructure,self).__init__()
         # Environment
         self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
-        self.add_param('wave_period', 0.0, units='s', desc='period of maximum wave height')
+        self.add_param('wave_period_range_low', val=2.0, units='s', desc='Lower bound of typical ocean wavve period')
+        self.add_param('wave_period_range_high', val=20.0, units='s', desc='Upper bound of typical ocean wavve period')
 
         # From other components
         self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
@@ -127,7 +128,7 @@ class Substructure(Component):
 
         self.add_param('structural_mass', val=0.0, units='kg', desc='Mass of whole turbine except for mooring lines')
         self.add_param('structure_center_of_mass', val=np.zeros(3), units='m', desc='xyz-position of center of gravity of whole turbine')
-        self.add_param('structural_frequencies', val=np.zeros(6), units='Hz', desc='')
+        self.add_param('structural_frequencies', val=np.zeros(NFREQ), units='Hz', desc='')
         self.add_param('z_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of gravity (x,y = 0,0)')
         self.add_param('total_displacement', val=0.0, units='m**3', desc='Total volume of water displaced by floating turbine (except for mooring lines)')
         self.add_param('total_force', val=np.zeros(3), units='N', desc='Net forces on turbine')
@@ -155,8 +156,10 @@ class Substructure(Component):
         self.add_output('added_mass_matrix', val=np.zeros(6), units='kg', desc='Summary hydrodynamic added mass matrix of structure (minus pontoons)')
         self.add_output('hydrostatic_stiffness', val=np.zeros(6), units='N/m', desc='Summary hydrostatic stiffness of structure')
         self.add_output('rigid_body_periods', val=np.zeros(6), units='s', desc='Natural periods of oscillation in 6 DOF')
-        self.add_output('period_margin', val=np.zeros(6), desc='Margin between natural periods and wave periods')
-        self.add_output('modal_margin', val=np.zeros(6), desc='Margin between structural modes and wave periods')
+        self.add_output('period_margin_low', val=np.zeros(6), desc='Margin between natural periods and 2 second wave period')
+        self.add_output('period_margin_high', val=np.zeros(6), desc='Margin between natural periods and 20 second wave period')
+        self.add_output('modal_margin_low', val=np.zeros(NFREQ), desc='Margin between structural modes and 2 second wave period')
+        self.add_output('modal_margin_high', val=np.zeros(NFREQ), desc='Margin between structural modes and 20 second wave period')
         
         
         # Derivatives
@@ -416,16 +419,19 @@ class Substructure(Component):
         
     def check_frequency_margins(self, params, unknowns):
         # Unpack variables
-        T_sys    = unknowns['rigid_body_periods']
-        T_wave   = params['wave_period']
-        f_struct = params['structural_frequencies']
+        T_sys       = unknowns['rigid_body_periods']
+        T_wave_low  = params['wave_period_range_low']
+        T_wave_high = params['wave_period_range_high']
+        f_struct    = params['structural_frequencies']
 
         # Compute margins between wave forcing and natural periods
-        unknowns['period_margin'] = np.abs(T_sys - T_wave) / T_wave
+        unknowns['period_margin_low']  = np.abs(T_sys - T_wave_low ) / T_wave_low
+        unknowns['period_margin_high'] = np.abs(T_sys - T_wave_high) / T_wave_high
 
         # Compute margins bewteen wave forcing and structural frequencies
         T_struct = 1.0 / f_struct
-        unknowns['modal_margin'] = np.abs(T_struct - T_wave) / T_wave
+        unknowns['modal_margin_low']  = np.abs(T_struct - T_wave_low)  / T_wave_low
+        unknowns['modal_margin_high'] = np.abs(T_struct - T_wave_high) / T_wave_high
         
         
     def compute_costs(self, params, unknowns):
