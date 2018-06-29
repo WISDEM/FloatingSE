@@ -169,7 +169,7 @@ class FloatingInstance(object):
         self.params['pontoon_cost_rate']                    = 6.250
 
         # OC4 Tower
-        self.params['hub_height']                           = 87.6
+        self.params['hub_height']                           = 90.0
         self.params['tower_outer_diameter']                 = np.linspace(6.5, 3.87, NSECTIONS+1)
         self.params['tower_section_height']                 = vecOption(77.6/NSECTIONS, NSECTIONS)
         self.params['tower_wall_thickness']                 = np.linspace(0.027, 0.019, NSECTIONS+1)
@@ -261,6 +261,7 @@ class FloatingInstance(object):
     def set_reference(self, instr):
         if instr.upper() in ['NREL', 'NREL5', 'NREL5MW', '5', '5MW', 'NREL-5', 'NREL-5MW']:
 
+            self.params['hub_height']              = 90.0
             self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
             self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
             self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
@@ -272,6 +273,7 @@ class FloatingInstance(object):
             
         elif instr.upper() in ['DTU', 'DTU10', 'DTU10MW', '10', '10MW', 'DTU-10', 'DTU-10MW']:
 
+            self.params['hub_height'] = 119.0
             towerData = np.loadtxt(dtuTowerData)
             towerData = towerData[(towerData[:,0] >= 30.0),:]
             towerData = np.vstack((towerData[0,:], towerData))
@@ -283,6 +285,9 @@ class FloatingInstance(object):
             self.params['tower_outer_diameter'] = np.flipud( towerData[idx, 1] )
             self.params['tower_wall_thickness'] = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
 
+            print(self.params['tower_section_height'])
+            print(np.cumsum(self.params['tower_section_height']))
+            
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 350e3 #285598.8
                 self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
@@ -379,7 +384,90 @@ class FloatingInstance(object):
                     self.prob.driver.opt_settings[k] = indict[k]
             
     def get_constraints(self):
-        raise NotImplementedError("Subclasses should implement this!")
+
+        conlist = [
+            # Try to get tower height to match desired hub height
+            ['tow.height_constraint', None, None, 0.0],
+            
+            # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
+            # Ensure that fairlead attaches to draft
+            ['base.draft_depth_ratio', 0.0, 0.75, None],
+            ['aux.draft_depth_ratio', 0.0, 0.75, None],
+            ['aux.fairlead_draft_ratio', 0.0, 1.0, None],
+            ['sg.base_auxiliary_spacing', 0.0, 1.0, None],
+            
+            # Ensure that the radius doesn't change dramatically over a section
+            ['base.manufacturability', None, 0.0, None],
+            ['base.weldability', None, 0.0, None],
+            ['aux.manufacturability', None, 0.0, None],
+            ['aux.weldability', None, 0.0, None],
+            ['tow.manufacturability', None, 0.0, None],
+            ['tow.weldability', None, 0.0, None],
+            
+            # Ensure that the spar top matches the tower base
+            ['sg.transition_buffer', -1.0, 1.0, None],
+            
+            # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
+            ['mm.axial_unity', 0.0, 1.0, None],
+            
+            # Ensure there is sufficient mooring line length, MAP doesn't give an error about this
+            ['mm.mooring_length_max', None, 1.0, None],
+            
+            # API Bulletin 2U constraints
+            ['base.flange_spacing_ratio', None, 1.0, None],
+            ['base.stiffener_radius_ratio', None, 0.5, None],
+            ['base.flange_compactness', 1.0, None, None],
+            ['base.web_compactness', 1.0, None, None],
+            ['base.axial_local_api', None, 1.0, None],
+            ['base.axial_general_api', None, 1.0, None],
+            ['base.external_local_api', None, 1.0, None],
+            ['base.external_general_api', None, 1.0, None],
+            
+            ['aux.flange_spacing_ratio', None, 1.0, None],
+            ['aux.stiffener_radius_ratio', None, 0.5, None],
+            ['aux.flange_compactness', 1.0, None, None],
+            ['aux.web_compactness', 1.0, None, None],
+            ['aux.axial_local_api', None, 1.0, None],
+            ['aux.axial_general_api', None, 1.0, None],
+            ['aux.external_local_api', None, 1.0, None],
+            ['aux.external_general_api', None, 1.0, None],
+            
+            # Pontoon tube radii
+            ['load.base_connection_ratio', 0.0, None, None],
+            ['load.auxiliary_connection_ratio', 0.0, None, None],
+            ['load.pontoon_base_attach_upper', 0.5, 1.0, None],
+            ['load.pontoon_base_attach_lower', 0.0, 0.5, None],
+            
+            # Pontoon stress safety factor
+            ['load.pontoon_stress', None, 1.0, None],
+            ['load.tower_stress', None, 1.0, None],
+            ['load.tower_shell_buckling', None, 1.0, None],
+            ['load.tower_global_buckling', None, 1.0, None],
+            
+            # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
+            ['subs.variable_ballast_height_ratio', 0.0, 1.0, None],
+            ['subs.variable_ballast_mass', 0.0, None, None],
+            
+            # Metacentric height should be positive for static stability
+            ['subs.metacentric_height', 0.1, None, None],
+            
+            # Center of buoyancy should be above CG (difference should be positive, None],
+            #['subs.buoyancy_to_gravity', 0.1, None, None],
+            
+            # Surge restoring force should be greater than wave-wind forces (ratio < 1, None],
+            ['subs.offset_force_ratio', None, 1.0, None],
+            
+            # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
+            ['subs.heel_moment_ratio', None, 1.0, None],
+
+            # Wave forcing period should be different than natural periods and structural modes
+            ['subs.period_margin_low', None, 1.0, None],
+            ['subs.period_margin_high', 1.0, None, None],
+            ['subs.modal_margin_low', None, 1.0, None],
+            ['subs.modal_margin_high', 1.0, None, None]
+        ]
+        #raise NotImplementedError("Subclasses should implement this!")
+        return conlist
 
 
     def add_objective(self):
@@ -636,8 +724,8 @@ class FloatingInstance(object):
         #ax.set_zlim([-220, 30])
         #plt.axis('off')
         #plt.show()
-        mlab.move([-517.16728532, -87.0711504, 5.60826224], [1.35691603e+01, -2.84217094e-14, -1.06547500e+02])
-        mlab.view(-170.68320804213343, 78.220729198686854, 549.40101471336777, [1.35691603e+01,  0.0, -1.06547500e+02])
+        #mlab.move([-517.16728532, -87.0711504, 5.60826224], [1.35691603e+01, -2.84217094e-14, -1.06547500e+02])
+        #mlab.view(-170.68320804213343, 78.220729198686854, 549.40101471336777, [1.35691603e+01,  0.0, -1.06547500e+02])
         if not fname is None: mlab.savefig(fname, figure=fig)
         mlab.show(stop=True)
 

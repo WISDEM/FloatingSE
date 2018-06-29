@@ -46,7 +46,20 @@ class SparInstance(FloatingInstance):
         
 
     def get_constraints(self):
+        conlist = super(SparInstance, self).get_constraints()
 
+        poplist = []
+        for k in range(len(conlist)):
+            if ( (conlist[k][0].find('aux') >= 0) or
+                 (conlist[k][0].find('pontoon') >= 0) or
+                 (conlist[k][0].find('base_connection_ratio') >= 0) ):
+                poplist.append(k)
+
+        poplist.reverse()
+        for k in poplist: conlist.pop(k)
+
+        return conlist
+    '''
         conlist = [
             # Try to get tower height to match desired hub height
             ['tow.height_constraint', None, None, 0.0],
@@ -102,10 +115,13 @@ class SparInstance(FloatingInstance):
             ['subs.heel_moment_ratio', None, 1.0, None],
 
             # Wave forcing period should be different than natural periods and structural modes
-            ['subs.period_margin', 0.1, None, None],
-            ['subs.modal_margin', 0.1, None, None]
+            ['subs.period_margin_low', None, 1.0, None],
+            ['subs.period_margin_high', 1.0, None, None],
+            ['subs.modal_margin_low', None, 1.0, None],
+            ['subs.modal_margin_high', 1.0, None, None]
         ]
         return conlist
+    '''
 
 
         

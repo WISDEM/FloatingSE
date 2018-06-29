@@ -283,10 +283,10 @@ class Substructure(Component):
         # Measure static stability:
         # 1. Center of buoyancy should be above CG (difference should be positive)
         # 2. Metacentric height should be positive
-        buoyancy2metacentre_BM         = Iwater_system / V_system
+        buoyancy2metacentre_BM          = Iwater_system / V_system
         unknowns['buoyancy_to_gravity'] = z_cg - z_cb
         unknowns['metacentric_height' ] = buoyancy2metacentre_BM - unknowns['buoyancy_to_gravity']
-        
+
         F_buoy     = V_system * rhoWater * gravity
         M_restore  = unknowns['metacentric_height'] * np.sin(np.deg2rad(max_heel)) * F_buoy 
 
@@ -423,15 +423,25 @@ class Substructure(Component):
         T_wave_low  = params['wave_period_range_low']
         T_wave_high = params['wave_period_range_high']
         f_struct    = params['structural_frequencies']
+        T_struct    = 1.0 / f_struct
 
         # Compute margins between wave forcing and natural periods
-        unknowns['period_margin_low']  = np.abs(T_sys - T_wave_low ) / T_wave_low
-        unknowns['period_margin_high'] = np.abs(T_sys - T_wave_high) / T_wave_high
+        indicator_high = T_wave_high * np.ones(T_sys.shape)
+        indicator_high[T_sys < T_wave_low] = 1e-16
+        unknowns['period_margin_high'] = T_sys / indicator_high
+
+        indicator_low = T_wave_low * np.ones(T_sys.shape)
+        indicator_low[T_sys > T_wave_high] = 1e30
+        unknowns['period_margin_low']  = T_sys / indicator_low
 
         # Compute margins bewteen wave forcing and structural frequencies
-        T_struct = 1.0 / f_struct
-        unknowns['modal_margin_low']  = np.abs(T_struct - T_wave_low)  / T_wave_low
-        unknowns['modal_margin_high'] = np.abs(T_struct - T_wave_high) / T_wave_high
+        indicator_high = T_wave_high * np.ones(T_struct.shape)
+        indicator_high[T_struct < T_wave_low] = 1e-16
+        unknowns['modal_margin_high'] = T_struct / indicator_high
+
+        indicator_low = T_wave_low * np.ones(T_struct.shape)
+        indicator_low[T_struct > T_wave_high] = 1e30
+        unknowns['modal_margin_low']  = T_struct / indicator_low
         
         
     def compute_costs(self, params, unknowns):
