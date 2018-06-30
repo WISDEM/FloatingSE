@@ -1,4 +1,5 @@
 from __future__ import print_function
+from floatingse.floating import FloatingSE
 from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver, SOGADriver, SOGADriverParallel, DumpRecorder
 import numpy as np
 import cPickle as pickle        
@@ -270,6 +271,13 @@ class FloatingInstance(object):
                 self.params['rna_mass'] = 350e3 #285598.8
                 self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
                 self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
+                # Max thrust
+                self.params['rna_force']      = np.array([ 1.03086517e+06, 0.0, -3.53463639e+06])
+                self.params['rna_moment']     = np.array([9817509.35136043, 566675.9644231, -858920.77230378])
+                # Max wind speed
+                #self.params['rna_force']     = np.array([188038.8045, 0,  -16451.2637])
+                #self.params['rna_moment']    = np.array([0.0, 131196.8431,  0.0])
+                
             
         elif instr.upper() in ['DTU', 'DTU10', 'DTU10MW', '10', '10MW', 'DTU-10', 'DTU-10MW']:
 
@@ -289,6 +297,8 @@ class FloatingInstance(object):
                 self.params['rna_mass'] = 350e3 #285598.8
                 self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
                 self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
+                self.params['rna_force']   = np.array([2.14149875e+06, 0.0, -8.49851438e+06])
+                self.params['rna_moment']  = np.array([28662206.47475225, 11629079.42415007,  -3012519.29255573])
             
         else:
             raise ValueError('Inputs must be either NREL5MW or DTU10MW')
