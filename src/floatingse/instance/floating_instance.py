@@ -285,9 +285,6 @@ class FloatingInstance(object):
             self.params['tower_outer_diameter'] = np.flipud( towerData[idx, 1] )
             self.params['tower_wall_thickness'] = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
 
-            print(self.params['tower_section_height'])
-            print(np.cumsum(self.params['tower_section_height']))
-            
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 350e3 #285598.8
                 self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
