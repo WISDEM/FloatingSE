@@ -5,6 +5,9 @@ class SemiInstance(FloatingInstance):
     def __init__(self):
         super(SemiInstance, self).__init__()
 
+        # Change scalars to vectors where needed
+        self.check_vectors()
+
         
     def visualize(self, fname=None):
         fig = self.init_figure()
