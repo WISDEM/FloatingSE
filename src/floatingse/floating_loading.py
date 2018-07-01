@@ -455,9 +455,9 @@ class FloatingFrame(Component):
         mooringEID = N1.size + 1
         mytube  = Tube(2.0*R_od_fairlead, t_wall_fairlead)
         nattach = len(fairleadID)
-        nlines_per_column = nlines / nattach
+        nlines_per_column = float(nlines) / float(nattach)
         for k in xrange(nlines):
-            ifairlead = 0 if nattach==1 else k/nlines_per_column
+            ifairlead = 0 if nattach==1 else int( float(k)/nlines_per_column )
             N1   = np.append(N1  , fairleadID[ifairlead] )
             N2   = np.append(N2  , mooringID[k] )
             Ax   = np.append(Ax  , mytube.Area )
