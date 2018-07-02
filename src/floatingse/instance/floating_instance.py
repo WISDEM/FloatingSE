@@ -298,7 +298,7 @@ class FloatingInstance(object):
                 self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
                 self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
                 self.params['rna_force']   = np.array([2.14149875e+06, 0.0, -8.49851438e+06])
-                self.params['rna_moment']  = np.array([28662206.47475225, 11629079.42415007,  -3012519.29255573])
+                self.params['rna_moment']  = np.array([28662206.47475225, -11629079.42415007,  -3012519.29255573])
             
         else:
             raise ValueError('Inputs must be either NREL5MW or DTU10MW')

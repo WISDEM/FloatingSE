@@ -132,6 +132,9 @@ class SparInstance(FloatingInstance):
 
         self.draw_mooring(fig, self.prob['mm.plot_matrix'])
 
+        zcut = 1.0 + self.params['base_freeboard']
+        self.draw_pontoons(fig, self.prob['load.plot_matrix'], 0.5*self.params['fairlead_support_outer_diameter'], zcut)
+
         self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                            0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
 

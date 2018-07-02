@@ -165,7 +165,7 @@ class FloatingSE(Group):
         self.connect('auxiliary_wall_thickness', 'aux.wall_thickness')
 
         self.connect('fairlead', ['base.fairlead','aux.fairlead','sg.fairlead','mm.fairlead','subs.fairlead','load.fairlead'])
-        self.connect('fairlead_offset_from_shell', ['sg.fairlead_offset_from_shell','load.fairlead_offset_from_shell'])
+        self.connect('fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell')
 
         self.connect('mooring_line_length', 'mm.mooring_line_length')
         self.connect('anchor_radius', 'mm.anchor_radius')
@@ -217,7 +217,7 @@ class FloatingSE(Group):
         self.connect('outfitting_cost_rate', ['base.outfitting_cost_rate', 'aux.outfitting_cost_rate'])
 
         # Link outputs from one model to inputs to another
-        self.connect('sg.fairlead_radius', ['mm.fairlead_radius', 'subs.fairlead_radius'])
+        self.connect('sg.fairlead_radius', ['mm.fairlead_radius', 'load.fairlead_radius', 'subs.fairlead_radius'])
 
         self.connect('base.z_full', ['sg.base_z_nodes', 'load.base_z_full'])
         self.connect('base.d_full', ['load.base_d_full', 'sg.base_outer_diameter'])

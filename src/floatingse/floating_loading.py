@@ -103,7 +103,7 @@ class FloatingFrame(Component):
         self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines')
         self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
         self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
-        self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
+        self.add_param('fairlead_radius', val=0.0, units='m',desc='Radius from center of structure to fairlead connection points')
         self.add_param('fairlead_support_outer_diameter', val=0.0, units='m',desc='fairlead support outer diameter')
         self.add_param('fairlead_support_wall_thickness', val=0.0, units='m',desc='fairlead support wall thickness')
         
@@ -258,7 +258,7 @@ class FloatingFrame(Component):
 
         nlines         = int(params['number_of_mooring_lines'])
         F_mooring      = params['mooring_neutral_load']
-        R_fairlead     = params['fairlead_offset_from_shell']
+        R_fairlead     = params['fairlead_radius']
         
         gamma_f        = params['gamma_f']
         gamma_m        = params['gamma_m']
@@ -365,14 +365,15 @@ class FloatingFrame(Component):
             ballastUpperID.append( xnode.size )
 
         # Add nodes where mooring lines attach, which may be offset from columns
-        mooringx  = (R_semi + R_fairlead) * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
-        mooringy  = (R_semi + R_fairlead) * np.sin( np.linspace(0, 2*np.pi, ncolumn+1) )
+        nsupport  = nlines if ncolumn==0 else len(fairleadID)
+        mooringx  = R_fairlead * np.cos( np.linspace(0, 2*np.pi, nsupport+1) )
+        mooringy  = R_fairlead * np.sin( np.linspace(0, 2*np.pi, nsupport+1) )
         mooringx  = mooringx[:-1]
         mooringy  = mooringy[:-1]
-        mooringID = xnode.size + 1 + np.arange(ncolumn, dtype=np.int32)
+        mooringID = xnode.size + 1 + np.arange(nsupport, dtype=np.int32)
         xnode     = np.append(xnode, mooringx)
         ynode     = np.append(ynode, mooringy)
-        znode     = np.append(znode, z_fairlead*np.ones(ncolumn) )
+        znode     = np.append(znode, z_fairlead*np.ones(nsupport) )
             
         # Add nodes midway around outer ring for cross bracing
         if outerCrossFlag and ncolumn > 0:
@@ -464,9 +465,9 @@ class FloatingFrame(Component):
         # Add in fairlead support elements
         mooringEID = N1.size + 1
         mytube  = Tube(2.0*R_od_fairlead, t_wall_fairlead)
-        nattach = len(fairleadID) # Should be =ncolumn
-        for k in xrange(nattach):
-            N1   = np.append(N1  , fairleadID[k] )
+        for k in xrange(nsupport):
+            kfair = 0 if ncolumn==0 else k
+            N1   = np.append(N1  , fairleadID[kfair] )
             N2   = np.append(N2  , mooringID[k] )
             Ax   = np.append(Ax  , mytube.Area )
             As   = np.append(As  , mytube.Asx )
