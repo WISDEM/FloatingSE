@@ -283,8 +283,18 @@ class FloatingFrame(Component):
             bad_input()
             return
 
+        # Must have symmetry in moorning loading too
+        if (ncolumn > 0) and (nlines%ncolumn > 0):
+            bad_input()
+            return
+
         # If there are auxiliary columns, must have attachment pontoons (only have ring pontoons doesn't make sense)
         if (ncolumn > 0) and (not crossAttachFlag) and (not lowerAttachFlag) and (not upperAttachFlag):
+            bad_input()
+            return
+
+        # Must have lower ring if have cross braces
+        if (ncolumn > 0) and outerCrossFlag and (not lowerRingFlag):
             bad_input()
             return
 
@@ -355,14 +365,14 @@ class FloatingFrame(Component):
             ballastUpperID.append( xnode.size )
 
         # Add nodes where mooring lines attach, which may be offset from columns
-        mooringx  = (R_semi + R_fairlead) * np.cos( np.linspace(0, 2*np.pi, nlines+1) )
-        mooringy  = (R_semi + R_fairlead) * np.sin( np.linspace(0, 2*np.pi, nlines+1) )
+        mooringx  = (R_semi + R_fairlead) * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
+        mooringy  = (R_semi + R_fairlead) * np.sin( np.linspace(0, 2*np.pi, ncolumn+1) )
         mooringx  = mooringx[:-1]
         mooringy  = mooringy[:-1]
-        mooringID = xnode.size + 1 + np.arange(nlines, dtype=np.int32)
+        mooringID = xnode.size + 1 + np.arange(ncolumn, dtype=np.int32)
         xnode     = np.append(xnode, mooringx)
         ynode     = np.append(ynode, mooringy)
-        znode     = np.append(znode, z_fairlead*np.ones(nlines) )
+        znode     = np.append(znode, z_fairlead*np.ones(ncolumn) )
             
         # Add nodes midway around outer ring for cross bracing
         if outerCrossFlag and ncolumn > 0:
@@ -454,11 +464,9 @@ class FloatingFrame(Component):
         # Add in fairlead support elements
         mooringEID = N1.size + 1
         mytube  = Tube(2.0*R_od_fairlead, t_wall_fairlead)
-        nattach = len(fairleadID)
-        nlines_per_column = float(nlines) / float(nattach)
-        for k in xrange(nlines):
-            ifairlead = 0 if nattach==1 else int( float(k)/nlines_per_column )
-            N1   = np.append(N1  , fairleadID[ifairlead] )
+        nattach = len(fairleadID) # Should be =ncolumn
+        for k in xrange(nattach):
+            N1   = np.append(N1  , fairleadID[k] )
             N2   = np.append(N2  , mooringID[k] )
             Ax   = np.append(Ax  , mytube.Area )
             As   = np.append(As  , mytube.Asx )
@@ -560,9 +568,14 @@ class FloatingFrame(Component):
         elements = frame3dd.ElementData(nelem, N1, N2, Ax, As, As, Jx, I, I, modE, modG, roll, dens)
 
         # Store data for plotting, also handy for operations below
-        plotMat = np.zeros((nelem.size, 3, 2))
-        plotMat[:,:,0] = np.c_[xnode[N1-1], ynode[N1-1], znode[N1-1]]
-        plotMat[:,:,1] = np.c_[xnode[N2-1], ynode[N2-1], znode[N2-1]]
+        #plotMat = np.zeros((nelem.size, 3, 2))
+        #plotMat[:,:,0] = np.c_[xnode[N1-1], ynode[N1-1], znode[N1-1]]
+        #plotMat[:,:,1] = np.c_[xnode[N2-1], ynode[N2-1], znode[N2-1]]
+        plotMat = np.zeros((baseEID, 3, 2))
+        myn1 = N1[:baseEID]
+        myn2 = N2[:baseEID]
+        plotMat[:,:,0] = np.c_[xnode[myn1-1], ynode[myn1-1], znode[myn1-1]]
+        plotMat[:,:,1] = np.c_[xnode[myn2-1], ynode[myn2-1], znode[myn2-1]]
         unknowns['plot_matrix'] = plotMat
         
         # Compute length and center of gravity for each element for use below
@@ -699,7 +712,7 @@ class FloatingFrame(Component):
 
         # Point loads for mooring loading
         nattach = len(fairleadID)
-        nlines_per_column = nlines / nattach
+        nlines_per_column = int( float(nlines) / float(nattach) )
         nF  = np.array(fairleadID, dtype=np.int32)
         Fx  = np.zeros(nattach)
         Fy  = np.zeros(nattach)
