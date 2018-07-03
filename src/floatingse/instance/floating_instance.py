@@ -1,6 +1,6 @@
 from __future__ import print_function
 from floatingse.floating import FloatingSE
-from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver, SOGADriver, SOGADriverParallel, DumpRecorder
+from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver, HeuristicDriver, HeuristicDriverParallel, DumpRecorder
 import numpy as np
 import cPickle as pickle        
 from StringIO import StringIO
@@ -339,8 +339,8 @@ class FloatingInstance(object):
         self.optimizer = optStr.upper()
         
         # Establish the optimization driver
-        if self.optimizer in ['SOGA']:
-            self.prob.driver = SOGADriverParallel()
+        if self.optimizer in ['SOGA','SOPSO']:
+            self.prob.driver = HeuristicDriverParallel()
         elif self.optimizer in ['COBYLA','SLSQP']:
             self.prob.driver = ScipyOptimizer()
         elif self.optimizer in ['CONMIN', 'PSQP','SNOPT','NSGA2','ALPSO']:
@@ -356,7 +356,7 @@ class FloatingInstance(object):
             self.prob.driver.opt_settings['ITMAX'] = 1000
         elif self.optimizer in ['PSQP']:
             self.prob.driver.opt_settings['MIT'] = 1000
-        elif self.optimizer in ['SOGA']:
+        elif self.optimizer in ['SOGA','SOPSO']:
             self.prob.driver.options['population'] = 200
             self.prob.driver.options['generations'] = 500
         elif self.optimizer in ['NSGA2']:
@@ -382,7 +382,7 @@ class FloatingInstance(object):
         assert isinstance(indict, dict), 'Options must be passed as a string:value dictionary'
         
         for k in indict.keys():
-            if self.optimizer in ['SOGA','COBYLA','SLSQP']:
+            if self.optimizer in ['SOGA','SOPSO','COBYLA','SLSQP']:
                 self.prob.driver.options[k] = indict[k]
             elif self.optimizer in ['CONMIN', 'PSQP','SNOPT','NSGA2','ALPSO']:
                 if k in ['title','print_results','gradient method']:
