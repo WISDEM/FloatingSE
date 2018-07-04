@@ -150,10 +150,9 @@ class FloatingSE(Group):
         self.connect('base_outer_diameter', 'base.diameter')
         self.connect('base_wall_thickness', 'base.wall_thickness')
 
-        self.connect('tow.d_full', 'load.windLoads.d') # includes tower_d_full
+        self.connect('tow.d_full', ['load.windLoads.d','sg.tower_outer_diameter']) # includes tower_d_full
         self.connect('tow.t_full', 'load.tower_t_full')
         self.connect('tow.z_full', ['load.wind.z','subs.tower_z_full']) # includes tower_z_full
-        self.connect('tower_outer_diameter','sg.tower_base',src_indices=[0])
         self.connect('tow.cm.mass','load.tower_mass')
         self.connect('tower_buckling_length','load.tower_buckling_length')
         self.connect('tow.turbine_mass','base.stack_mass_in')

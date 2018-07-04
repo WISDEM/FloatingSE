@@ -149,6 +149,7 @@ class FloatingInstance(object):
         #self.params['rna_moment']                          = np.array([0.0, 131196.8431,  0.0])
         self.params['base_bulkhead_thickness']              = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.params['auxiliary_bulkhead_thickness']         = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
+        self.params['sg.Rhub']                              = 1.125
         
         # Typically design (start at OC4 semi)
         self.params['radius_to_auxiliary_column']           = 28.867513459481287
@@ -228,6 +229,7 @@ class FloatingInstance(object):
             self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
             self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
             self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
+            self.params['sg.Rhub']                 = 1.125
 
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 350e3 #285598.8
@@ -299,6 +301,7 @@ class FloatingInstance(object):
                 self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
                 self.params['rna_force']   = np.array([2.14149875e+06, 0.0, -8.49851438e+06])
                 self.params['rna_moment']  = np.array([28662206.47475225, -11629079.42415007,  -3012519.29255573])
+                self.params['sg.Rhub']     = 2.3
             
         else:
             raise ValueError('Inputs must be either NREL5MW or DTU10MW')
@@ -398,8 +401,8 @@ class FloatingInstance(object):
             
             # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
             # Ensure that fairlead attaches to draft
-            ['base.draft_depth_ratio', 0.0, 0.75, None],
-            ['aux.draft_depth_ratio', 0.0, 0.75, None],
+            ['base.draft_depth_ratio', 0.0, 0.6, None],
+            ['aux.draft_depth_ratio', 0.0, 0.6, None],
             ['aux.fairlead_draft_ratio', 0.0, 1.0, None],
             ['sg.base_auxiliary_spacing', 0.0, 1.0, None],
             
@@ -412,7 +415,8 @@ class FloatingInstance(object):
             ['tow.weldability', None, 0.0, None],
             
             # Ensure that the spar top matches the tower base
-            ['sg.transition_buffer', -1.0, 1.0, None],
+            ['sg.tower_transition_buffer', -1.0, 1.0, None],
+            ['sg.nacelle_transition_buffer', 0.0, None, None],
             
             # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
             ['mm.axial_unity', 0.0, 1.0, None],

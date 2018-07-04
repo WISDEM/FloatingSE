@@ -23,12 +23,14 @@ class SubstructureGeometry(Component):
         self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
         self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
         self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column')
-        self.add_param('tower_base', val=0.0, units='m', desc='tower base diameter')
+        self.add_param('tower_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('Rhub', val=0.0, units='m', desc='rotor hub radius')
         
         # Output constraints
         self.add_output('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
         self.add_output('base_auxiliary_spacing', val=0.0, desc='Radius of base and ballast columns relative to spacing')
-        self.add_output('transition_buffer', val=0.0, units='m', desc='Buffer between substructure base and tower base')
+        self.add_output('tower_transition_buffer', val=0.0, units='m', desc='Buffer between substructure base and tower base')
+        self.add_output('nacelle_transition_buffer', val=0.0, units='m', desc='Buffer between tower top and nacelle base')
 
         
         # Derivatives
@@ -54,7 +56,8 @@ class SubstructureGeometry(Component):
         R_od_base       = 0.5*params['base_outer_diameter']
         R_od_ballast    = 0.5*params['auxiliary_outer_diameter']
         R_semi          = params['radius_to_auxiliary_column']
-        R_tower         = 0.5*params['tower_base']
+        R_tower         = 0.5*params['tower_outer_diameter']
+        R_hub           = params['Rhub']
         z_nodes_ballast = params['auxiliary_z_nodes']
         z_nodes_base    = params['base_z_nodes']
         fairlead        = params['fairlead'] # depth of mooring attachment point
@@ -70,7 +73,8 @@ class SubstructureGeometry(Component):
             unknowns['fairlead_radius'] = fair_off + np.interp(-fairlead, z_nodes_base, R_od_base)
 
         # Constrain spar top to be at least greater than tower base
-        unknowns['transition_buffer'] = R_od_base[-1] - R_tower
+        unknowns['tower_transition_buffer']   = R_od_base[-1] - R_tower[0]
+        unknowns['nacelle_transition_buffer'] = R_hub + 1.0 - R_tower[-1] # Guessing at 6m size for nacelle
 
 
 
