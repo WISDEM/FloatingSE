@@ -103,7 +103,7 @@ class FloatingInstance(object):
         self.params['loading']                              = 'hydrostatic'
 
         # Design constraints
-        self.params['min_taper_ratio']                      = 0.4
+        self.params['max_taper_ratio']                      = 0.2
         self.params['min_diameter_thickness_ratio']         = 120.0
 
         # Safety factors
@@ -404,11 +404,11 @@ class FloatingInstance(object):
             ['sg.base_auxiliary_spacing', 0.0, 1.0, None],
             
             # Ensure that the radius doesn't change dramatically over a section
-            ['base.manufacturability', None, 0.0, None],
+            ['base.manufacturability', 0.0, None, None],
             ['base.weldability', None, 0.0, None],
-            ['aux.manufacturability', None, 0.0, None],
+            ['aux.manufacturability', 0.0, None, None],
             ['aux.weldability', None, 0.0, None],
-            ['tow.manufacturability', None, 0.0, None],
+            ['tow.manufacturability', 0.0, None, None],
             ['tow.weldability', None, 0.0, None],
             
             # Ensure that the spar top matches the tower base

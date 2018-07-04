@@ -34,17 +34,17 @@ class FloatingSE(Group):
 
         self.add('tow', TowerLeanSE(nSection+1,self.nFull), promotes=['material_density','tower_section_height',
                                                                       'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
-                                                                      'tower_buckling_length','min_taper','min_d_to_t','rna_mass','rna_cg','rna_I',
+                                                                      'tower_buckling_length','max_taper','min_d_to_t','rna_mass','rna_cg','rna_I',
                                                                       'tower_mass','tower_I_base'])
         
         # Next do base and ballast columns
         # Ballast columns are replicated from same design in the components
         self.add('base', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                  'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
-                                                                 'min_taper','min_d_to_t','gamma_f','gamma_b'])
+                                                                 'max_taper','min_d_to_t','gamma_f','gamma_b'])
         self.add('aux', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                 'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
-                                                                'min_taper','min_d_to_t','gamma_f','gamma_b'])
+                                                                'max_taper','min_d_to_t','gamma_f','gamma_b'])
 
         # Run Semi Geometry for interfaces
         self.add('sg', SubstructureGeometry(self.nFull), promotes=['number_of_auxiliary_columns'])
@@ -131,7 +131,7 @@ class FloatingSE(Group):
         self.add('outfitting_cost_rate',       IndepVarComp('outfitting_cost_rate', 0.0), promotes=['*'])
         self.add('loading',                    IndepVarComp('loading', val='hydrostatic', pass_by_obj=True), promotes=['*'])
         
-        self.add('min_taper_ratio',            IndepVarComp('min_taper_ratio', 0.0), promotes=['*'])
+        self.add('max_taper_ratio',            IndepVarComp('max_taper_ratio', 0.0), promotes=['*'])
         self.add('min_diameter_thickness_ratio', IndepVarComp('min_diameter_thickness_ratio', 0.0), promotes=['*'])
 
         # Pontoons
@@ -179,7 +179,7 @@ class FloatingSE(Group):
         self.connect('mooring_cost_rate', 'mm.mooring_cost_rate')
         self.connect('gamma_f', 'mm.gamma')
 
-        self.connect('min_taper_ratio', 'min_taper')
+        self.connect('max_taper_ratio', 'max_taper')
         self.connect('min_diameter_thickness_ratio', 'min_d_to_t')
         
         # To do: connect these to independent variables
@@ -403,7 +403,7 @@ def sparExample():
     prob['mooring_max_heel']   = 10.0 # Max heel (pitching) angle [deg]
 
     # Design constraints
-    prob['min_taper_ratio'] = 0.4                # For manufacturability of rolling steel
+    prob['max_taper_ratio'] = 0.2                # For manufacturability of rolling steel
     prob['min_diameter_thickness_ratio'] = 120.0 # For weld-ability
 
     # API 2U flag
@@ -578,7 +578,7 @@ def semiExample():
     prob['mooring_max_heel']   = 10.0 # Max heel (pitching) angle [deg]
 
     # Design constraints
-    prob['min_taper_ratio'] = 0.4                # For manufacturability of rolling steel
+    prob['max_taper_ratio'] = 0.2                # For manufacturability of rolling steel
     prob['min_diameter_thickness_ratio'] = 120.0 # For weld-ability
     prob['connection_ratio_max']      = 0.25 # For welding pontoons to columns
 

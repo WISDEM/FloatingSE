@@ -802,7 +802,7 @@ class Column(Group):
                                                                         'stiffener_flange_thickness','stiffener_spacing',
                                                                         't_web','h_web','t_flange','w_flange','L_stiffener'])
 
-        self.add('gc', GeometricConstraints(nSection+1, diamFlag=True), promotes=['min_taper','min_d_to_t','manufacturability','weldability'])
+        self.add('gc', GeometricConstraints(nSection+1, diamFlag=True), promotes=['max_taper','min_d_to_t','manufacturability','weldability'])
 
         self.add('bulk', BulkheadMass(nSection, nFull), promotes=['z_full','z_param','d_full','t_full','rho',
                                                                   'bulkhead_mass_factor','bulkhead_thickness',
