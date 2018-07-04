@@ -1011,8 +1011,8 @@ class FloatingLoading(Group):
         self.connect('wind.U', 'windLoads.U')
 
         # connections to distLoads1
-        self.connect('windLoads.windLoads:Px', 'tower_Px')
-        self.connect('windLoads.windLoads:Py', 'tower_Py')
-        self.connect('windLoads.windLoads:Pz', 'tower_Pz')
-        self.connect('windLoads.windLoads:qdyn', 'tower_qdyn')
+        self.connect('windLoads.windLoads_Px', 'tower_Px')
+        self.connect('windLoads.windLoads_Py', 'tower_Py')
+        self.connect('windLoads.windLoads_Pz', 'tower_Pz')
+        self.connect('windLoads.windLoads_qdyn', 'tower_qdyn')
 
