@@ -134,8 +134,8 @@ class MapMooring(Component):
             #self.min_break_load      = 2.74e7  * Dmooring2 * (44.0 - 80.0*Dmooring)
             # Use a linear fit to the other fit becuase it is poorly conditioned for optimization
             self.min_break_load      = 1e3*np.maximum(1.0, -5445.2957034820683+176972.68498888266*Dmooring)
-            self.wet_mass_per_length = 19.9e3  * Dmooring2
-            self.axial_stiffness     = 8.54e10 * Dmooring2
+            self.wet_mass_per_length = 7983.34117 * Dmooring2 # From OC3 definiton doc, 19.9e3 from Orca
+            self.axial_stiffness     = 4.74374e10 * Dmooring2 # From OC3 definiton doc, 8.54e10 from Orca
             self.area                = 2.0 * 0.25 * np.pi * Dmooring2
             self.cost_per_length     = 3.415e4  * Dmooring2 #0.58*1e-3*self.min_break_load/gravity - 87.6
 
@@ -283,6 +283,10 @@ class MapMooring(Component):
         
         OUTPUTS  : none
         """
+        # Add flag for taut lines
+        if params['mooring_line_length'] <= params['water_depth']:
+            flags += ' LINEAR SPRING'
+            
         self.finput.append('---------------------- LINE PROPERTIES ---------------------------------------')
         self.finput.append('Line    LineType  UnstrLen  NodeAnch  NodeFair  Flags')
         self.finput.append('(-)      (-)       (m)       (-)       (-)       (-)')
@@ -322,10 +326,12 @@ class MapMooring(Component):
         self.finput.append(' inner_max_its 200')
         self.finput.append(' outer_max_its 600')
         # Repeat the details for the one mooring line multiple times
+        angles = np.linspace(0, 360, nlines+1)[1:-1]
         n = 360.0/nlines
         degree = n
         line = 'repeat'
-        while degree + n <= 360:
+        #while degree + n <= 360:
+        for degree in angles:
             line += (' %d' % degree)
             degree += n
         self.finput.append(line)

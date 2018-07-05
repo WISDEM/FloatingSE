@@ -148,6 +148,7 @@ class Substructure(Component):
         self.add_output('buoyancy_to_gravity', val=0.0, desc='static stability margin based on position of centers of gravity and buoyancy')
         self.add_output('offset_force_ratio', val=0.0, desc='total surge force divided by restoring force')
         self.add_output('heel_moment_ratio', val=0.0, desc='total pitch moment divided by restoring moment')
+        self.add_output('Iwaterplane_system', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section for whole structure')
 
         self.add_output('center_of_mass', val=np.zeros(3), units='m', desc='xyz-position of center of gravity (x,y = 0,0)')
 
@@ -283,7 +284,8 @@ class Substructure(Component):
         radii = R_semi * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
         for k in xrange(ncolumn):
             Iwater_system += Iwater_column + Awater_column*radii[k]**2
-        
+        unknowns['Iwaterplane_system'] = Iwater_column
+            
         # Measure static stability:
         # 1. Center of buoyancy should be above CG (difference should be positive)
         # 2. Metacentric height should be positive
@@ -347,11 +349,13 @@ class Substructure(Component):
         I_water         = unknowns['variable_ballast_moments_of_inertia']
         I_tower         = params['tower_I_base']
         I_rna           = params['rna_I']
+        I_waterplane    = unknowns['Iwaterplane_system']
 
         z_cg_base       = params['base_column_center_of_mass']
         z_cb_base       = params['base_column_center_of_buoyancy']
         z_cg_column     = params['auxiliary_column_center_of_mass']
         z_cb_column     = params['auxiliary_column_center_of_buoyancy']
+        z_cb            = params['z_center_of_buoyancy']
         z_cg_water      = unknowns['variable_ballast_center_of_mass']
         r_cg            = unknowns['center_of_mass']
         cg_rna          = params['rna_cg']
@@ -412,7 +416,7 @@ class Substructure(Component):
         # See DNV-RP-H103: Modeling and Analyis of Marine Operations
         K_hydro = np.zeros((nDOF,))
         K_hydro[2]   = rhoWater * gravity * (Awater_base + ncolumn*Awater_column)
-        K_hydro[3:5] = rhoWater * gravity * V_system * h_metacenter
+        K_hydro[3:5] = rhoWater * gravity * V_system * h_metacenter # FAST eqns: (I_waterplane + V_system * z_cb)
         unknowns['hydrostatic_stiffness'] = K_hydro
 
         # Now compute all six natural periods at once
@@ -429,22 +433,28 @@ class Substructure(Component):
         f_struct    = params['structural_frequencies']
         T_struct    = 1.0 / f_struct
 
+        # NOTE: I AM REMOVING YAW FROM THIS CONSTRAINT BECAUSE I DON'T THINK WAVES CAN EXCITE YAW
+        
         # Compute margins between wave forcing and natural periods
         indicator_high = T_wave_high * np.ones(T_sys.shape)
         indicator_high[T_sys < T_wave_low] = 1e-16
+        indicator_high[-1] = 1e-16 # Yaw
         unknowns['period_margin_high'] = T_sys / indicator_high
 
         indicator_low = T_wave_low * np.ones(T_sys.shape)
         indicator_low[T_sys > T_wave_high] = 1e30
+        indicator_low[-1] = 1e30 # Yaw
         unknowns['period_margin_low']  = T_sys / indicator_low
 
         # Compute margins bewteen wave forcing and structural frequencies
         indicator_high = T_wave_high * np.ones(T_struct.shape)
         indicator_high[T_struct < T_wave_low] = 1e-16
+        indicator_high[-1] = 1e-16 # Yaw
         unknowns['modal_margin_high'] = T_struct / indicator_high
 
         indicator_low = T_wave_low * np.ones(T_struct.shape)
         indicator_low[T_struct > T_wave_high] = 1e30
+        indicator_low[-1] = 1e30 # Yaw
         unknowns['modal_margin_low']  = T_struct / indicator_low
         
         
