@@ -4,8 +4,8 @@ import os
 import sys
 from pymap import pyMAP
 
-from commonse import gravity
-from commonse import Enum
+from commonse import gravity, Enum
+from commonse.utilities import assembleI, unassembleI
 
 Anchor    = Enum('DRAGEMBEDMENT SUCTIONPILE')
 NLINES_MAX = 15
@@ -57,6 +57,7 @@ class MapMooring(Component):
 
         # Outputs
         self.add_output('mooring_mass', val=0.0, units='kg',desc='total mass of mooring')
+        self.add_output('mooring_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of mooring system about fairlead-centerline point [xx yy zz xy xz yz]')
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
         self.add_output('mooring_stiffness', val=np.zeros((6,6)), units='N/m', desc='Linearized stiffness matrix of mooring system at neutral (no offset) conditions.')
         self.add_output('anchor_cost', val=0.0, units='USD',desc='total cost for anchor')
@@ -417,14 +418,36 @@ class MapMooring(Component):
         # Get the vertical load on the structure and plotting data
         F_neutral = np.zeros((NLINES_MAX, 3))
         plotMat   = np.zeros((NLINES_MAX, NPTS_PLOT, 3))
+        nptsMOI   = 100
+        xyzpts    = np.zeros((nlines, nptsMOI, 3)) # For MOI calculation
         for k in xrange(nlines):
             (F_neutral[k,0], F_neutral[k,1], F_neutral[k,2]) = mymap.get_fairlead_force_3d(k)
             plotMat[k,:,0] = mymap.plot_x(k, NPTS_PLOT)
             plotMat[k,:,1] = mymap.plot_y(k, NPTS_PLOT)
             plotMat[k,:,2] = mymap.plot_z(k, NPTS_PLOT)
+            xyzpts[k,:,0]  = np.flipud( mymap.plot_x(k, nptsMOI) ) # flipud so vessel point is first
+            xyzpts[k,:,1]  = np.flipud( mymap.plot_y(k, nptsMOI) ) # flipud so vessel point is first
+            xyzpts[k,:,2]  = np.flipud( mymap.plot_z(k, nptsMOI) ) # flipud so vessel point is first
         unknowns['neutral_load'] = F_neutral
         unknowns['plot_matrix']  = plotMat
 
+        # Fine line segment length, ds = sqrt(dx^2 + dy^2 + dz^2)
+        xyzpts_dx = np.gradient(xyzpts[:,:,0], axis=1)
+        xyzpts_dy = np.gradient(xyzpts[:,:,1], axis=1)
+        xyzpts_dz = np.gradient(xyzpts[:,:,2], axis=1)
+        xyzpts_ds = np.sqrt(xyzpts_dx**2 + xyzpts_dy**2 + xyzpts_dz**2)
+
+        # Initialize inertia tensor integrands in https://en.wikipedia.org/wiki/Moment_of_inertia#Inertia_tensor
+        # Taking MOI relative to body centerline at fairlead depth
+        r0 = np.array([0.0, 0.0, -fairleadDepth])
+        R  = np.zeros((nlines, nptsMOI, 6))
+        for ii in range(nptsMOI):
+            for k in range(nlines):
+                r = xyzpts[k,ii,:] - r0
+                R[k,ii,:] = unassembleI(np.dot(r,r)*np.eye(3) - np.outer(r,r))
+        Imat = self.wet_mass_per_length * np.trapz(R, x=xyzpts_ds[:,:,np.newaxis], axis=1)
+        unknowns['mooring_moments_of_inertia'] = Imat.sum(axis=0)
+        
         # Get the restoring moment at maximum angle of heel
         # Since we don't know the substucture CG, have to just get the forces of the lines now and do the cross product later
         # We also want to allow for arbitraty wind direction and yaw of rotor relative to mooring lines, so we will compare

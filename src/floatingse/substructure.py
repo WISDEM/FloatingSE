@@ -90,6 +90,7 @@ class Substructure(Component):
         # From other components
         self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
         self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
+        self.add_param('mooring_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of mooring system about fairlead-centerline point [xx yy zz xy xz yz]')
         self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
         self.add_param('mooring_surge_restoring_force', val=0.0, units='N', desc='Restoring force from mooring system after surge motion')
         self.add_param('mooring_pitch_restoring_force', val=np.zeros((NLINES_MAX,3)), units='N', desc='Restoring force from mooring system after pitch motion')
@@ -142,6 +143,9 @@ class Substructure(Component):
 
         
         # Outputs
+        self.add_output('substructure_mass', val=0.0, units='kg', desc='total mass of spar and auxiliary columns with all ballasts, no mooring')
+        self.add_output('substructure_center_of_mass', val=0.0, units='m', desc='z-center of mass of spar and auxiliary columns with all ballasts, no mooring')
+        self.add_output('substructure_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of substructure (no tower or rna or mooring) [xx yy zz xy xz yz]')
         self.add_output('total_mass', val=0.0, units='kg', desc='total mass of spar and moorings')
         self.add_output('total_cost', val=0.0, units='USD', desc='total cost of spar and moorings')
         self.add_output('metacentric_height', val=0.0, units='m', desc='measure of static overturning stability')
@@ -247,7 +251,7 @@ class Substructure(Component):
         Izz   = 0.5 * rhoWater * np.pi * np.trapz(r_int**4, z_int)
         Ixx   = rhoWater * np.pi * np.trapz(0.25*r_int**4 + r_int**2*(z_int-z_cg)**2, z_int)
         unknowns['variable_ballast_moments_of_inertia'] = np.array([Ixx, Ixx, Izz, 0.0, 0.0, 0.0])
-            
+
         
     def compute_stability(self, params, unknowns):
         # Unpack variables
@@ -333,7 +337,8 @@ class Substructure(Component):
         m_column        = np.sum(params['auxiliary_column_mass'])
         m_tower         = np.sum(params['tower_mass'])
         m_rna           = params['rna_mass']
-        m_struct        = params['structural_mass']
+        m_mooring       = params['mooring_mass']
+        m_total         = unknowns['total_mass']
         m_water         = np.maximum(0.0, unknowns['variable_ballast_mass'])
         m_a_base        = params['base_column_added_mass']
         m_a_column      = params['auxiliary_column_added_mass']
@@ -346,6 +351,7 @@ class Substructure(Component):
         Awater_column   = params['auxiliary_column_Awaterplane']
         I_base          = params['base_column_moments_of_inertia']
         I_column        = params['auxiliary_column_moments_of_inertia']
+        I_mooring       = params['mooring_moments_of_inertia']
         I_water         = unknowns['variable_ballast_moments_of_inertia']
         I_tower         = params['tower_I_base']
         I_rna           = params['rna_I']
@@ -357,6 +363,8 @@ class Substructure(Component):
         z_cb_column     = params['auxiliary_column_center_of_buoyancy']
         z_cb            = params['z_center_of_buoyancy']
         z_cg_water      = unknowns['variable_ballast_center_of_mass']
+        z_fairlead      = params['fairlead']*(-1)
+        
         r_cg            = unknowns['center_of_mass']
         cg_rna          = params['rna_cg']
         z_tower         = params['tower_z_full']
@@ -370,7 +378,7 @@ class Substructure(Component):
         # Compute elements on mass matrix diagonal
         M_mat = np.zeros((nDOF,))
         # Surge, sway, heave just use normal inertia
-        M_mat[:3] = m_struct + m_water
+        M_mat[:3] = m_total + m_water
         # Add in moments of inertia of primary column
         I_total = assembleI( np.zeros(6) )
         I_base  = assembleI( I_base )
@@ -386,6 +394,20 @@ class Substructure(Component):
         # Add in variable ballast
         R         = np.array([0.0, 0.0, z_cg_water]) - r_cg
         I_total  += assembleI(I_water) + m_water*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        
+        # Save what we have so far as m_substructure & I_substructure and move to its own CM
+        m_subs    =  m_base           + ncolumn*m_column             + m_water
+        z_cg_subs = (m_base*z_cg_base + ncolumn*m_column*z_cg_column + m_water*z_cg_water) / m_subs
+        R              = r_cg - np.array([0.0, 0.0, z_cg_subs])
+        I_substructure = I_total + m_subs*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        unknowns['substructure_mass'] = m_subs
+        unknowns['substructure_center_of_mass'] = z_cg_subs
+        unknowns['substructure_moments_of_inertia'] = unassembleI( I_total )
+
+        # Now go back to the total
+        # Add in mooring system
+        R         = np.array([0.0, 0.0, z_fairlead]) - r_cg
+        I_total  += assembleI(I_mooring) + m_mooring*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
         # Add in tower
         R         = np.array([0.0, 0.0, z_tower[0]]) - r_cg
         I_total  += assembleI(I_tower) + m_tower*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
