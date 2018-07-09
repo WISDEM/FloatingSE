@@ -6,21 +6,6 @@ from map_mooring import MapMooring
 from towerse.tower import TowerLeanSE
 import numpy as np
 
-# Modify tower height to account for freeboard and still reach desired hub height
-class NewHubHeight(Component):
-    def __init__(self):
-        super(NewHubHeight,self).__init__()
-        self.add_param('base_freeboard', val=0.0, units='m', desc='Length of spar above water line')
-        self.add_param('hub_height', val=0.0, units='m', desc='Height of tower above water line')
-        self.add_output('tower_height', val=0.0, units='m', desc='Height of tower above water line minus freeboard')
-    def solve_nonlinear(self, params, unknowns, resids):
-        unknowns['tower_height'] = params['hub_height'] - params['base_freeboard']
-    def linearization(self, params, unknowns, resids):
-        J = {}
-        J['tower_height','hub_height'] = 1.0
-        J['tower_height','base_freeboard'] = -1.0
-        return J
-
     
 class FloatingSE(Group):
 
@@ -30,21 +15,19 @@ class FloatingSE(Group):
         #self.add('geomsys', SubstructureDiscretization(nSection), promotes=['z_system'])
         self.nFull = 3*nSection+1
 
-        self.add('hub', NewHubHeight(), promotes=['*'])
-
         self.add('tow', TowerLeanSE(nSection+1,self.nFull), promotes=['material_density','tower_section_height',
                                                                       'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
                                                                       'tower_buckling_length','max_taper','min_d_to_t','rna_mass','rna_cg','rna_I',
-                                                                      'tower_mass','tower_I_base'])
+                                                                      'tower_mass','tower_I_base','hub_height'])
         
         # Next do base and ballast columns
         # Ballast columns are replicated from same design in the components
         self.add('base', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                  'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
-                                                                 'max_taper','min_d_to_t','gamma_f','gamma_b'])
+                                                                 'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height'])
         self.add('aux', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                 'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
-                                                                'max_taper','min_d_to_t','gamma_f','gamma_b'])
+                                                                'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height'])
 
         # Run Semi Geometry for interfaces
         self.add('sg', SubstructureGeometry(self.nFull), promotes=['number_of_auxiliary_columns'])
@@ -80,6 +63,7 @@ class FloatingSE(Group):
         self.add('fairlead',                   IndepVarComp('fairlead', 0.0), promotes=['*'])
         self.add('fairlead_offset_from_shell', IndepVarComp('fairlead_offset_from_shell', 0.0), promotes=['*'])
 
+        self.add('z_offset',                   IndepVarComp('z_offset', 0.0), promotes=['*'])
         self.add('base_freeboard',             IndepVarComp('base_freeboard', 0.0), promotes=['*'])
         self.add('base_section_height',        IndepVarComp('base_section_height', np.zeros((nSection,))), promotes=['*'])
         self.add('base_outer_diameter',        IndepVarComp('base_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
@@ -144,11 +128,11 @@ class FloatingSE(Group):
         # Connect all input variables from all models
         self.connect('radius_to_auxiliary_column', ['sg.radius_to_auxiliary_column', 'load.radius_to_auxiliary_column', 'subs.radius_to_auxiliary_column'])
 
-        self.connect('tower_height','tow.hub_height')
-        self.connect('base_freeboard', ['base.freeboard', 'subs.base_freeboard'])
+        self.connect('base_freeboard', ['tow.foundation_height', 'base.freeboard', 'subs.base_freeboard'])
         self.connect('base_section_height', 'base.section_height')
         self.connect('base_outer_diameter', 'base.diameter')
         self.connect('base_wall_thickness', 'base.wall_thickness')
+        self.connect('z_offset', 'foundation_height')
 
         self.connect('tow.d_full', ['load.windLoads.d','sg.tower_outer_diameter']) # includes tower_d_full
         self.connect('tow.t_full', 'load.tower_t_full')
@@ -227,6 +211,7 @@ class FloatingSE(Group):
         self.connect('aux.t_full', 'load.auxiliary_t_full')
 
         self.connect('mm.mooring_mass', 'subs.mooring_mass')
+        self.connect('mm.mooring_moments_of_inertia', 'subs.mooring_moments_of_inertia')
         self.connect('mm.neutral_load', ['load.mooring_neutral_load','subs.mooring_neutral_load'])
         self.connect('mm.mooring_stiffness', 'subs.mooring_stiffness')
         self.connect('mm.mooring_cost', 'subs.mooring_cost')

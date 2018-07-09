@@ -79,7 +79,8 @@ class FloatingInstance(object):
         self.params['yaw']                       = 0.0
         self.params['beta']                      = 0.0
         self.params['cd_usr']                    = np.inf
-
+        self.params['z_offset'] = 0.0
+        
         # Encironmental constaints
         self.params['wave_period_range_low']                = 2.0
         self.params['wave_period_range_high']               = 20.0
@@ -397,7 +398,7 @@ class FloatingInstance(object):
 
         conlist = [
             # Try to get tower height to match desired hub height
-            ['tow.height_constraint', None, None, 0.0],
+            ['tow.height_constraint', -1e-2, 1e-2, None],
             
             # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
             # Ensure that fairlead attaches to draft
@@ -481,6 +482,34 @@ class FloatingInstance(object):
         return conlist
 
 
+    def constraint_report(self):
+        passStr = 'yes'
+        noStr = 'NO'
+        
+        #print('Status\tLow\tName\tHigh\tEq\tValue')
+        conlist = self.get_constraints()
+        for k in conlist:
+            lowStr = ''
+            highStr = ''
+            eqStr = ''
+            passFlag = True
+            if not k[1] is None:
+                lowStr = str(k[1])+' <\t'
+                passFlag = passFlag and np.all(self.prob[k[0]] >= k[1])
+                
+            if not k[2] is None:
+                highStr = '< '+str(k[2])+'\t'
+                passFlag = passFlag and np.all(self.prob[k[0]] <= k[2])
+
+            if not k[3] is None:
+                highStr = '= '+str(k[3])+'\t'
+                passFlag = passFlag and np.all(self.prob[k[0]] == k[3])
+
+            conStr = passStr if passFlag else noStr
+            valStr = str(self.prob[k[0]])
+            print(conStr, '\t', lowStr, k[0], '\t', highStr, eqStr, '\t', valStr)
+
+            
     def add_objective(self):
         self.prob.driver.add_objective('total_cost', scaler=1e-9)
 
@@ -493,7 +522,7 @@ class FloatingInstance(object):
             try:
                 self.prob[ivar] = self.params[ivar]
             except KeyError:
-                print('Cannot set: ', ivar)
+                print('Cannot set: ', ivar, '=', self.params[ivar])
                 continue
             except AttributeError as e:
                 print('Vector issues?: ', ivar)

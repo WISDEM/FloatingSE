@@ -792,7 +792,7 @@ class Column(Group):
         nRefine = (nFull-1)/nSection
         
         self.add('cyl_geom', CylinderDiscretization(nSection+1, nRefine), promotes=['section_height','diameter','wall_thickness',
-                                                                                  'd_full','t_full'])
+                                                                                    'd_full','t_full','foundation_height'])
         
         self.add('cyl_mass', CylinderMass(nFull), promotes=['d_full','t_full','material_density'])
 
