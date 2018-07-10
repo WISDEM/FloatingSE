@@ -159,7 +159,8 @@ class Substructure(Component):
         self.add_output('variable_ballast_mass', val=0.0, units='kg', desc='Amount of variable water ballast')
         self.add_output('variable_ballast_center_of_mass', val=0.0, units='m', desc='Center of mass for variable ballast')
         self.add_output('variable_ballast_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of variable ballast [xx yy zz xy xz yz]')
-        self.add_output('variable_ballast_height_ratio', val=0.0, units='m', desc='height of water ballast to balance spar')
+        self.add_output('variable_ballast_height', val=0.0, units='m', desc='height of water ballast to balance spar')
+        self.add_output('variable_ballast_height_ratio', val=0.0, desc='Ratio of water ballast height to available height')
 
         self.add_output('mass_matrix', val=np.zeros(6), units='kg', desc='Summary mass matrix of structure (minus pontoons)')
         self.add_output('added_mass_matrix', val=np.zeros(6), units='kg', desc='Summary hydrodynamic added mass matrix of structure (minus pontoons)')
@@ -236,6 +237,7 @@ class Substructure(Component):
             coeff = 1.0
         h_water = z_end - z_water_data[0]
         unknowns['variable_ballast_mass']   = m_water
+        unknowns['variable_ballast_height'] = coeff * h_water
         unknowns['variable_ballast_height_ratio'] = coeff * h_water / (z_water_data[-1] - z_water_data[0])
         
         # Find cg of whole system

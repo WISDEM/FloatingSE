@@ -72,6 +72,10 @@ class SparInstance(FloatingInstance):
         self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                            0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
 
+        self.draw_ballast(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
+                          0.5*self.params['base_outer_diameter']-self.params['base_wall_thickness'],
+                          self.params['base_permanent_ballast_height'], self.prob['subs.variable_ballast_height'])
+
         self.draw_column(fig, [0.0, 0.0], self.params['hub_height'], self.params['tower_section_height'],
                          0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)
 

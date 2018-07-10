@@ -689,7 +689,7 @@ class FloatingInstance(object):
         #ax.plot_surface(X, Y, Z, alpha=1.0, color=mybrown)
         mlab.mesh(X,Y,Z, opacity=1.0, color=mybrown, figure=fig)
 
-        cmoor = (0,1,0)
+        cmoor = (0,0.8,0)
         for k in xrange(int(self.params['number_of_mooring_lines'])):
             #ax.plot(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], 'k', lw=2)
             mlab.plot3d(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], color=cmoor, tube_radius=0.5*self.params['mooring_diameter'], figure=fig)
@@ -723,7 +723,7 @@ class FloatingInstance(object):
             else:
                 ck = ckIn
             #ax.plot_surface(X, Y, Z, alpha=0.5, color=ck)
-            mlab.mesh(X, Y, Z, opacity=0.9, color=ck, figure=fig)
+            mlab.mesh(X, Y, Z, opacity=0.7, color=ck, figure=fig)
 
             if spacingVec is None: continue
             
@@ -755,6 +755,33 @@ class FloatingInstance(object):
                 ax.plot_surface(X, Y, Z, alpha=0.7, color='r')
                 '''
 
+    def draw_ballast(self, fig, centerline, freeboard, h_section, r_nodes, h_perm, h_water):
+        npts = 40
+        th = np.linspace(0, 2*np.pi, npts)
+        z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
+
+        # Permanent ballast
+        z_perm = z_nodes[0] + np.linspace(0, h_perm, npts)
+        r_perm = np.interp(z_perm, z_nodes, r_nodes)
+        R, TH = np.meshgrid(r_perm, th)
+        Z, _  = np.meshgrid(z_perm, th)
+        X = R*np.cos(TH) + centerline[0]
+        Y = R*np.sin(TH) + centerline[1]
+        ck = np.array([122, 85, 33]) / 255.0
+        ck = tuple(ck.tolist())
+        mlab.mesh(X, Y, Z, color=ck, figure=fig)
+
+        # Water ballast
+        z_water = z_perm[-1] + np.linspace(0, h_water, npts)
+        r_water = np.interp(z_water, z_nodes, r_nodes)
+        R, TH = np.meshgrid(r_water, th)
+        Z, _  = np.meshgrid(z_water, th)
+        X = R*np.cos(TH) + centerline[0]
+        Y = R*np.sin(TH) + centerline[1]
+        ck = (0.0, 0.1, 0.8) # Dark blue
+        mlab.mesh(X, Y, Z, color=ck, figure=fig)
+        
+        
     def set_figure(self, fig, fname=None):
         #ax.set_aspect('equal')
         #set_axes_equal(ax)

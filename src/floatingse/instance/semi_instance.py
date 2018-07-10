@@ -24,6 +24,10 @@ class SemiInstance(FloatingInstance):
         self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                            0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
 
+        self.draw_ballast(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
+                          0.5*self.params['base_outer_diameter']-self.params['base_wall_thickness'],
+                          self.params['base_permanent_ballast_height'], self.prob['subs.variable_ballast_height'])
+
         R_semi  = self.params['radius_to_auxiliary_column']
         ncolumn = int(self.params['number_of_auxiliary_columns'])
         angles = np.linspace(0, 2*np.pi, ncolumn+1)
@@ -33,6 +37,11 @@ class SemiInstance(FloatingInstance):
             self.draw_column(fig, [x[k], y[k]], self.params['auxiliary_freeboard'], self.params['auxiliary_section_height'],
                                0.5*self.params['auxiliary_outer_diameter'], self.params['auxiliary_stiffener_spacing'])
 
+            self.draw_ballast(fig, [x[k], y[k]], self.params['auxiliary_freeboard'], self.params['auxiliary_section_height'],
+                              0.5*self.params['auxiliary_outer_diameter']-self.params['auxiliary_wall_thickness'],
+                              self.params['auxiliary_permanent_ballast_height'], 0.0)
+
+            
         self.draw_column(fig, [0.0, 0.0], self.params['hub_height'], self.params['tower_section_height'],
                          0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)
 
