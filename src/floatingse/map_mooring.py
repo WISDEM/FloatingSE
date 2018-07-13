@@ -180,7 +180,7 @@ class MapMooring(Component):
         L_mooring     = params['mooring_line_length']
 
         # Create constraint that there is at least enough line to cover this distance
-        unknowns['mooring_length_max'] = L_mooring / (R_anchor + waterDepth - fairleadDepth)
+        unknowns['mooring_length_max'] = L_mooring / (0.95 * (R_anchor + waterDepth - fairleadDepth) )
         
     
     def write_line_dictionary(self, params, cable_sea_friction_coefficient=0.65):
@@ -512,7 +512,12 @@ class MapMooring(Component):
                 
         # Store the weakest restoring force when the vessel is offset the maximum amount
         unknowns['max_offset_restoring_force'] = F_min
-        unknowns['axial_unity'] = gamma * max_tension / self.min_break_load
+
+        # Check for good convergence
+        if (plotMat[0,-1,-1] + fairleadDepth) > 1.0:
+            unknowns['axial_unity'] = 1e30
+        else:
+            unknowns['axial_unity'] = gamma * max_tension / self.min_break_load
 
         mymap.end()
 
