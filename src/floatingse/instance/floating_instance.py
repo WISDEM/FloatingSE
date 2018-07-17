@@ -346,9 +346,12 @@ class FloatingInstance(object):
             raise RuntimeError('Must set the optimizer to set the driver first')
         
         assert type(varStr) == type(''), 'Input variable must be a string'
-        assert isinstance(lowVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid lower bound'
-        assert isinstance(highVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid upper bound'
-        assert isinstance(eqVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid equality value'
+        if not lowVal is None:
+            assert isinstance(lowVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid lower bound'
+        if not highVal is None:
+            assert isinstance(highVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid upper bound'
+        if not eqVal is None:
+            assert isinstance(eqVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid equality value'
 
         self.prob.driver.add_constraint(con[0], lower=lowVal, upper=highVal, equals=eqVal)
 
