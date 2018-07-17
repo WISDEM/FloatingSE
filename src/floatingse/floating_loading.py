@@ -842,9 +842,15 @@ class FloatingFrame(Component):
         unknowns['structural_mass'] = mass.total_mass
         unknowns['center_of_mass']  = (m_rna*cg_rna + m_tower.sum()*cg_tower +
                                        unknowns['substructure_mass']*unknowns['substructure_center_of_mass']) / mass.total_mass
-        unknowns['total_force'] = -1.0 * np.array([reactions.Fx.sum(), reactions.Fy.sum(), reactions.Fz.sum()])
-        unknowns['total_moment'] = -1.0 * np.array([reactions.Mxx.sum(), reactions.Myy.sum(), reactions.Mzz.sum()])
+        F_base = -1.0 * np.array([reactions.Fx.sum(), reactions.Fy.sum(), reactions.Fz.sum()])
+        M_base = -1.0 * np.array([reactions.Mxx.sum(), reactions.Myy.sum(), reactions.Mzz.sum()])
 
+        r_cg_base = np.array([0.0, 0.0, (znode[baseBeginID] - znode[cg_node+1])])
+        delta     = np.cross(r_cg_base, F_base)
+
+        unknowns['total_force'] = F_base
+        unknowns['total_moment'] = M_base + delta
+        
         # shear and bending (convert from local to global c.s.)
         Nx = forces.Nx[iCase, 1::2]
         Vy = forces.Vy[iCase, 1::2]
