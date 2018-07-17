@@ -100,7 +100,8 @@ class FloatingFrame(Component):
         self.add_param('rna_I', val=np.zeros(6), units='kg*m**2', desc='Moments about turbine base')
 
         # Mooting parameters for loading
-        self.add_param('number_of_mooring_lines', val=3, desc='number of mooring lines')
+        self.add_param('number_of_mooring_connections', val=3, desc='number of mooring connections on vessel')
+        self.add_param('mooring_lines_per_connection', val=1, desc='number of mooring lines per connection')
         self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
         self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_radius', val=0.0, units='m',desc='Radius from center of structure to fairlead connection points')
@@ -256,7 +257,8 @@ class FloatingFrame(Component):
         
         coeff          = params['pontoon_cost_rate']
 
-        nlines         = int(params['number_of_mooring_lines'])
+        n_connect      = int(params['number_of_mooring_connections'])
+        n_lines        = int(params['mooring_lines_per_connection'])
         F_mooring      = params['mooring_neutral_load']
         R_fairlead     = params['fairlead_radius']
         
@@ -284,7 +286,7 @@ class FloatingFrame(Component):
             return
 
         # Must have symmetry in moorning loading too
-        if (ncolumn > 0) and (nlines%ncolumn > 0):
+        if (ncolumn > 0) and (n_connect > 0) and (ncolumn != n_connect):
             bad_input()
             return
 
@@ -356,7 +358,7 @@ class FloatingFrame(Component):
         # Add in ballast column nodes around the circle, make sure there is a node at the fairlead
         idx = find_nearest(z_ballast, z_fairlead)
         myones = np.ones(z_ballast.shape)
-        for k in xrange(ncolumn):
+        for k in range(ncolumn):
             ballastLowerID.append( xnode.size + 1 )
             fairleadID.append( xnode.size + idx + 1 )
             xnode = np.append(xnode, ballastx[k]*myones)
@@ -365,15 +367,12 @@ class FloatingFrame(Component):
             ballastUpperID.append( xnode.size )
 
         # Add nodes where mooring lines attach, which may be offset from columns
-        nsupport  = nlines if ncolumn==0 else len(fairleadID)
-        mooringx  = R_fairlead * np.cos( np.linspace(0, 2*np.pi, nsupport+1) )
-        mooringy  = R_fairlead * np.sin( np.linspace(0, 2*np.pi, nsupport+1) )
-        mooringx  = mooringx[:-1]
-        mooringy  = mooringy[:-1]
-        mooringID = xnode.size + 1 + np.arange(nsupport, dtype=np.int32)
+        mooringx  = R_fairlead * np.cos( np.linspace(0, 2*np.pi, n_connect+1) )[:-1]
+        mooringy  = R_fairlead * np.sin( np.linspace(0, 2*np.pi, n_connect+1) )[:-1]
+        mooringID = xnode.size + 1 + np.arange(n_connect, dtype=np.int32)
         xnode     = np.append(xnode, mooringx)
         ynode     = np.append(ynode, mooringy)
-        znode     = np.append(znode, z_fairlead*np.ones(nsupport) )
+        znode     = np.append(znode, z_fairlead*np.ones(n_connect) )
             
         # Add nodes midway around outer ring for cross bracing
         if outerCrossFlag and ncolumn > 0:
@@ -403,19 +402,19 @@ class FloatingFrame(Component):
         # Lower connection from central base column to ballast columns
         if lowerAttachFlag:
             lowerAttachEID = N1.size + 1
-            for k in xrange(ncolumn):
+            for k in range(ncolumn):
                 N1 = np.append(N1, baseLowerID )
                 N2 = np.append(N2, ballastLowerID[k] )
         # Upper connection from central base column to ballast columns
         if upperAttachFlag:
             upperAttachEID = N1.size + 1
-            for k in xrange(ncolumn):
+            for k in range(ncolumn):
                 N1 = np.append(N1, baseUpperID )
                 N2 = np.append(N2, ballastUpperID[k] )
         # Cross braces from lower central base column to upper ballast columns
         if crossAttachFlag:
             crossAttachEID = N1.size + 1
-            for k in xrange(ncolumn):
+            for k in range(ncolumn):
                 N1 = np.append(N1, baseLowerID )
                 N2 = np.append(N2, ballastUpperID[k] )
             # Will be used later to convert from local member c.s. to global
@@ -423,7 +422,7 @@ class FloatingFrame(Component):
         # Lower ring around ballast columns
         if lowerRingFlag:
             lowerRingEID = N1.size + 1
-            for k in xrange(ncolumn-1):
+            for k in range(ncolumn-1):
                 N1 = np.append(N1, ballastLowerID[k] )
                 N2 = np.append(N2, ballastLowerID[k+1] )
             N1 = np.append(N1, ballastLowerID[0] )
@@ -431,7 +430,7 @@ class FloatingFrame(Component):
         # Upper ring around ballast columns
         if upperRingFlag:
             upperRingEID = N1.size + 1
-            for k in xrange(ncolumn-1):
+            for k in range(ncolumn-1):
                 N1 = np.append(N1, ballastUpperID[k] )
                 N2 = np.append(N2, ballastUpperID[k+1] )
             N1 = np.append(N1, ballastUpperID[0] )
@@ -439,7 +438,7 @@ class FloatingFrame(Component):
         # Outer cross braces
         if outerCrossFlag:
             outerCrossEID = N1.size + 1
-            for k in xrange(ncolumn-1):
+            for k in range(ncolumn-1):
                 N1 = np.append(N1, crossOuterLowerID[k] )
                 N2 = np.append(N2, ballastUpperID[k] )
                 N1 = np.append(N1, crossOuterLowerID[k+1] )
@@ -465,7 +464,7 @@ class FloatingFrame(Component):
         # Add in fairlead support elements
         mooringEID = N1.size + 1
         mytube  = Tube(2.0*R_od_fairlead, t_wall_fairlead)
-        for k in xrange(nsupport):
+        for k in range(n_connect):
             kfair = 0 if ncolumn==0 else k
             N1   = np.append(N1  , fairleadID[kfair] )
             N2   = np.append(N2  , mooringID[k] )
@@ -547,7 +546,7 @@ class FloatingFrame(Component):
         myrange    = np.arange(R_od_ballast.size)
         myones     = np.ones(myrange.shape)
         mydens     = m_ballast / mytube.Area / np.diff(z_ballast) + eps
-        for k in xrange(ncolumn):
+        for k in range(ncolumn):
             ballastEID.append( N1.size + 1 )
             
             N1   = np.append(N1  , myrange + ballastLowerID[k]    )
@@ -628,7 +627,7 @@ class FloatingFrame(Component):
         wz2     = np.append(wz2, Pz_tower[1:])
         # Buoyancy- ballast columns
         nrange  = np.arange(R_od_ballast.size, dtype=np.int32)
-        for k in xrange(ncolumn):
+        for k in range(ncolumn):
             EL      = np.append(EL, ballastEID[k] + nrange)
             Ux      = np.append(Ux,  F_hydro_ballast / np.diff(z_ballast) )
             x1      = np.append(x1, np.zeros(nrange.shape))
@@ -700,33 +699,33 @@ class FloatingFrame(Component):
                 F_truss += Frange * elemL[upperRingEID-1] * ncolumn
                 z_cb    += Frange * elemL[upperRingEID-1] * ncolumn * elemCoG[upperRingEID-1,:]
         # Now do fairlead supports
-        nrange   = np.arange(nlines, dtype=np.int32)
+        nrange   = np.arange(n_connect, dtype=np.int32)
         Frange   = np.pi * R_od_fairlead**2 * rhoWater * gravity
         EL       = np.append(EL, mooringEID + nrange)
         Ux       = np.append(Ux, np.zeros(nrange.shape))
         Uy       = np.append(Uy, np.zeros(nrange.shape))
         Uz       = np.append(Uz, Frange * np.ones(nrange.shape))
-        F_truss += Frange * elemL[mooringEID-1] * nlines
-        z_cb    += Frange * elemL[mooringEID-1] * nlines * elemCoG[mooringEID-1,:]
+        F_truss += Frange * elemL[mooringEID-1] * n_connect
+        z_cb    += Frange * elemL[mooringEID-1] * n_connect * elemCoG[mooringEID-1,:]
         # Finally add in all the uniform loads on buoyancy
         load.changeUniformLoads(EL, Ux, Uy, Uz)
 
         # Point loads for mooring loading
-        nattach = len(fairleadID)
-        nlines_per_column = int( float(nlines) / float(nattach) )
+        nnode_connect = len(fairleadID)
         nF  = np.array(fairleadID, dtype=np.int32)
-        Fx  = np.zeros(nattach)
-        Fy  = np.zeros(nattach)
-        Fz  = np.zeros(nattach)
-        Mxx = np.zeros(nattach)
-        Myy = np.zeros(nattach)
-        Mzz = np.zeros(nattach)
-        for k in range(len(fairleadID)):
-            idx = k*nlines_per_column + np.arange(nlines_per_column)
-            Fx[k] = F_mooring[idx,0].sum()
-            Fy[k] = F_mooring[idx,1].sum()
-            Fz[k] = F_mooring[idx,2].sum()
-            
+        Fx  = np.zeros(nnode_connect)
+        Fy  = np.zeros(nnode_connect)
+        Fz  = np.zeros(nnode_connect)
+        Mxx = np.zeros(nnode_connect)
+        Myy = np.zeros(nnode_connect)
+        Mzz = np.zeros(nnode_connect)
+        for k in range(n_connect):
+            iline = 0 if nnode_connect==1 else k
+            idx = k*n_lines + np.arange(n_lines)
+            Fx[iline] += F_mooring[idx,0].sum()
+            Fy[iline] += F_mooring[idx,1].sum()
+            Fz[iline] += F_mooring[idx,2].sum()
+
         # Point loading for rotor thrust and wind loads at CG
         # Note: extra momemt from mass accounted for below
         nF  = np.append(nF , towerEndID)
@@ -739,6 +738,7 @@ class FloatingFrame(Component):
         
         # Add in all point loads
         load.changePointLoads(nF, Fx, Fy, Fz, Mxx, Myy, Mzz)
+
 
 
         # ---MASS SUMMARIES---

@@ -90,7 +90,8 @@ class FloatingInstance(object):
         # Mooring parameters
         self.params['mooring_max_offset']                   = 0.1*self.params['water_depth'] # Assumption        
         self.params['mooring_max_heel']                     = 10.0
-        self.params['number_of_mooring_lines']              = 3
+        self.params['number_of_mooring_connections']        = 3
+        self.params['mooring_lines_per_connection']         = 1
         self.params['mooring_type']                         = 'chain'
         self.params['anchor_type']                          = 'suctionpile'
         self.params['mooring_cost_rate']                    = 1.1
@@ -704,7 +705,8 @@ class FloatingInstance(object):
         mlab.mesh(X,Y,Z, opacity=1.0, color=mybrown, figure=fig)
 
         cmoor = (0,0.8,0)
-        for k in xrange(int(self.params['number_of_mooring_lines'])):
+        nlines = int( self.params['number_of_mooring_connections'] * self.params['mooring_lines_per_connections'] )
+        for k in xrange(nlines):
             #ax.plot(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], 'k', lw=2)
             mlab.plot3d(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], color=cmoor, tube_radius=0.5*self.params['mooring_diameter'], figure=fig)
 

@@ -17,16 +17,16 @@ myones = np.ones((100,))
 truth=['---------------------- LINE DICTIONARY ---------------------------------------',
 'LineType  Diam      MassDenInAir   EA            CB   CIntDamp  Ca   Cdn    Cdt',
 '(-)       (m)       (kg/m)        (N)           (-)   (Pa-s)    (-)  (-)    (-)',
-'chain   0.05   53.77517   213500000.0   0.65   1.0E8   0.6   -1.0   0.05',
+'chain   0.05    23.98352   118593500.0   0.65   1.0E8   0.6   -1.0   0.05',
 '---------------------- NODE PROPERTIES ---------------------------------------',
 'Node Type X     Y    Z   M     V FX FY FZ',
 '(-)  (-) (m)   (m)  (m) (kg) (m^3) (kN) (kN) (kN)',
-'1   FIX   175.0   0.0   depth   0.0   0.0   #   #   #',
-'2   VESSEL   11.0   0.0   -10.0   0.0   0.0   #   #   #',
+'1   VESSEL   11.0   0.0   -10.0   0.0   0.0   #   #   #',
+'2   FIX   175.0   0.0   depth   0.0   0.0   #   #   #',
 '---------------------- LINE PROPERTIES ---------------------------------------',
 'Line    LineType  UnstrLen  NodeAnch  NodeFair  Flags',
 '(-)      (-)       (m)       (-)       (-)       (-)',
-'1   chain   416.0   1   2',
+'1   chain   235.8   2   1',
 '---------------------- SOLVER OPTIONS-----------------------------------------',
 'Option',
 '(-)',
@@ -65,14 +65,15 @@ class TestMapMooring(unittest.TestCase):
         self.params['freeboard'] = 15.0
         self.params['fairlead'] = 10.0
         self.params['fairlead_radius'] = 11.0
+        self.params['anchor_radius'] = 175.0
 
         self.params['water_density'] = 1025.0 #1e3
         self.params['water_depth'] = 218.0 #100.0
 
-        self.params['mooring_line_length'] = 2.0*(self.params['water_depth']-10.0)
+        self.params['number_of_mooring_connections'] = 3
+        self.params['mooring_lines_per_connection'] = 1
+        self.params['mooring_line_length'] = 0.6*(self.params['water_depth'] + self.params['anchor_radius'])
         self.params['mooring_diameter'] = 0.05
-        self.params['anchor_radius'] = 175.0
-        self.params['number_of_mooring_lines'] = 3
         self.params['mooring_type'] = 'chain'
         self.params['anchor_type'] = 'suctionpile'
         self.params['drag_embedment_extra_length'] = 300.0
@@ -139,12 +140,12 @@ class TestMapMooring(unittest.TestCase):
         expect = truth[:]
         self.assertEqual(len(expect), len(actual))
         
-        for n in xrange(len(actual)):
+        for n in range(len(actual)):
             actualTok = actual[n].split()
             expectTok = expect[n].split()
             self.assertEqual(len(expectTok), len(actualTok))
             
-            for k in xrange(len(actualTok)):
+            for k in range(len(actualTok)):
                 if myisnumber(actualTok[k]):
                     self.assertEqual( float(actualTok[k]), float(expectTok[k]) )
                 else:

@@ -14,10 +14,10 @@ NPTS = NSECTIONS+1
 
 def DrawTruss(mytruss):
     mynodes = {}
-    for k in xrange(len(mytruss.frame.nx)):
+    for k in range(len(mytruss.frame.nx)):
         mynodes[mytruss.frame.nnode[k]] = np.r_[mytruss.frame.nx[k], mytruss.frame.ny[k], mytruss.frame.nz[k]]
     myelem = []
-    for k in xrange(len(mytruss.frame.eN1)):
+    for k in range(len(mytruss.frame.eN1)):
         myelem.append( (mytruss.frame.eN1[k], mytruss.frame.eN2[k]) )
 
     fig = plt.figure()
@@ -51,11 +51,12 @@ def getParams():
     params['number_of_auxiliary_columns'] = 3
     params['connection_ratio_max'] = 0.25
 
-    params['number_of_mooring_lines'] = 3
+    params['number_of_mooring_connections'] = 3
+    params['mooring_lines_per_connection'] = 1
     params['mooring_neutral_load'] = 1e2*np.ones((15,3))
     
     params['fairlead'] = 7.5
-    params['fairlead_offset_from_shell'] = 0.5
+    params['fairlead_radius'] = 23.5
     params['fairlead_support_outer_diameter'] = 2.0
     params['fairlead_support_wall_thickness'] = 1.0
     
@@ -170,7 +171,9 @@ class TestFrame(unittest.TestCase):
         rho    = self.params['material_density']
         rhoW   = self.params['water_density']
 
-        self.params['number_of_mooring_lines'] = 0.0
+        self.params['mooring_lines_per_column'] = 0.0
+        self.params['number_of_mooring_connections'] = 0.0
+        self.params['fairlead_radius'] = 0.0
         self.params['cross_attachment_pontoons'] = False
         self.params['lower_attachment_pontoons'] = True
         self.params['upper_attachment_pontoons'] = False
@@ -277,9 +280,10 @@ class TestFrame(unittest.TestCase):
         self.params['base_pontoon_attach_upper'] = 0.0
         self.params['base_pontoon_attach_lower'] = 0.0
         self.params['water_density'] = 1e-12
-        self.params['number_of_mooring_lines'] = 3
+        self.params['number_of_mooring_connections'] = 3
+        self.params['mooring_lines_per_connection'] = 1
         self.params['mooring_neutral_load'] = 10.0*np.ones((15,3))
-        self.params['fairlead_offset_from_shell'] = 0.1
+        self.params['fairlead_radius'] = 0.1
         self.params['fairlead_support_outer_diameter'] = 2*np.sqrt(2.0/np.pi)
         self.params['fairlead_support_wall_thickness'] = np.sqrt(2.0/np.pi) - np.sqrt(1.0/np.pi)
         self.params['material_density'] = 20.0
@@ -346,7 +350,8 @@ class TestSandbox(unittest.TestCase):
                                 
                                 for ocp in [True, False]:
                                     self.params['number_of_auxiliary_columns'] = nc
-                                    self.params['number_of_mooring_lines'] = np.maximum(nc, 3)
+                                    self.params['number_of_mooring_connections'] = np.maximum(nc, 3)
+                                    self.params['mooring_lines_per_connection'] = 1
                                     self.params['cross_attachment_pontoons'] = cap
                                     self.params['lower_attachment_pontoons'] = lap
                                     self.params['upper_attachment_pontoons'] = uap
@@ -354,7 +359,8 @@ class TestSandbox(unittest.TestCase):
                                     self.params['upper_ring_pontoons'] = urp
                                     self.params['outer_cross_pontoons'] = ocp
                                     if (nc > 0) and (not cap) and (not lap) and (not uap): continue
-        
+                                    if (nc > 0) and (ocp) and (not lrp): continue
+                                    
                                     self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
                                     if self.unknowns['substructure_mass'] == 1e30:
                                         print nc, cap, lap, uap, lrp, urp, ocp
@@ -363,9 +369,10 @@ class TestSandbox(unittest.TestCase):
         
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestFrame))
     suite.addTest(unittest.makeSuite(TestSandbox))
+    suite.addTest(unittest.makeSuite(TestFrame))
     return suite
 
 if __name__ == '__main__':
     unittest.TextTestRunner().run(suite())
+
