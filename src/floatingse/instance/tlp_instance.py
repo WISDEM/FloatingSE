@@ -6,9 +6,8 @@ class TLPInstance(SemiInstance):
     def __init__(self):
         super(TLPInstance, self).__init__()
 
-        self.params['mooring_type']        = 'fiber'
+        self.params['mooring_type']        = 'nylon'
         self.params['anchor_type']         = 'suctionpile'
-        self.params['mooring_cost_rate']   *= 1.1
         self.params['mooring_line_length'] = 0.95 * self.params['water_depth']
         self.params['anchor_radius']       = 10.0
         self.params['mooring_diameter']    = 0.1
