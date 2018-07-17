@@ -353,7 +353,7 @@ class FloatingInstance(object):
         if not eqVal is None:
             assert isinstance(eqVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid equality value'
 
-        self.prob.driver.add_constraint(con[0], lower=lowVal, upper=highVal, equals=eqVal)
+        self.prob.driver.add_constraint(varStr, lower=lowVal, upper=highVal, equals=eqVal)
 
         self.constraintSet = True
         
