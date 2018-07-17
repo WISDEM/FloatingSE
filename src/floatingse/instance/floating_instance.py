@@ -5,12 +5,13 @@ import numpy as np
 import cPickle as pickle        
 from StringIO import StringIO
 
-#import matplotlib.pyplot as plt
-#from mpl_toolkits.mplot3d import Axes3D
 from mayavi import mlab
 
 NSECTIONS = 5
 NPTS = 100
+Ten_strings = ['DTU', 'DTU10', 'DTU10MW', '10', '10MW', 'DTU-10', 'DTU-10MW']
+Five_strings = ['NREL', 'NREL5', 'NREL5MW', '5', '5MW', 'NREL-5', 'NREL-5MW']
+
 
 def vecOption(x, in1s):
     myones = in1s if type(in1s) == type(np.array([])) else np.ones((in1s,))
@@ -51,6 +52,7 @@ class FloatingInstance(object):
         self.params = {}
         self.optimizerSet = False
         self.desvarSet = False
+        self.constraintSet = False
         self.optimizer = None
 
         # Environmental parameters
@@ -224,7 +226,7 @@ class FloatingInstance(object):
 
 
     def set_reference(self, instr):
-        if instr.upper() in ['NREL', 'NREL5', 'NREL5MW', '5', '5MW', 'NREL-5', 'NREL-5MW']:
+        if instr.upper() in Five_strings:
 
             self.params['hub_height']              = 90.0
             self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
@@ -244,7 +246,7 @@ class FloatingInstance(object):
                 #self.params['rna_moment']    = np.array([0.0, 131196.8431,  0.0])
                 
             
-        elif instr.upper() in ['DTU', 'DTU10', 'DTU10MW', '10', '10MW', 'DTU-10', 'DTU-10MW']:
+        elif instr.upper() in Ten_strings:
 
             #z Do Di Ixx= Iyy J
             #[m] [m] [m] [m4] [m4]
@@ -336,6 +338,20 @@ class FloatingInstance(object):
             self.prob.driver.add_desvar(varStr, lower=lowVal, upper=highVal)
 
         self.desvarSet = True
+
+        
+    def add_constraint(self, varStr, lowVal, highVal, eqVal):
+        if not self.optimizerSet:
+            raise RuntimeError('Must set the optimizer to set the driver first')
+        
+        assert type(varStr) == type(''), 'Input variable must be a string'
+        assert isinstance(lowVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid lower bound'
+        assert isinstance(highVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid upper bound'
+        assert isinstance(eqVal, (float, int, np.float32, np.float64, np.int32, np.int64)), 'Invalid equality value'
+
+        self.prob.driver.add_constraint(con[0], lower=lowVal, upper=highVal, equals=eqVal)
+
+        self.constraintSet = True
         
             
     def set_optimizer(self, optStr):
@@ -586,10 +602,8 @@ class FloatingInstance(object):
                 raise RuntimeError('Must set the optimizer to set the driver first')
             if not self.desvarSet:
                 raise RuntimeError('Must set design variables before running optimization')
-            
-            constlist = self.get_constraints()
-            for con in constlist:
-                self.prob.driver.add_constraint(con[0], lower=con[1], upper=con[2], equals=con[3])
+            if not self.constraintSet:
+                print('Warning: no constraints set')
 
             self.add_objective()
 
