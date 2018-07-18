@@ -57,7 +57,7 @@ class MapMooring(Component):
         self.add_param('mooring_cost_rate', val=0.0, desc='miscellaneous cost factor in percent')
 
         # Outputs
-        self.add_output('number_of_mooring_lines', val=0.0, desc='total number of mooring lines')
+        self.add_output('number_of_mooring_lines', val=0, desc='total number of mooring lines')
         self.add_output('mooring_mass', val=0.0, units='kg',desc='total mass of mooring')
         self.add_output('mooring_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of mooring system about fairlead-centerline point [xx yy zz xy xz yz]')
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
