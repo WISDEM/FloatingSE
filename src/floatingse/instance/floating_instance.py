@@ -96,7 +96,8 @@ class FloatingInstance(object):
         self.params['anchor_type']                          = 'suctionpile'
         self.params['mooring_cost_rate']                    = 1.1
         self.params['drag_embedment_extra_length']          = 300.0
-        self.params['number_of_mooring_lines']              = 3
+        self.params['number_of_mooring_connections']        = 3
+        self.params['mooring_lines_per_connection']         = 1
 
         # Steel properties
         self.params['material_density']                     = 7850.0
@@ -708,7 +709,7 @@ class FloatingInstance(object):
         mlab.mesh(X,Y,Z, opacity=1.0, color=mybrown, figure=fig)
 
         cmoor = (0,0.8,0)
-        nlines = int( self.params['number_of_mooring_connections'] * self.params['mooring_lines_per_connections'] )
+        nlines = int( self.params['number_of_mooring_connections'] * self.params['mooring_lines_per_connection'] )
         for k in xrange(nlines):
             #ax.plot(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], 'k', lw=2)
             mlab.plot3d(mooring[k,:,0], mooring[k,:,1], mooring[k,:,2], color=cmoor, tube_radius=0.5*self.params['mooring_diameter'], figure=fig)

@@ -379,7 +379,7 @@ class MapMooring(Component):
 
         # Write the "Line Properties" section
         for k in range(n_lines):
-            self.write_line_properties(params, line_number=k+1, anchor_node=k+2, fairlead_node=k+1)
+            self.write_line_properties(params, line_number=k+1, anchor_node=k+2, fairlead_node=1)
 
         # Write the "Solve Options" section
         self.write_solver_options(params)

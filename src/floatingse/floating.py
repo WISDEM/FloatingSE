@@ -353,7 +353,8 @@ def sparExample():
     prob['base_stiffener_spacing']          = 0.40 * np.ones(nsection) # (by section) [m]
     
     # Mooring parameters
-    prob['number_of_mooring_lines']    = 3             # Evenly spaced around structure
+    prob['number_of_mooring_connections'] = 3             # Evenly spaced around structure
+    prob['mooring_lines_per_connection'] = 1             # Evenly spaced around structure
     prob['mooring_type']               = 'chain'       # Options are chain, nylon, polyester, fiber, or iwrc
     prob['anchor_type']                = 'suctionpile' # Options are SUCTIONPILE or DRAGEMBEDMENT
     prob['mooring_diameter']           = 0.09          # Diameter of mooring line/chain [m]
@@ -528,7 +529,8 @@ def semiExample():
     prob['base_pontoon_attach_upper'] = 10.0   # Upper z-coordinate on base where truss attaches [m]
     
     # Mooring parameters
-    prob['number_of_mooring_lines']    = 3             # Evenly spaced around structure
+    prob['number_of_mooring_connections'] = 3             # Evenly spaced around structure
+    prob['mooring_lines_per_connection'] = 1             # Evenly spaced around structure
     prob['mooring_type']               = 'chain'       # Options are chain, nylon, polyester, fiber, or iwrc
     prob['anchor_type']                = 'suctionpile' # Options are SUCTIONPILE or DRAGEMBEDMENT
     prob['mooring_diameter']           = 0.0766        # Diameter of mooring line/chain [m]
