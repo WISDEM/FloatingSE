@@ -532,8 +532,7 @@ class FloatingInstance(object):
 
             
     def add_objective(self):
-        curobj = self.prob.driver.get_objective()
-        if (curobj is None) or )len(curobj) == 0):
+        if (len(self.prob.driver._objs) == 0):
             self.prob.driver.add_objective('total_cost', scaler=1e-9)
 
 
