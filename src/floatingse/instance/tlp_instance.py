@@ -16,7 +16,7 @@ class TLPInstance(SemiInstance):
         self.check_vectors()
 
     def get_constraints(self):
-        conlist = super(SparInstance, self).get_constraints()
+        conlist = super(TLPInstance, self).get_constraints()
 
         poplist = []
         for k in range(len(conlist)):
