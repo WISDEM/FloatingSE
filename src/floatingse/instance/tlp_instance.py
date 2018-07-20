@@ -14,4 +14,18 @@ class TLPInstance(SemiInstance):
         
         # Change scalars to vectors where needed
         self.check_vectors()
+
+    def get_constraints(self):
+        conlist = super(SparInstance, self).get_constraints()
+
+        poplist = []
+        for k in range(len(conlist)):
+            if ( (conlist[k][0].find('metacentric') >= 0) or
+                 (conlist[k][0].find('freeboard_heel') >= 0) ):
+                poplist.append(k)
+
+        poplist.reverse()
+        for k in poplist: conlist.pop(k)
+
+        return conlist
         

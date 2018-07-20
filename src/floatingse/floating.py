@@ -84,8 +84,9 @@ class FloatingSE(Group):
         self.add('anchor_type',                IndepVarComp('anchor_type', 'SUCTIONPILE', pass_by_obj=True), promotes=['*'])
         self.add('drag_embedment_extra_length',IndepVarComp('drag_embedment_extra_length', 0.0), promotes=['*'])
         self.add('mooring_max_offset',         IndepVarComp('mooring_max_offset', 0.0), promotes=['*'])
-        self.add('mooring_max_heel',           IndepVarComp('mooring_max_heel', 0.0), promotes=['*'])
+        self.add('mooring_operational_heel',   IndepVarComp('mooring_operational_heel', 0.0), promotes=['*'])
         self.add('mooring_cost_rate',          IndepVarComp('mooring_cost_rate', 0.0), promotes=['*'])
+        self.add('max_survival_heel',          IndepVarComp('max_survival_heel', 0.0), promotes=['*'])
 
         # Column
         self.add('permanent_ballast_density',  IndepVarComp('permanent_ballast_density', 0.0), promotes=['*'])
@@ -143,14 +144,15 @@ class FloatingSE(Group):
         self.connect('tow.turbine_mass','base.stack_mass_in')
         self.connect('tow.tower_center_of_mass','load.tower_center_of_mass')
         
-        self.connect('auxiliary_freeboard', 'aux.freeboard')
+        self.connect('auxiliary_freeboard', ['aux.freeboard','sg.auxiliary_freeboard'])
         self.connect('auxiliary_section_height', 'aux.section_height')
         self.connect('auxiliary_outer_diameter', 'aux.diameter')
         self.connect('auxiliary_wall_thickness', 'aux.wall_thickness')
 
         self.connect('fairlead', ['base.fairlead','aux.fairlead','sg.fairlead','mm.fairlead','subs.fairlead','load.fairlead'])
         self.connect('fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell')
-
+        self.connect('max_survival_heel', 'sg.max_survival_heel')
+        
         self.connect('mooring_line_length', 'mm.mooring_line_length')
         self.connect('anchor_radius', 'mm.anchor_radius')
         self.connect('mooring_diameter', 'mm.mooring_diameter')
@@ -160,7 +162,7 @@ class FloatingSE(Group):
         self.connect('anchor_type', 'mm.anchor_type')
         self.connect('drag_embedment_extra_length', 'mm.drag_embedment_extra_length')
         self.connect('mooring_max_offset', 'mm.max_offset')
-        self.connect('mooring_max_heel', ['mm.max_heel', 'subs.max_heel'])
+        self.connect('mooring_operational_heel', ['mm.operational_heel', 'subs.operational_heel'])
         self.connect('mooring_cost_rate', 'mm.mooring_cost_rate')
         self.connect('gamma_f', 'mm.gamma')
 
@@ -218,7 +220,7 @@ class FloatingSE(Group):
         self.connect('mm.mooring_stiffness', 'subs.mooring_stiffness')
         self.connect('mm.mooring_cost', 'subs.mooring_cost')
         self.connect('mm.max_offset_restoring_force', 'subs.mooring_surge_restoring_force')
-        self.connect('mm.max_heel_restoring_force', 'subs.mooring_pitch_restoring_force')
+        self.connect('mm.operational_heel_restoring_force', 'subs.mooring_pitch_restoring_force')
         
         self.connect('base.z_center_of_mass', ['load.base_column_center_of_mass','subs.base_column_center_of_mass'])
         self.connect('base.z_center_of_buoyancy', ['load.base_column_center_of_buoyancy','subs.base_column_center_of_buoyancy'])
@@ -387,7 +389,7 @@ def sparExample():
     
     # Mooring constraints
     prob['mooring_max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
-    prob['mooring_max_heel']   = 10.0 # Max heel (pitching) angle [deg]
+    prob['mooring_operational_heel']   = 10.0 # Max heel (pitching) angle [deg]
 
     # Design constraints
     prob['max_taper_ratio'] = 0.2                # For manufacturability of rolling steel
@@ -563,7 +565,7 @@ def semiExample():
     
     # Mooring constraints
     prob['mooring_max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
-    prob['mooring_max_heel']   = 10.0 # Max heel (pitching) angle [deg]
+    prob['mooring_operational_heel']   = 10.0 # Max heel (pitching) angle [deg]
 
     # Design constraints
     prob['max_taper_ratio'] = 0.2                # For manufacturability of rolling steel

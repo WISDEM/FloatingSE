@@ -89,7 +89,8 @@ class FloatingInstance(object):
         
         # Mooring parameters
         self.params['mooring_max_offset']                   = 0.1*self.params['water_depth'] # Assumption        
-        self.params['mooring_max_heel']                     = 10.0
+        self.params['mooring_operational_heel']             = 6.0
+        self.params['max_survival_heel']                    = 15.0
         self.params['number_of_mooring_connections']        = 3
         self.params['mooring_lines_per_connection']         = 1
         self.params['mooring_type']                         = 'chain'
@@ -319,7 +320,9 @@ class FloatingInstance(object):
     def load(self, fname):
         assert type(fname) == type(''), 'Input filename must be a string'
         with open(fname,'rb') as fp:
-            self.params = pickle.load(fp)
+            newparams = pickle.load(fp)
+        for k in newparams.keys():
+            self.params[k] = newparams[k]
         
     def get_assembly(self):
         return FloatingSE(NSECTIONS)
@@ -382,20 +385,17 @@ class FloatingInstance(object):
         elif self.optimizer in ['PSQP']:
             self.prob.driver.opt_settings['MIT'] = 1000
         elif self.optimizer in ['SOGA','SOPSO']:
-            self.prob.driver.options['population'] = 200
+            self.prob.driver.options['population'] = 50
             self.prob.driver.options['generations'] = 500
         elif self.optimizer in ['NSGA2']:
             self.prob.driver.opt_settings['PopSize'] = 200
             self.prob.driver.opt_settings['maxGen'] = 500
         elif self.optimizer in ['SNOPT']:
-            self.prob.driver.opt_settings['Major iterations limit'] = 500
-            self.prob.driver.opt_settings['Minor iterations limit'] = 250
-            #self.prob.driver.opt_settings['Major optimality tolerance'] = 1e-5
-            #self.prob.driver.opt_settings['Major feasibility tolerance'] = 1e-6
-            #self.prob.driver.opt_settings['Minor feasibility tolerance'] = 1e-6
-            #self.prob.driver.opt_settings['Function precision'] = 1e-12
-            #self.prob.driver.opt_settings['Linesearch tolerance'] = 0.4
-            #self.prob.driver.opt_settings['LU singularity tolerance'] = 1e30
+            self.prob.driver.opt_settings['Iterations limit'] = 500
+            self.prob.driver.opt_settings['Major optimality tolerance'] = 1e-4
+            self.prob.driver.opt_settings['Major feasibility tolerance'] = 1e-6
+            self.prob.driver.opt_settings['Minor feasibility tolerance'] = 1e-6
+            self.prob.driver.opt_settings['Function precision'] = 1e-8
         elif self.optimizer in ['COBYLA','SLSQP']:
             self.prob.driver.options['tol'] = 1e-6
             self.prob.driver.options['maxiter'] = 1000
@@ -439,6 +439,9 @@ class FloatingInstance(object):
             # Ensure that the spar top matches the tower base
             ['sg.tower_transition_buffer', -1.0, 1.0, None],
             ['sg.nacelle_transition_buffer', 0.0, None, None],
+
+            # Make sure semisub columns don't get submerged
+            ['sg.auxiliary_freeboard_heel_margin', 0.0, None, None],
             
             # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
             ['mm.axial_unity', 0.0, 1.0, None],
@@ -527,7 +530,7 @@ class FloatingInstance(object):
                 passFlag = passFlag and np.all(self.prob[k[0]] == k[3])
 
             conStr = passStr if passFlag else noStr
-            valStr = str(self.prob[k[0]])
+            valStr = '' if passFlag else str(self.prob[k[0]])
             print(conStr, '\t', lowStr, k[0], '\t', highStr, eqStr, '\t', valStr)
 
             

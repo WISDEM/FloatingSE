@@ -18,6 +18,7 @@ class SubstructureGeometry(Component):
         self.add_param('base_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('auxiliary_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('auxiliary_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('auxiliary_freeboard', val=0.0, units='m', desc='Length of column above water line')
         self.add_param('base_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
@@ -25,12 +26,14 @@ class SubstructureGeometry(Component):
         self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column')
         self.add_param('tower_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('Rhub', val=0.0, units='m', desc='rotor hub radius')
+        self.add_param('max_survival_heel', val=0.0, units='deg', desc='max heel angle for turbine survival')
         
         # Output constraints
         self.add_output('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
         self.add_output('base_auxiliary_spacing', val=0.0, desc='Radius of base and ballast columns relative to spacing')
         self.add_output('tower_transition_buffer', val=0.0, units='m', desc='Buffer between substructure base and tower base')
         self.add_output('nacelle_transition_buffer', val=0.0, units='m', desc='Buffer between tower top and nacelle base')
+        self.add_output('auxiliary_freeboard_heel_margin', val=0.0, units='m', desc='Margin so auxiliary column does not submerge during max heel')
 
         
         # Derivatives
@@ -62,6 +65,8 @@ class SubstructureGeometry(Component):
         z_nodes_base    = params['base_z_nodes']
         fairlead        = params['fairlead'] # depth of mooring attachment point
         fair_off        = params['fairlead_offset_from_shell']
+        aux_freeboard   = params['auxiliary_freeboard']
+        max_heel        = params['max_survival_heel']
 
         # Set spacing constraint
         unknowns['base_auxiliary_spacing'] = (R_od_base.max() + R_od_ballast.max()) / R_semi
@@ -76,6 +81,8 @@ class SubstructureGeometry(Component):
         unknowns['tower_transition_buffer']   = R_od_base[-1] - R_tower[0]
         unknowns['nacelle_transition_buffer'] = R_hub + 1.0 - R_tower[-1] # Guessing at 6m size for nacelle
 
+        # Make sure semi columns don't get submerged
+        unknowns['auxiliary_freeboard_heel_margin'] = aux_freeboard - R_semi*np.sin(np.deg2rad(max_heel))
 
 
 
@@ -88,7 +95,7 @@ class Substructure(Component):
         self.add_param('wave_period_range_high', val=20.0, units='s', desc='Upper bound of typical ocean wavve period')
 
         # From other components
-        self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
+        self.add_param('operational_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
         self.add_param('mooring_mass', val=0.0, units='kg', desc='Mass of mooring lines')
         self.add_param('mooring_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of mooring system about fairlead-centerline point [xx yy zz xy xz yz]')
         self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
@@ -275,7 +282,7 @@ class Substructure(Component):
         F_restore_pitch = params['mooring_pitch_restoring_force']
         z_fairlead      = params['fairlead']*(-1)
         R_fairlead      = params['fairlead_radius']
-        max_heel        = params['max_heel']
+        oper_heel       = params['operational_heel']
         
         # Compute the distance from the center of buoyancy to the metacentre (BM is naval architecture)
         # BM = Iw / V where V is the displacement volume (just computed)
@@ -300,7 +307,7 @@ class Substructure(Component):
         unknowns['metacentric_height' ] = buoyancy2metacentre_BM - unknowns['buoyancy_to_gravity']
 
         F_buoy     = V_system * rhoWater * gravity
-        M_restore  = unknowns['metacentric_height'] * np.sin(np.deg2rad(max_heel)) * F_buoy 
+        M_restore  = unknowns['metacentric_height'] * np.sin(np.deg2rad(oper_heel)) * F_buoy 
 
         # Convert mooring restoring force after pitch to a restoring moment
         nlines = np.count_nonzero(F_restore_pitch[:,2])
@@ -311,7 +318,7 @@ class Substructure(Component):
         Msum   = 0.0
         for k in xrange(nlines):
             dvF   = DirectionVector.fromArray(F_restore_pitch[k,:])
-            dvR   = DirectionVector.fromArray(r_moor[k,:]).yawToHub(max_heel)
+            dvR   = DirectionVector.fromArray(r_moor[k,:]).yawToHub(oper_heel)
             M     = dvR.cross(dvF)
             Msum += M.y
 
@@ -379,8 +386,8 @@ class Substructure(Component):
 
         # Compute elements on mass matrix diagonal
         M_mat = np.zeros((nDOF,))
-        # Surge, sway, heave just use normal inertia
-        M_mat[:3] = m_total + m_water
+        # Surge, sway, heave just use normal inertia (without mooring according to Senu)
+        M_mat[:3] = m_total + m_water - m_mooring
         # Add in moments of inertia of primary column
         I_total = assembleI( np.zeros(6) )
         I_base  = assembleI( I_base )
@@ -407,9 +414,9 @@ class Substructure(Component):
         unknowns['substructure_moments_of_inertia'] = unassembleI( I_total )
 
         # Now go back to the total
-        # Add in mooring system
-        R         = np.array([0.0, 0.0, z_fairlead]) - r_cg
-        I_total  += assembleI(I_mooring) + m_mooring*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        # Add in mooring system- Not needed according to Senu
+        #R         = np.array([0.0, 0.0, z_fairlead]) - r_cg
+        #I_total  += assembleI(I_mooring) + m_mooring*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
         # Add in tower
         R         = np.array([0.0, 0.0, z_tower[0]]) - r_cg
         I_total  += assembleI(I_tower) + m_tower*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
@@ -462,23 +469,21 @@ class Substructure(Component):
         # Compute margins between wave forcing and natural periods
         indicator_high = T_wave_high * np.ones(T_sys.shape)
         indicator_high[T_sys < T_wave_low] = 1e-16
-        indicator_high[-1] = 1e-16 # Yaw
+        indicator_high[2:] = 1e-16 # Only surge/sway for now
         unknowns['period_margin_high'] = T_sys / indicator_high
 
         indicator_low = T_wave_low * np.ones(T_sys.shape)
         indicator_low[T_sys > T_wave_high] = 1e30
-        indicator_low[-1] = 1e30 # Yaw
+        indicator_low[2:] = 1e30 # Only surge/sway for now
         unknowns['period_margin_low']  = T_sys / indicator_low
 
         # Compute margins bewteen wave forcing and structural frequencies
         indicator_high = T_wave_high * np.ones(T_struct.shape)
         indicator_high[T_struct < T_wave_low] = 1e-16
-        indicator_high[-1] = 1e-16 # Yaw
         unknowns['modal_margin_high'] = T_struct / indicator_high
 
         indicator_low = T_wave_low * np.ones(T_struct.shape)
         indicator_low[T_struct > T_wave_high] = 1e30
-        indicator_low[-1] = 1e30 # Yaw
         unknowns['modal_margin_low']  = T_struct / indicator_low
         
         

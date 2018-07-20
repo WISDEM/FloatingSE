@@ -50,7 +50,7 @@ class MapMooring(Component):
         self.add_param('anchor_type', val='DRAGEMBEDMENT', desc='SUCTIONPILE or DRAGEMBEDMENT', pass_by_obj=True)
         self.add_param('drag_embedment_extra_length', val=0.0, units='m', desc='Extra mooring line length so that anchors only see horizontal forces')
         self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
-        self.add_param('max_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable')
+        self.add_param('operational_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable during operation')
         self.add_param('gamma', val=0.0, desc='Safety factor for mooring line tension')
 
         # Cost rates
@@ -65,7 +65,7 @@ class MapMooring(Component):
         self.add_output('anchor_cost', val=0.0, units='USD',desc='total cost for anchor')
         self.add_output('neutral_load', val=np.zeros((NLINES_MAX,3)), units='N',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='N',desc='sum of forces in x direction after max offset')
-        self.add_output('max_heel_restoring_force', val=np.zeros((NLINES_MAX,3)), units='N',desc='forces for all mooring lines after max heel')
+        self.add_output('operational_heel_restoring_force', val=np.zeros((NLINES_MAX,3)), units='N',desc='forces for all mooring lines after operational heel')
         self.add_output('plot_matrix', val=np.zeros((NLINES_MAX, NPTS_PLOT, 3)), units='m', desc='data matrix for plotting') 
 
         # Output constriants
@@ -137,8 +137,8 @@ class MapMooring(Component):
             #self.min_break_load      = 2.74e7  * Dmooring2 * (44.0 - 80.0*Dmooring)
             # Use a linear fit to the other fit becuase it is poorly conditioned for optimization
             self.min_break_load      = 1e3*np.maximum(1.0, -5445.2957034820683+176972.68498888266*Dmooring)
-            self.wet_mass_per_length = 7983.34117 * Dmooring2 # From OC3 definiton doc, 19.9e3 from Orca
-            self.axial_stiffness     = 4.74374e10 * Dmooring2 # From OC3 definiton doc, 8.54e10 from Orca
+            self.wet_mass_per_length = 19.9e3  * Dmooring2 # From Orca, 7983.34117 OC3 definiton doc
+            self.axial_stiffness     = 8.54e10 * Dmooring2 # From Orca, 4.74374e10 OC3 definiton doc, 
             self.area                = 2.0 * 0.25 * np.pi * Dmooring2
             self.cost_per_length     = 3.415e4  * Dmooring2 #0.58*1e-3*self.min_break_load/gravity - 87.6
 
@@ -402,7 +402,7 @@ class MapMooring(Component):
         fairleadDepth = params['fairlead']
         Dmooring      = params['mooring_diameter']
         offset        = params['max_offset']
-        heel          = params['max_heel']
+        heel          = params['operational_heel']
         gamma         = params['gamma']
         n_connect     = int(params['number_of_mooring_connections'])
         n_lines       = int(params['mooring_lines_per_connection'])
@@ -473,7 +473,7 @@ class MapMooring(Component):
         for k in range(ntotal):
             Fh[k][0], Fh[k][1], Fh[k][2] = mymap.get_fairlead_force_3d(k)
 
-        unknowns['max_heel_restoring_force'] = Fh
+        unknowns['operational_heel_restoring_force'] = Fh
         
         # Get angles by which to find the weakest line
         dangle  = 2.0
