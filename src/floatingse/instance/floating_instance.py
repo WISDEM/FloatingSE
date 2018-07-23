@@ -236,6 +236,7 @@ class FloatingInstance(object):
             self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
             self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
             self.params['sg.Rhub']                 = 1.125
+            self.params['base_freeboard'] = 10.0
 
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 350e3 #285598.8
@@ -289,18 +290,19 @@ class FloatingInstance(object):
             """)
 
             
-            self.params['hub_height'] = 119.0
+            self.params['hub_height'] = 149.0
+            self.params['base_freeboard'] = 30.0
             towerData = np.loadtxt(dtuTowerData)
             towerData = towerData[(towerData[:,0] >= 30.0),:]
             towerData = np.vstack((towerData[0,:], towerData))
-            towerData[0,0] = 30.0 + self.params['hub_height']
+            towerData[0,0] = self.params['hub_height']
             towerData[(towerData[:,0] == 40.0),0] += np.array([0.01, 0.0])
             trans_idx = np.where(towerData[:,1] == towerData[-1,1])[0]
             idx = [0, 1, trans_idx[0]/2, trans_idx[0]-1, trans_idx[0], trans_idx[-1]]
             self.params['tower_section_height'] = np.diff( np.flipud( towerData[idx,0] ) )
             self.params['tower_outer_diameter'] = np.flipud( towerData[idx, 1] )
             self.params['tower_wall_thickness'] = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
-
+            
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 350e3 #285598.8
                 self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
@@ -675,7 +677,7 @@ class FloatingInstance(object):
         alpha   = 0.3
 
         # Waterplane box
-        x = y = 50 * np.linspace(-1, 1, npts)
+        x = y = 100 * np.linspace(-1, 1, npts)
         X,Y = np.meshgrid(x,y)
         Z   = np.sin(100*X*Y) #np.zeros(X.shape)
         #ax.plot_surface(X, Y, Z, alpha=alpha, color=mywater)

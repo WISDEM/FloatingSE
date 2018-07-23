@@ -48,7 +48,6 @@ class MapMooring(Component):
         self.add_param('mooring_lines_per_connection', val=1, desc='number of mooring lines per connection')
         self.add_param('mooring_type', val='CHAIN', desc='chain, nylon, polyester, fiber, or iwrc', pass_by_obj=True)
         self.add_param('anchor_type', val='DRAGEMBEDMENT', desc='SUCTIONPILE or DRAGEMBEDMENT', pass_by_obj=True)
-        self.add_param('drag_embedment_extra_length', val=0.0, units='m', desc='Extra mooring line length so that anchors only see horizontal forces')
         self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
         self.add_param('operational_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable during operation')
         self.add_param('gamma', val=0.0, desc='Safety factor for mooring line tension')
@@ -549,11 +548,9 @@ class MapMooring(Component):
         ntotal        = n_connect * n_lines
         
         # Cost of anchors
-        extraLength = 0.0
         if type(anchorType) == type(''): anchorType = Anchor[anchorType.upper()]
         if anchorType == Anchor['DRAGEMBEDMENT']:
             anchor_rate = 1e-3 * self.min_break_load / gravity / 20*2000
-            extraLength = params['drag_embedment_extra_length']
         elif anchorType  == Anchor['SUCTIONPILE']:
             anchor_rate = 150000.* np.sqrt(1e-3*self.min_break_load/gravity/1250.)
         else:
@@ -561,7 +558,7 @@ class MapMooring(Component):
         anchor_total = anchor_rate*ntotal
 
         # Cost of all of the mooring lines
-        legs_total = ntotal * self.cost_per_length * (L_mooring + extraLength)
+        legs_total = ntotal * self.cost_per_length * L_mooring
 
         # Total summations
         unknowns['anchor_cost']  = anchor_total

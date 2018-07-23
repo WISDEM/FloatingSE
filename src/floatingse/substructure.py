@@ -82,6 +82,7 @@ class SubstructureGeometry(Component):
         unknowns['nacelle_transition_buffer'] = R_hub + 1.0 - R_tower[-1] # Guessing at 6m size for nacelle
 
         # Make sure semi columns don't get submerged
+        print aux_freeboard, R_semi, np.sin(np.deg2rad(max_heel))
         unknowns['auxiliary_freeboard_heel_margin'] = aux_freeboard - R_semi*np.sin(np.deg2rad(max_heel))
 
 
@@ -324,8 +325,9 @@ class Substructure(Component):
 
         M_restore += Msum
         
-        # Comput heel angle
-        unknowns['heel_moment_ratio'] =  np.abs( M_pitch / M_restore )
+        # Comput heel angle, scaling overturning moment by defect of inflow velocity
+        # TODO: Make this another load case in Frame3DD
+        unknowns['heel_moment_ratio'] =  np.abs( np.cos(np.deg2rad(oper_heel))**2.0 * M_pitch / M_restore )
 
         # Now compute offsets from the applied force
         # First use added mass (the mass of the water that must be displaced in movement)
