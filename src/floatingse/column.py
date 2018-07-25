@@ -623,10 +623,11 @@ class ColumnProperties(Component):
         # Find total hydrostatic force by section- sign says in which direction force acts
         z_section,_ = nodal2sectional(z_under)
         F_hydro     = np.pi * np.diff(r_under**2.0) * np.maximum(0.0, -z_section) #cg_under))
-        F_hydro[0] += np.pi * r_under[0]**2 * (-z_under[0])
-        if z_nodes[-1] < 0.0:
-            F_hydro[-1] -= np.pi * r_under[-1]**2 * (-z_under[-1])
-        F_hydro    *= rho_water * gravity
+        if F_hydro.size > 0:
+            F_hydro[0] += np.pi * r_under[0]**2 * (-z_under[0])
+            if z_nodes[-1] < 0.0:
+                F_hydro[-1] -= np.pi * r_under[-1]**2 * (-z_under[-1])
+            F_hydro    *= rho_water * gravity
         unknowns['hydrostatic_force'] = np.r_[F_hydro, np.zeros(add0)]
         
         # 2nd moment of area for circular cross section
