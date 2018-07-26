@@ -427,8 +427,8 @@ class FloatingInstance(object):
             # Ensure that fairlead attaches to draft
             ['base.draft_depth_ratio', 0.0, 0.6, None],
             ['aux.draft_depth_ratio', 0.0, 0.6, None],
-            ['aux.fairlead_draft_ratio', 0.0, 1.0, None],
-            ['sg.base_auxiliary_spacing', 0.0, 1.0, None],
+            #['aux.fairlead_draft_ratio', 0.0, 1.0, None],
+            ['sg.base_auxiliary_spacing', 1.0, None, None],
             
             # Ensure that the radius doesn't change dramatically over a section
             ['base.manufacturability', 0.0, None, None],
@@ -471,8 +471,8 @@ class FloatingInstance(object):
             ['aux.external_general_api', None, 1.0, None],
             
             # Pontoon tube radii
-            ['load.base_connection_ratio', 0.0, None, None],
-            ['load.auxiliary_connection_ratio', 0.0, None, None],
+            #['load.base_connection_ratio', 0.0, None, None],
+            #['load.auxiliary_connection_ratio', 0.0, None, None],
             ['load.pontoon_base_attach_upper', 0.5, 1.0, None],
             ['load.pontoon_base_attach_lower', 0.0, 0.5, None],
             
