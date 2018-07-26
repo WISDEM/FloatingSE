@@ -69,7 +69,7 @@ class SubstructureGeometry(Component):
         max_heel        = params['max_survival_heel']
 
         # Set spacing constraint
-        unknowns['base_auxiliary_spacing'] = (R_od_base.max() + R_od_ballast.max()) / R_semi
+        unknowns['base_auxiliary_spacing'] = R_semi - R_od_base.max() - R_od_ballast.max()
 
         # Determine radius at mooring connection point (fairlead)
         if int(params['number_of_auxiliary_columns']) > 0:
