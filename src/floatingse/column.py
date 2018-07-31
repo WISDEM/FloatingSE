@@ -540,8 +540,9 @@ class ColumnProperties(Component):
         I_keel = rho_ballast * unassembleI(I_keel)
         
         # Water ballast will start at top of fixed ballast
-        z_water_start = z_draft + h_ballast
-
+        z_water_start = (z_draft + h_ballast)
+        #z_water_start = z_water_start + params['variable_ballast_start'] * (z_nodes[-1] - z_water_start)
+        
         # Find height of water ballast numerically by finding the height that integrates to the mass we want
         # This step is completed in spar.py or semi.py because we must account for other substructure elements too
         zpts    = np.linspace(z_water_start, z_nodes[-1], npts)
@@ -817,7 +818,7 @@ class Column(Group):
         self.add('col', ColumnProperties(nFull), promotes=['water_density','d_full','t_full','z_full','z_section',
                                                            'permanent_ballast_density','permanent_ballast_height',
                                                            'bulkhead_mass','stiffener_mass','column_mass_factor','outfitting_mass_fraction',
-                                                           'bulkhead_I_keel','stiffener_I_keel',
+                                                           'bulkhead_I_keel','stiffener_I_keel','spar_mass',
                                                            'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
                                                            'variable_ballast_interp_radius','variable_ballast_interp_zpts',
                                                            'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater','I_column',
