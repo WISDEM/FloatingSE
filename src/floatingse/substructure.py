@@ -465,17 +465,17 @@ class Substructure(Component):
         f_struct    = params['structural_frequencies']
         T_struct    = 1.0 / f_struct
 
-        # NOTE: I AM REMOVING YAW FROM THIS CONSTRAINT BECAUSE I DON'T THINK WAVES CAN EXCITE YAW
+        # Waves cannot excite yaw, so removing that constraint
         
         # Compute margins between wave forcing and natural periods
         indicator_high = T_wave_high * np.ones(T_sys.shape)
         indicator_high[T_sys < T_wave_low] = 1e-16
-        indicator_high[2:] = 1e-16 # Only surge/sway for now
+        indicator_high[-1] = 1e-16 # Not yaw
         unknowns['period_margin_high'] = T_sys / indicator_high
 
         indicator_low = T_wave_low * np.ones(T_sys.shape)
         indicator_low[T_sys > T_wave_high] = 1e30
-        indicator_low[2:] = 1e30 # Only surge/sway for now
+        indicator_low[-1] = 1e30 # Not yaw
         unknowns['period_margin_low']  = T_sys / indicator_low
 
         # Compute margins bewteen wave forcing and structural frequencies

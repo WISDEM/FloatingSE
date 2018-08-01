@@ -48,8 +48,8 @@ class FloatingFrame(Component):
         self.add_param('base_column_Pz', np.zeros(nFull), units='N/m', desc='force per unit length in z-direction on base')
         self.add_param('base_column_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on base')
 
-        self.add_param('base_pontoon_attach_upper', val=0.0, units='m', desc='z-value of upper truss attachment on base column')
-        self.add_param('base_pontoon_attach_lower', val=0.0, units='m', desc='z-value of lower truss attachment on base column')
+        self.add_param('base_pontoon_attach_upper', val=0.0, desc='Fraction of base column for upper truss attachment on base column')
+        self.add_param('base_pontoon_attach_lower', val=0.0, desc='Fraction of base column lower truss attachment on base column')
 
         # Ballast columns
         self.add_param('auxiliary_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
@@ -158,8 +158,6 @@ class FloatingFrame(Component):
         self.add_output('plot_matrix', val=np.array([]), desc='Ratio of shear stress to yield stress for all pontoon elements', pass_by_obj=True)
         self.add_output('base_connection_ratio', val=np.zeros((nFull,)), desc='Ratio of pontoon outer diameter to base outer diameter')
         self.add_output('auxiliary_connection_ratio', val=np.zeros((nFull,)), desc='Ratio of pontoon outer diameter to base outer diameter')
-        self.add_output('pontoon_base_attach_upper', val=0.0, desc='Fractional distance along base column for upper truss attachment')
-        self.add_output('pontoon_base_attach_lower', val=0.0, desc='Fractional distance along base column for lower truss attachment')
 
         self.add_output('structural_frequencies', np.zeros(NFREQ), units='Hz', desc='First six natural frequencies')
         self.add_output('substructure_mass', val=0.0, units='kg', desc='Mass of substructure elements and connecting truss')
@@ -226,8 +224,8 @@ class FloatingFrame(Component):
         z_base         = params['base_z_full']
         z_ballast      = params['auxiliary_z_full']
         z_tower        = params['tower_z_full']
-        z_attach_upper = params['base_pontoon_attach_upper']
-        z_attach_lower = params['base_pontoon_attach_lower']
+        z_attach_upper = z_base[-1] if upperAttachFlag else params['base_pontoon_attach_upper']*(z_base[-1] - z_base[0]) + z_base[0]
+        z_attach_lower = params['base_pontoon_attach_lower']*(z_base[-1] - z_base[0]) + z_base[0]
         z_fairlead     = -params['fairlead']
         
         m_base         = params['base_column_mass']
@@ -271,8 +269,6 @@ class FloatingFrame(Component):
         # Quick ratio for unknowns
         unknowns['base_connection_ratio']    = params['connection_ratio_max'] - R_od_pontoon/R_od_base
         unknowns['auxiliary_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_ballast
-        unknowns['pontoon_base_attach_upper'] = (z_attach_upper - z_base[0]) / (z_base[-1] - z_base[0]) #0.5<x<1.0
-        unknowns['pontoon_base_attach_lower'] = (z_attach_lower - z_base[0]) / (z_base[-1] - z_base[0]) #0.0<x<0.5
 
         # --- INPUT CHECKS -----
         # There is no truss if not auxiliary columns

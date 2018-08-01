@@ -23,10 +23,10 @@ class FloatingSE(Group):
         # Next do base and ballast columns
         # Ballast columns are replicated from same design in the components
         self.add('base', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
-                                                                 'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
+                                                                 'Uref','zref','shearExp','beta','yaw','Uc','Hs','T','cd_usr','cm','loading',
                                                                  'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height'])
         self.add('aux', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
-                                                                'Uref','zref','shearExp','beta','yaw','Uc','hmax','T','cd_usr','cm','loading',
+                                                                'Uref','zref','shearExp','beta','yaw','Uc','Hs','T','cd_usr','cm','loading',
                                                                 'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height'])
 
         # Run Semi Geometry for interfaces
@@ -62,17 +62,8 @@ class FloatingSE(Group):
         
         self.add('fairlead',                   IndepVarComp('fairlead', 0.0), promotes=['*'])
         self.add('fairlead_offset_from_shell', IndepVarComp('fairlead_offset_from_shell', 0.0), promotes=['*'])
-
         self.add('z_offset',                   IndepVarComp('z_offset', 0.0), promotes=['*'])
-        self.add('base_freeboard',             IndepVarComp('base_freeboard', 0.0), promotes=['*'])
-        self.add('base_section_height',        IndepVarComp('base_section_height', np.zeros((nSection,))), promotes=['*'])
-        self.add('base_outer_diameter',        IndepVarComp('base_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
-        self.add('base_wall_thickness',        IndepVarComp('base_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
 
-        self.add('auxiliary_freeboard',          IndepVarComp('auxiliary_freeboard', 0.0), promotes=['*'])
-        self.add('auxiliary_section_height',     IndepVarComp('auxiliary_section_height', np.zeros((nSection,))), promotes=['*'])
-        self.add('auxiliary_outer_diameter',     IndepVarComp('auxiliary_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
-        self.add('auxiliary_wall_thickness',     IndepVarComp('auxiliary_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
 
         # Mooring
         self.add('mooring_line_length',        IndepVarComp('mooring_line_length', 0.0), promotes=['*'])
@@ -90,6 +81,10 @@ class FloatingSE(Group):
         # Column
         self.add('permanent_ballast_density',  IndepVarComp('permanent_ballast_density', 0.0), promotes=['*'])
         
+        self.add('base_freeboard',             IndepVarComp('base_freeboard', 0.0), promotes=['*'])
+        self.add('base_section_height',        IndepVarComp('base_section_height', np.zeros((nSection,))), promotes=['*'])
+        self.add('base_outer_diameter',        IndepVarComp('base_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
+        self.add('base_wall_thickness',        IndepVarComp('base_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('base_stiffener_web_height',       IndepVarComp('base_stiffener_web_height', np.zeros((nSection,))), promotes=['*'])
         self.add('base_stiffener_web_thickness',    IndepVarComp('base_stiffener_web_thickness', np.zeros((nSection,))), promotes=['*'])
         self.add('base_stiffener_flange_width',     IndepVarComp('base_stiffener_flange_width', np.zeros((nSection,))), promotes=['*'])
@@ -97,7 +92,12 @@ class FloatingSE(Group):
         self.add('base_stiffener_spacing',          IndepVarComp('base_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
         self.add('base_bulkhead_thickness',             IndepVarComp('base_bulkhead_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('base_permanent_ballast_height',   IndepVarComp('base_permanent_ballast_height', 0.0), promotes=['*'])
+        self.add('base_heave_plate_diameter',   IndepVarComp('base_heave_plate_diameter', 0.0), promotes=['*'])
 
+        self.add('auxiliary_freeboard',          IndepVarComp('auxiliary_freeboard', 0.0), promotes=['*'])
+        self.add('auxiliary_section_height',     IndepVarComp('auxiliary_section_height', np.zeros((nSection,))), promotes=['*'])
+        self.add('auxiliary_outer_diameter',     IndepVarComp('auxiliary_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
+        self.add('auxiliary_wall_thickness',     IndepVarComp('auxiliary_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('auxiliary_stiffener_web_height',       IndepVarComp('auxiliary_stiffener_web_height', np.zeros((nSection,))), promotes=['*'])
         self.add('auxiliary_stiffener_web_thickness',    IndepVarComp('auxiliary_stiffener_web_thickness', np.zeros((nSection,))), promotes=['*'])
         self.add('auxiliary_stiffener_flange_width',     IndepVarComp('auxiliary_stiffener_flange_width', np.zeros((nSection,))), promotes=['*'])
@@ -105,6 +105,7 @@ class FloatingSE(Group):
         self.add('auxiliary_stiffener_spacing',          IndepVarComp('auxiliary_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
         self.add('auxiliary_bulkhead_thickness',             IndepVarComp('auxiliary_bulkhead_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('auxiliary_permanent_ballast_height',   IndepVarComp('auxiliary_permanent_ballast_height', 0.0), promotes=['*'])
+        self.add('auxiliary_heave_plate_diameter',   IndepVarComp('auxiliary_heave_plate_diameter', 0.0), promotes=['*'])
 
         self.add('bulkhead_mass_factor',       IndepVarComp('bulkhead_mass_factor', 0.0), promotes=['*'])
         self.add('ring_mass_factor',           IndepVarComp('ring_mass_factor', 0.0), promotes=['*'])
@@ -150,7 +151,7 @@ class FloatingSE(Group):
 
         self.connect('fairlead', ['base.fairlead','aux.fairlead','sg.fairlead','mm.fairlead','subs.fairlead','load.fairlead'])
         self.connect('fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell')
-        self.connect('max_survival_heel', 'sg.max_survival_heel')
+        self.connect('max_survival_heel', ['sg.max_survival_heel','mm.max_survival_heel'])
         
         self.connect('mooring_line_length', 'mm.mooring_line_length')
         self.connect('anchor_radius', 'mm.anchor_radius')
@@ -182,7 +183,8 @@ class FloatingSE(Group):
         self.connect('base_bulkhead_thickness', 'base.bulkhead_thickness')
         self.connect('base_permanent_ballast_height', 'base.permanent_ballast_height')
         self.connect('base.L_stiffener','load.base_column_buckling_length')
-        
+        self.connect('base_heave_plate_diameter', 'base.heave_plate_diameter')
+
         self.connect('auxiliary_stiffener_web_height', 'aux.stiffener_web_height')
         self.connect('auxiliary_stiffener_web_thickness', 'aux.stiffener_web_thickness')
         self.connect('auxiliary_stiffener_flange_width', 'aux.stiffener_flange_width')
@@ -191,8 +193,10 @@ class FloatingSE(Group):
         self.connect('auxiliary_bulkhead_thickness', 'aux.bulkhead_thickness')
         self.connect('auxiliary_permanent_ballast_height', 'aux.permanent_ballast_height')
         self.connect('aux.L_stiffener','load.auxiliary_column_buckling_length')
+        self.connect('auxiliary_heave_plate_diameter', 'aux.heave_plate_diameter')
         
-        self.connect('bulkhead_mass_factor', ['base.bulkhead_mass_factor', 'aux.bulkhead_mass_factor'])
+        self.connect('bulkhead_mass_factor', ['base.bulkhead_mass_factor', 'aux.bulkhead_mass_factor',
+                                              'base.heave_plate_mass_factor', 'aux.heave_plate_mass_factor'])
         self.connect('ring_mass_factor', ['base.ring_mass_factor', 'aux.ring_mass_factor'])
         self.connect('shell_mass_factor', ['base.cyl_mass.outfitting_factor', 'aux.cyl_mass.outfitting_factor'])
         self.connect('column_mass_factor', ['base.column_mass_factor', 'aux.column_mass_factor'])
@@ -293,7 +297,7 @@ def sparExample():
 
     # Set environment to that used in OC3 testing campaign
     prob['water_depth'] = 320.0  # Distance to sea floor [m]
-    prob['hmax']        = 10.8   # Significant wave height [m]
+    prob['Hs']        = 10.8   # Significant wave height [m]
     prob['T']           = 9.8    # Wave period [s]
     prob['Uref']        = 11.0   # Wind reference speed [m/s]
     prob['zref']        = 119.0  # Wind reference height [m]
@@ -446,7 +450,7 @@ def semiExample():
 
     # Set environment to that used in OC4 testing campaign
     prob['water_depth'] = 200.0  # Distance to sea floor [m]
-    prob['hmax']        = 10.8   # Significant wave height [m]
+    prob['Hs']        = 10.8   # Significant wave height [m]
     prob['T']           = 9.8    # Wave period [s]
     prob['Uref']        = 11.0   # Wind reference speed [m/s]
     prob['zref']        = 119.0  # Wind reference height [m]

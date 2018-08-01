@@ -65,7 +65,7 @@ class FloatingInstance(object):
         #self.params['water_viscosity']          = 8.9e-4
         self.params['base.waveLoads.mu']         = 8.9e-4
         #self.params['wave_height']              = 10.8
-        self.params['hmax']                      = 10.8
+        self.params['Hs']                      = 10.8
         #self.params['wave_period']              = 9.8
         self.params['T']                         = 9.8
         self.params['Uc']                        = 0.0
@@ -91,12 +91,9 @@ class FloatingInstance(object):
         self.params['mooring_max_offset']                   = 0.1*self.params['water_depth'] # Assumption        
         self.params['mooring_operational_heel']             = 6.0
         self.params['max_survival_heel']                    = 15.0
-        self.params['number_of_mooring_connections']        = 3
-        self.params['mooring_lines_per_connection']         = 1
         self.params['mooring_type']                         = 'chain'
         self.params['anchor_type']                          = 'suctionpile'
         self.params['mooring_cost_rate']                    = 1.1
-        self.params['drag_embedment_extra_length']          = 300.0
         self.params['number_of_mooring_connections']        = 3
         self.params['mooring_lines_per_connection']         = 1
 
@@ -184,14 +181,16 @@ class FloatingInstance(object):
         self.params['pontoon_outer_diameter']               = 2*1.6
         self.params['pontoon_wall_thickness']               = 0.0175
         self.params['connection_ratio_max']                 = 0.25
-        self.params['base_pontoon_attach_lower']            = -20.0
-        self.params['base_pontoon_attach_upper']            = 10.0
+        self.params['base_pontoon_attach_lower']            = 0.1
+        self.params['base_pontoon_attach_upper']            = 1.0
+        self.params['base_heave_plate_diameter']            = 0.0
+        self.params['auxiliary_heave_plate_diameter']       = 0.0
         
         self.set_length_base( 30.0 )
         self.set_length_aux( 32.0 )
 
-        self.params['auxiliary_section_height']             = np.array([6.0, 0.1, 7.9, 8.0, 10.0])
-        self.params['auxiliary_outer_diameter']             = 2*np.array([12.0, 12.0, 6.0, 6.0, 6.0, 6.0])
+        self.params['auxiliary_outer_diameter']             = 2*6.0
+        self.params['auxiliary_heave_plate_diameter']       = 24.0
 
         self.params['mooring_line_length']                  = 835.5
         self.params['anchor_radius']                        = 837.6
@@ -292,6 +291,7 @@ class FloatingInstance(object):
             
             self.params['hub_height'] = 149.0
             self.params['base_freeboard'] = 30.0
+            self.params['base_section_height'] += 3.0
             towerData = np.loadtxt(dtuTowerData)
             towerData = towerData[(towerData[:,0] >= 30.0),:]
             towerData = np.vstack((towerData[0,:], towerData))
@@ -302,13 +302,13 @@ class FloatingInstance(object):
             self.params['tower_section_height'] = np.diff( np.flipud( towerData[idx,0] ) )
             self.params['tower_outer_diameter'] = np.flipud( towerData[idx, 1] )
             self.params['tower_wall_thickness'] = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
-            
+
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 350e3 #285598.8
                 self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
                 self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
-                self.params['rna_force']   = np.array([2.14149875e+06, 0.0, -8.49851438e+06])
-                self.params['rna_moment']  = np.array([28662206.47475225, -11629079.42415007,  -3012519.29255573])
+                self.params['rna_force']   = np.array([ 2.11271060e+06, 0.0, -7.25225356e+06])
+                self.params['rna_moment']  = np.array([29259007.24076359,  1422330.08481948, -3075245.58067333])
                 self.params['sg.Rhub']     = 2.3
             
         else:
@@ -425,8 +425,13 @@ class FloatingInstance(object):
             
             # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
             # Ensure that fairlead attaches to draft
-            ['base.draft_depth_ratio', 0.0, 0.6, None],
-            ['aux.draft_depth_ratio', 0.0, 0.6, None],
+            ['base.draft', 0.0, 100.0, None],
+            ['aux.draft', 0.0, 100.0, None],
+            ['base.draft_depth_ratio', None, 0.9, None],
+            ['aux.draft_depth_ratio', None, 0.9, None],
+            ['base.wave_height_freeboard_ratio', None, 1.0, None],
+            ['aux.wave_height_freeboard_ratio', None, 1.0, None],
+            
             #['aux.fairlead_draft_ratio', 0.0, 1.0, None],
             ['sg.base_auxiliary_spacing', 1.0, None, None],
             
@@ -473,8 +478,6 @@ class FloatingInstance(object):
             # Pontoon tube radii
             #['load.base_connection_ratio', 0.0, None, None],
             #['load.auxiliary_connection_ratio', 0.0, None, None],
-            ['load.pontoon_base_attach_upper', 0.5, 1.0, None],
-            ['load.pontoon_base_attach_lower', 0.0, 0.5, None],
             
             # Pontoon stress safety factor
             ['load.pontoon_stress', None, 1.0, None],

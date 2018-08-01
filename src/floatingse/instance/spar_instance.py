@@ -27,7 +27,7 @@ class SparInstance(FloatingInstance):
         
         # OC3
         self.params['water_depth'] = 320.0
-        self.params['hmax'] = 10.8
+        self.params['Hs'] = 10.8
         self.params['T'] = 9.8
         self.params['Uref'] = 11.0
         self.params['zref'] = 119.0

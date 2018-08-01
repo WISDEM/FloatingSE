@@ -27,6 +27,7 @@ class MapMooring(Component):
         self.area                = None
         self.cost_per_length     = None
         self.finput              = None
+        self.tlpFlag             = False
 
         # Environment
         self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
@@ -50,6 +51,7 @@ class MapMooring(Component):
         self.add_param('anchor_type', val='DRAGEMBEDMENT', desc='SUCTIONPILE or DRAGEMBEDMENT', pass_by_obj=True)
         self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
         self.add_param('operational_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable during operation')
+        self.add_param('max_survival_heel', val=0.0, units='deg', desc='max heel angle for turbine survival')
         self.add_param('gamma', val=0.0, desc='Safety factor for mooring line tension')
 
         # Cost rates
@@ -176,13 +178,23 @@ class MapMooring(Component):
     def set_geometry(self, params, unknowns):
         # Unpack variables
         fairleadDepth = params['fairlead']
+        R_fairlead    = params['fairlead_radius']
         R_anchor      = params['anchor_radius']
         waterDepth    = params['water_depth']
         L_mooring     = params['mooring_line_length']
-
-        # Create constraint that there is at least enough line to cover this distance
-        unknowns['mooring_length_max'] = L_mooring / (0.95 * (R_anchor + waterDepth - fairleadDepth) )
+        max_heel      = params['max_survival_heel']
+        gamma         = params['gamma']
         
+        if L_mooring > (waterDepth - fairleadDepth):
+            self.tlpFlag = False
+            
+            # Create constraint that line isn't too long that there is no catenary hang
+            unknowns['mooring_length_max'] = L_mooring / (0.95 * (R_anchor + waterDepth - fairleadDepth) )
+        else:
+            self.tlpFlag = True
+            # Create constraint that we don't lose line tension
+            unknowns['mooring_length_max'] = L_mooring / ( (waterDepth - fairleadDepth - gamma*R_fairlead*np.sin(np.deg2rad(max_heel))) )
+            
     
     def write_line_dictionary(self, params, cable_sea_friction_coefficient=0.65):
         """Writes LINE DICTIONARY section of input.map file
@@ -286,7 +298,7 @@ class MapMooring(Component):
         OUTPUTS  : none
         """
         # Add flag for taut lines
-        if params['mooring_line_length'] <= params['water_depth']:
+        if self.tlpFlag:
             flags += ' LINEAR SPRING'
             
         self.finput.append('---------------------- LINE PROPERTIES ---------------------------------------')
