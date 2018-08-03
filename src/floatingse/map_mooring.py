@@ -550,7 +550,6 @@ class MapMooring(Component):
         """
         # Unpack variables
         rhoWater      = params['water_density']
-        D_mooring     = params['mooring_diameter']
         L_mooring     = params['mooring_line_length']
         anchorType    = params['anchor_type']
         costFact      = params['mooring_cost_rate']
@@ -574,5 +573,5 @@ class MapMooring(Component):
         # Total summations
         unknowns['anchor_cost']  = anchor_total
         unknowns['mooring_cost'] = costFact*(legs_total + anchor_total)
-        unknowns['mooring_mass'] = (self.wet_mass_per_length + rhoWater*0.25*np.pi*D_mooring**2)*L_mooring*ntotal
+        unknowns['mooring_mass'] = self.wet_mass_per_length*L_mooring*ntotal
         unknowns['number_of_mooring_lines'] = ntotal

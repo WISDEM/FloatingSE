@@ -722,7 +722,7 @@ class FloatingFrame(Component):
             Fy[iline] += F_mooring[idx,1].sum()
             Fz[iline] += F_mooring[idx,2].sum()
 
-        # Point loading for rotor thrust and wind loads at CG
+        # Point loading for rotor thrust and mooring lines
         # Note: extra momemt from mass accounted for below
         nF  = np.append(nF , towerEndID)
         Fx  = np.append(Fx , F_rna[0] )
@@ -764,6 +764,9 @@ class FloatingFrame(Component):
         unknowns['substructure_mass']  = m_pontoon + m_base.sum() + ncolumn*m_ballast.sum()
         unknowns['substructure_center_of_mass'] = (ncolumn*m_ballast.sum()*cg_ballast + m_base.sum()*cg_base +
                                                    m_pontoon*cg_pontoon) / unknowns['substructure_mass']
+        m_total = unknowns['substructure_mass'] + m_rna + m_tower.sum()
+        unknowns['center_of_mass']  = (m_rna*cg_rna + m_tower.sum()*cg_tower +
+                                       unknowns['substructure_mass']*unknowns['substructure_center_of_mass']) / m_total
 
         # Find cb (center of buoyancy) for whole system
         z_cb = (V_base.sum()*z_cb_base + ncolumn*V_ballast.sum()*z_cb_ballast + V_pontoon*z_cb) / unknowns['total_displacement']
@@ -772,7 +775,7 @@ class FloatingFrame(Component):
 
         # ---REACTIONS---
         # Find node closest to CG
-        cg_dist = np.sum( (np.c_[xnode, ynode, znode] - unknowns['substructure_center_of_mass'][np.newaxis,:])**2, axis=1 )
+        cg_dist = np.sum( (np.c_[xnode, ynode, znode] - unknowns['center_of_mass'][np.newaxis,:])**2, axis=1 )
         cg_node = np.argmin(cg_dist)
         # Free=0, Rigid=1
         rid = np.array([baseBeginID]) #np.array([cg_node+1]) #np.array(fairleadID)
@@ -836,16 +839,15 @@ class FloatingFrame(Component):
 
         # Find cg (center of gravity) for whole system
         unknowns['structural_mass'] = mass.total_mass
-        unknowns['center_of_mass']  = (m_rna*cg_rna + m_tower.sum()*cg_tower +
-                                       unknowns['substructure_mass']*unknowns['substructure_center_of_mass']) / mass.total_mass
         F_base = -1.0 * np.array([reactions.Fx.sum(), reactions.Fy.sum(), reactions.Fz.sum()])
         M_base = -1.0 * np.array([reactions.Mxx.sum(), reactions.Myy.sum(), reactions.Mzz.sum()])
 
-        r_cg_base = np.array([0.0, 0.0, (znode[baseBeginID] - znode[cg_node+1])])
+        r_cg_base = np.array([0.0, 0.0, (znode[baseBeginID] - unknowns['center_of_mass'][-1])])
         delta     = np.cross(r_cg_base, F_base)
 
         unknowns['total_force'] = F_base
         unknowns['total_moment'] = M_base + delta
+        myM= np.cross(np.array([0.0, 0.0, (z_tower[-1] - unknowns['center_of_mass'][-1])]), F_rna)
         
         # shear and bending (convert from local to global c.s.)
         Nx = forces.Nx[iCase, 1::2]
