@@ -19,6 +19,7 @@ class SubstructureGeometry(Component):
         self.add_param('auxiliary_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('auxiliary_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('auxiliary_freeboard', val=0.0, units='m', desc='Length of column above water line')
+        self.add_param('auxiliary_draft', val=0.0, units='m', desc='Length of column below water line')
         self.add_param('base_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
@@ -34,6 +35,7 @@ class SubstructureGeometry(Component):
         self.add_output('tower_transition_buffer', val=0.0, units='m', desc='Buffer between substructure base and tower base')
         self.add_output('nacelle_transition_buffer', val=0.0, units='m', desc='Buffer between tower top and nacelle base')
         self.add_output('auxiliary_freeboard_heel_margin', val=0.0, units='m', desc='Margin so auxiliary column does not submerge during max heel')
+        self.add_output('auxiliary_draft_heel_margin', val=0.0, units='m', desc='Margin so auxiliary column does not leave water during max heel')
 
         
         # Derivatives
@@ -66,6 +68,7 @@ class SubstructureGeometry(Component):
         fairlead        = params['fairlead'] # depth of mooring attachment point
         fair_off        = params['fairlead_offset_from_shell']
         aux_freeboard   = params['auxiliary_freeboard']
+        aux_draft       = params['auxiliary_draft']
         max_heel        = params['max_survival_heel']
 
         # Set spacing constraint
@@ -82,7 +85,9 @@ class SubstructureGeometry(Component):
         unknowns['nacelle_transition_buffer'] = R_hub + 1.0 - R_tower[-1] # Guessing at 6m size for nacelle
 
         # Make sure semi columns don't get submerged
-        unknowns['auxiliary_freeboard_heel_margin'] = aux_freeboard - R_semi*np.sin(np.deg2rad(max_heel))
+        heel_deflect = R_semi*np.sin(np.deg2rad(max_heel))
+        unknowns['auxiliary_freeboard_heel_margin'] = aux_freeboard - heel_deflect
+        unknowns['auxiliary_draft_heel_margin']     = aux_draft - heel_deflect
 
 
 

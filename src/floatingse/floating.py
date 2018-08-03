@@ -255,6 +255,7 @@ class FloatingSE(Group):
         self.connect('aux.Py', 'load.auxiliary_column_Py')
         self.connect('aux.Pz', 'load.auxiliary_column_Pz')
         self.connect('aux.qdyn', 'load.auxiliary_column_qdyn')
+        self.connect('aux.draft', 'sg.auxiliary_draft')
 
         self.connect('load.structural_mass', 'subs.structural_mass')
         self.connect('load.center_of_mass', 'subs.structure_center_of_mass')

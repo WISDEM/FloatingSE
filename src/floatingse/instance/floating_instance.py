@@ -449,6 +449,7 @@ class FloatingInstance(object):
 
             # Make sure semisub columns don't get submerged
             ['sg.auxiliary_freeboard_heel_margin', 0.0, None, None],
+            ['sg.auxiliary_draft_heel_margin', 0.0, None, None],
             
             # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
             ['mm.axial_unity', 0.0, 1.0, None],
@@ -809,6 +810,19 @@ class FloatingInstance(object):
         Y = R*np.sin(TH) + centerline[1]
         ck = (0.0, 0.1, 0.8) # Dark blue
         mlab.mesh(X, Y, Z, color=ck, figure=fig)
+
+    def draw_heave_plate(self, fig, centerline, freeboard, h_section, r_heave):
+        npts = 20
+        z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
+
+        r  = np.linspace(0, r_heave, npts)
+        th = np.linspace(0, 2*np.pi, npts)
+        R, TH = np.meshgrid(r, th)
+        X = R*np.cos(TH) + centerline[0]
+        Y = R*np.sin(TH) + centerline[1]
+        Z = z_nodes[0] * np.ones(X.shape)
+        ck = (0.2,)*3
+        mlab.mesh(X,Y,Z, opacity=1.0, color=ck, figure=fig)
         
         
     def set_figure(self, fig, fname=None):

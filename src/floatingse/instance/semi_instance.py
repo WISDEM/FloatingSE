@@ -41,6 +41,9 @@ class SemiInstance(FloatingInstance):
                               0.5*self.params['auxiliary_outer_diameter']-self.params['auxiliary_wall_thickness'],
                               self.params['auxiliary_permanent_ballast_height'], 0.0)
 
+            self.draw_heave_plate(fig, [x[k], y[k]], self.params['auxiliary_freeboard'], self.params['auxiliary_section_height'],
+                                  0.5*self.params['auxiliary_heave_plate_diameter'])
+            
             
         self.draw_column(fig, [0.0, 0.0], self.params['hub_height'], self.params['tower_section_height'],
                          0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)

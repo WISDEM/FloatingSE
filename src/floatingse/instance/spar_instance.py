@@ -80,4 +80,6 @@ class SparInstance(FloatingInstance):
         self.draw_column(fig, [0.0, 0.0], self.params['hub_height'], self.params['tower_section_height'],
                          0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)
 
+        self.draw_heave_plate(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'], 0.5*self.params['base_heave_plate_diameter'])
+        
         self.set_figure(fig, fname)

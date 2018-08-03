@@ -211,12 +211,11 @@ class MapMooring(Component):
         lineType = params['mooring_type'].lower()
         Dmooring = params['mooring_diameter']
         
-        air_mass_density = self.wet_mass_per_length + (rhoWater*self.area)
         self.finput.append('---------------------- LINE DICTIONARY ---------------------------------------')
         self.finput.append('LineType  Diam      MassDenInAir   EA            CB   CIntDamp  Ca   Cdn    Cdt')
         self.finput.append('(-)       (m)       (kg/m)        (N)           (-)   (Pa-s)    (-)  (-)    (-)')
         self.finput.append('%s   %.5f   %.5f   %.5f   %.5f   1.0E8   0.6   -1.0   0.05' %
-                          (lineType, Dmooring, air_mass_density, self.axial_stiffness, cable_sea_friction_coefficient) )
+                          (lineType, Dmooring, self.wet_mass_per_length, self.axial_stiffness, cable_sea_friction_coefficient) )
 
         
     def write_node_properties_header(self):
