@@ -106,7 +106,7 @@ class FloatingInstance(object):
         self.params['loading']                              = 'hydrostatic'
 
         # Design constraints
-        self.params['max_taper_ratio']                      = 0.2
+        self.params['max_taper_ratio']                      = 0.4
         self.params['min_diameter_thickness_ratio']         = 120.0
 
         # Safety factors
@@ -371,12 +371,14 @@ class FloatingInstance(object):
         # Establish the optimization driver
         if self.optimizer in ['SOGA','SOPSO']:
             self.prob.driver = HeuristicDriverParallel()
+        elif self.optimizer in ['NM']:
+            self.prob.driver = HeuristicDriver()
         elif self.optimizer in ['COBYLA','SLSQP']:
             self.prob.driver = ScipyOptimizer()
         elif self.optimizer in ['CONMIN', 'PSQP','SNOPT','NSGA2','ALPSO']:
             self.prob.driver = pyOptSparseDriver()
         else:
-            raise ValueError('Unknown or unworking optimizer. '+validStr)
+            raise ValueError('Unknown or unworking optimizer. '+self.optimizer)
 
         self.optimizerSet = True
         
@@ -386,7 +388,7 @@ class FloatingInstance(object):
             self.prob.driver.opt_settings['ITMAX'] = 1000
         elif self.optimizer in ['PSQP']:
             self.prob.driver.opt_settings['MIT'] = 1000
-        elif self.optimizer in ['SOGA','SOPSO']:
+        elif self.optimizer in ['SOGA','SOPSO','NM']:
             self.prob.driver.options['population'] = 50
             self.prob.driver.options['generations'] = 500
         elif self.optimizer in ['NSGA2']:
@@ -409,7 +411,7 @@ class FloatingInstance(object):
         assert isinstance(indict, dict), 'Options must be passed as a string:value dictionary'
         
         for k in indict.keys():
-            if self.optimizer in ['SOGA','SOPSO','COBYLA','SLSQP']:
+            if self.optimizer in ['SOGA','SOPSO','NM','COBYLA','SLSQP']:
                 self.prob.driver.options[k] = indict[k]
             elif self.optimizer in ['CONMIN', 'PSQP','SNOPT','NSGA2','ALPSO']:
                 if k in ['title','print_results','gradient method']:
@@ -821,7 +823,7 @@ class FloatingInstance(object):
         X = R*np.cos(TH) + centerline[0]
         Y = R*np.sin(TH) + centerline[1]
         Z = z_nodes[0] * np.ones(X.shape)
-        ck = (0.2,)*3
+        ck = (0.9,)*3
         mlab.mesh(X,Y,Z, opacity=1.0, color=ck, figure=fig)
         
         
