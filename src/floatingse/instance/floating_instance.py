@@ -369,10 +369,8 @@ class FloatingInstance(object):
         self.optimizer = optStr.upper()
         
         # Establish the optimization driver
-        if self.optimizer in ['SOGA','SOPSO']:
+        if self.optimizer in ['SOGA','SOPSO','NM']:
             self.prob.driver = HeuristicDriverParallel()
-        elif self.optimizer in ['NM']:
-            self.prob.driver = HeuristicDriver()
         elif self.optimizer in ['COBYLA','SLSQP']:
             self.prob.driver = ScipyOptimizer()
         elif self.optimizer in ['CONMIN', 'PSQP','SNOPT','NSGA2','ALPSO']:
