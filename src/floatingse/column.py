@@ -684,7 +684,7 @@ class ColumnProperties(Component):
         r_under  = np.interp(zpts, z_under, r_under)
         m_a      = np.zeros(6)
         m_a[:2]  = rho_water * V_under.sum() # A11 surge, A22 sway
-        m_a[2]   = 0.5 * (8.0/3.0) * rho_water * R_plate**3.0# A33 heave
+        m_a[2]   = 0.5 * (8.0/3.0) * rho_water * np.maximum(R_plate, r_under.max())**3.0# A33 heave
         m_a[3:5] = np.pi * rho_water * np.trapz((zpts-z_cb)**2.0 * r_under**2.0, zpts)# A44 roll, A55 pitch
         m_a[5]   = 0.0 # A66 yaw
         unknowns['added_mass'] = m_a
