@@ -194,7 +194,7 @@ class MapMooring(Component):
             self.tlpFlag = True
             # Create constraint that we don't lose line tension
             unknowns['mooring_length_max'] = L_mooring / ( (waterDepth - fairleadDepth - gamma*R_fairlead*np.sin(np.deg2rad(max_heel))) )
-            
+
     
     def write_line_dictionary(self, params, cable_sea_friction_coefficient=0.65):
         """Writes LINE DICTIONARY section of input.map file
@@ -451,9 +451,13 @@ class MapMooring(Component):
             xyzpts[k,:,0]  = mymap.plot_x(k, nptsMOI)
             xyzpts[k,:,1]  = mymap.plot_y(k, nptsMOI)
             xyzpts[k,:,2]  = mymap.plot_z(k, nptsMOI)
+            if self.tlpFlag:
+                # Seems to be a bug in the plot arrays from MAP++ for plotting output with taut lines
+                plotMat[k,:,2] = np.linspace(-fairleadDepth, -waterDepth, NPTS_PLOT)
+                xyzpts[k,:,2]  = np.linspace(-fairleadDepth, -waterDepth, nptsMOI)
         unknowns['neutral_load'] = F_neutral
         unknowns['plot_matrix']  = plotMat
-
+        
         # Fine line segment length, ds = sqrt(dx^2 + dy^2 + dz^2)
         xyzpts_dx = np.gradient(xyzpts[:,:,0], axis=1)
         xyzpts_dy = np.gradient(xyzpts[:,:,1], axis=1)
@@ -484,7 +488,7 @@ class MapMooring(Component):
             Fh[k][0], Fh[k][1], Fh[k][2] = mymap.get_fairlead_force_3d(k)
 
         unknowns['operational_heel_restoring_force'] = Fh
-        
+
         # Get angles by which to find the weakest line
         dangle  = 2.0
         angles  = np.deg2rad( np.arange(0.0, 360.0, dangle) )
