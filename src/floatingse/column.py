@@ -127,7 +127,7 @@ class HeavePlateMass(Component):
         
     def solve_nonlinear(self, params, unknowns, resids):
         R_plate   = 0.5*params['heave_plate_diameter']
-        t_plate   = 5e-3 # TODO: User input or follow API 2V
+        t_plate   = R_plate / 50.0
         m_plate   = params['heave_plate_mass_factor'] * params['rho'] * np.pi * R_plate**2.0 * t_plate
         I_plate   = 0.25 * m_plate * R_plate**2.0 * np.array([1.0, 1.0, 2.0, 0.0, 0.0, 0.0])
         unknowns['heave_plate_mass'] = m_plate
