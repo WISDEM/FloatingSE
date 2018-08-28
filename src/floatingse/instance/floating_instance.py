@@ -717,7 +717,6 @@ class FloatingInstance(object):
         Z = -self.params['water_depth'] * np.ones(X.shape)
         #ax.plot_surface(X, Y, Z, alpha=1.0, color=mybrown)
         mlab.mesh(X,Y,Z, opacity=1.0, color=mybrown, figure=fig)
-
         cmoor = (0,0.8,0)
         nlines = int( self.params['number_of_mooring_connections'] * self.params['mooring_lines_per_connection'] )
         for k in xrange(nlines):
@@ -737,7 +736,7 @@ class FloatingInstance(object):
         npts = 20
         
         z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
-        
+
         th = np.linspace(0, 2*np.pi, npts)
         for k in xrange(NSECTIONS):
             rk = np.linspace(r_nodes[k], r_nodes[k+1], npts)
@@ -760,7 +759,6 @@ class FloatingInstance(object):
             z = z_nodes[k] + spacingVec[k]
             while z < z_nodes[k+1]:
                 rk = np.interp(z, z_nodes[k:], r_nodes[k:])
-                #print(z, z_nodes[k], z_nodes[k+1], rk, r_nodes[k], r_nodes[k+1])
                 #ax.plot(rk*np.cos(th), rk*np.sin(th), z*np.ones(th.shape), 'r', lw=0.25)
                 mlab.plot3d(rk*np.cos(th) + centerline[0], rk*np.sin(th) + centerline[1], z*np.ones(th.shape), color=(0.5,0,0), figure=fig)
                 z += spacingVec[k]
@@ -822,6 +820,8 @@ class FloatingInstance(object):
         Y = R*np.sin(TH) + centerline[1]
         Z = z_nodes[0] * np.ones(X.shape)
         ck = (0.9,)*3
+        mlab.mesh(X,Y,Z, opacity=1.0, color=ck, figure=fig)
+        Z += r_heave / 50.0
         mlab.mesh(X,Y,Z, opacity=1.0, color=ck, figure=fig)
         
         
