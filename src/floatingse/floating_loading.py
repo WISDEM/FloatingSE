@@ -779,7 +779,7 @@ class FloatingFrame(Component):
         cg_node = np.argmin(cg_dist)
         # Free=0, Rigid=1
         rid = np.array([baseBeginID]) #np.array([cg_node+1]) #np.array(fairleadID)
-        Rx = Ry = Rz = Rxx = Ryy = Rzz = np.ones(rid.shape)
+        Rx = Ry = Rz = Rxx = Ryy = Rzz = np.inf * np.ones(rid.shape)
 
         # Get reactions object from frame3dd
         reactions = frame3dd.ReactionData(rid, Rx, Ry, Rz, Rxx, Ryy, Rzz, rigid=1)
