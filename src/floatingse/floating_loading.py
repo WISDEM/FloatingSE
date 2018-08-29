@@ -782,7 +782,7 @@ class FloatingFrame(Component):
         Rx = Ry = Rz = Rxx = Ryy = Rzz = np.inf * np.ones(rid.shape)
 
         # Get reactions object from frame3dd
-        reactions = frame3dd.ReactionData(rid, Rx, Ry, Rz, Rxx, Ryy, Rzz, rigid=1)
+        reactions = frame3dd.ReactionData(rid, Rx, Ry, Rz, Rxx, Ryy, Rzz, rigid=np.inf)
 
         
         # ---FRAME3DD INSTANCE---
