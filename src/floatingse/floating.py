@@ -33,7 +33,7 @@ class FloatingSE(Group):
         self.add('sg', SubstructureGeometry(self.nFull), promotes=['number_of_auxiliary_columns'])
 
         # Next run MapMooring
-        self.add('mm', MapMooring(), promotes=['water_density','water_depth'])
+        self.add('mm', MapMooring(), promotes=['water_density','water_depth','mooring_stiffness','mooring_mass','mooring_cost'])
         
         # Add in the connecting truss
         self.add('load', FloatingLoading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
@@ -46,12 +46,12 @@ class FloatingSE(Group):
                                                                           'connection_ratio_max','base_pontoon_attach_lower','base_pontoon_attach_upper',
                                                                           'gamma_b','gamma_f','gamma_fatigue','gamma_m','gamma_n',
                                                                           'rna_I','rna_cg','rna_force','rna_moment','rna_mass',
-                                                                          'number_of_auxiliary_columns','structural_frequencies'])
+                                                                          'number_of_auxiliary_columns','structural_frequencies','mooring_stiffness'])
 
         # Run main Semi analysis
         self.add('subs', Substructure(self.nFull), promotes=['water_density','total_cost','total_mass','number_of_auxiliary_columns',
                                                              'structural_frequencies','rigid_body_periods','rna_I','rna_cg','rna_mass',
-                                                             'tower_I_base','tower_mass',
+                                                             'tower_I_base','tower_mass','mooring_stiffness','mooring_mass','mooring_cost',
                                                              'wave_period_range_low','wave_period_range_high'])
 
         # Define all input variables from all models
@@ -92,7 +92,9 @@ class FloatingSE(Group):
         self.add('base_stiffener_spacing',          IndepVarComp('base_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
         self.add('base_bulkhead_thickness',             IndepVarComp('base_bulkhead_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('base_permanent_ballast_height',   IndepVarComp('base_permanent_ballast_height', 0.0), promotes=['*'])
-        self.add('base_heave_plate_diameter',   IndepVarComp('base_heave_plate_diameter', 0.0), promotes=['*'])
+        self.add('base_ballast_heave_box_diameter',   IndepVarComp('base_ballast_heave_box_diameter', 0.0), promotes=['*'])
+        self.add('base_ballast_heave_box_height',   IndepVarComp('base_ballast_heave_box_height', 0.0), promotes=['*'])
+        self.add('base_ballast_heave_box_location',   IndepVarComp('base_ballast_heave_box_location', 0.0), promotes=['*'])
 
         self.add('auxiliary_freeboard',          IndepVarComp('auxiliary_freeboard', 0.0), promotes=['*'])
         self.add('auxiliary_section_height',     IndepVarComp('auxiliary_section_height', np.zeros((nSection,))), promotes=['*'])
@@ -105,7 +107,9 @@ class FloatingSE(Group):
         self.add('auxiliary_stiffener_spacing',          IndepVarComp('auxiliary_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
         self.add('auxiliary_bulkhead_thickness',             IndepVarComp('auxiliary_bulkhead_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('auxiliary_permanent_ballast_height',   IndepVarComp('auxiliary_permanent_ballast_height', 0.0), promotes=['*'])
-        self.add('auxiliary_heave_plate_diameter',   IndepVarComp('auxiliary_heave_plate_diameter', 0.0), promotes=['*'])
+        self.add('auxiliary_ballast_heave_box_diameter',   IndepVarComp('auxiliary_ballast_heave_box_diameter', 0.0), promotes=['*'])
+        self.add('auxiliary_ballast_heave_box_height',   IndepVarComp('auxiliary_ballast_heave_box_height', 0.0), promotes=['*'])
+        self.add('auxiliary_ballast_heave_box_location',   IndepVarComp('auxiliary_ballast_heave_box_location', 0.0), promotes=['*'])
 
         self.add('bulkhead_mass_factor',       IndepVarComp('bulkhead_mass_factor', 0.0), promotes=['*'])
         self.add('ring_mass_factor',           IndepVarComp('ring_mass_factor', 0.0), promotes=['*'])
@@ -183,7 +187,9 @@ class FloatingSE(Group):
         self.connect('base_bulkhead_thickness', 'base.bulkhead_thickness')
         self.connect('base_permanent_ballast_height', 'base.permanent_ballast_height')
         self.connect('base.L_stiffener','load.base_column_buckling_length')
-        self.connect('base_heave_plate_diameter', 'base.heave_plate_diameter')
+        self.connect('base_ballast_heave_box_diameter', 'base.ballast_heave_box_diameter')
+        self.connect('base_ballast_heave_box_height', 'base.ballast_heave_box_height')
+        self.connect('base_ballast_heave_box_location', 'base.ballast_heave_box_location')
 
         self.connect('auxiliary_stiffener_web_height', 'aux.stiffener_web_height')
         self.connect('auxiliary_stiffener_web_thickness', 'aux.stiffener_web_thickness')
@@ -193,10 +199,12 @@ class FloatingSE(Group):
         self.connect('auxiliary_bulkhead_thickness', 'aux.bulkhead_thickness')
         self.connect('auxiliary_permanent_ballast_height', 'aux.permanent_ballast_height')
         self.connect('aux.L_stiffener','load.auxiliary_column_buckling_length')
-        self.connect('auxiliary_heave_plate_diameter', 'aux.heave_plate_diameter')
+        self.connect('auxiliary_ballast_heave_box_diameter', 'aux.ballast_heave_box_diameter')
+        self.connect('auxiliary_ballast_heave_box_height', 'aux.ballast_heave_box_height')
+        self.connect('auxiliary_ballast_heave_box_location', 'aux.ballast_heave_box_location')
         
         self.connect('bulkhead_mass_factor', ['base.bulkhead_mass_factor', 'aux.bulkhead_mass_factor',
-                                              'base.heave_plate_mass_factor', 'aux.heave_plate_mass_factor'])
+                                              'base.ballast_heave_box_mass_factor', 'aux.ballast_heave_box_mass_factor'])
         self.connect('ring_mass_factor', ['base.ring_mass_factor', 'aux.ring_mass_factor'])
         self.connect('shell_mass_factor', ['base.cyl_mass.outfitting_factor', 'aux.cyl_mass.outfitting_factor'])
         self.connect('column_mass_factor', ['base.column_mass_factor', 'aux.column_mass_factor'])
@@ -216,11 +224,8 @@ class FloatingSE(Group):
         self.connect('aux.d_full', ['load.auxiliary_d_full', 'sg.auxiliary_outer_diameter'])
         self.connect('aux.t_full', 'load.auxiliary_t_full')
 
-        self.connect('mm.mooring_mass', 'subs.mooring_mass')
         self.connect('mm.mooring_moments_of_inertia', 'subs.mooring_moments_of_inertia')
         self.connect('mm.neutral_load', ['load.mooring_neutral_load','subs.mooring_neutral_load'])
-        self.connect('mm.mooring_stiffness', 'subs.mooring_stiffness')
-        self.connect('mm.mooring_cost', 'subs.mooring_cost')
         self.connect('mm.max_offset_restoring_force', 'subs.mooring_surge_restoring_force')
         self.connect('mm.operational_heel_restoring_force', 'subs.mooring_pitch_restoring_force')
         

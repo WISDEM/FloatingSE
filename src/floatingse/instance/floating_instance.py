@@ -1,11 +1,9 @@
 from __future__ import print_function
 from floatingse.floating import FloatingSE
-from openmdao.api import Problem, ScipyOptimizer, pyOptSparseDriver, HeuristicDriver, HeuristicDriverParallel, DumpRecorder
+from openmdao.api import Problem, ScipyOptimizer, DumpRecorder
 import numpy as np
 import cPickle as pickle        
 from StringIO import StringIO
-
-from mayavi import mlab
 
 NSECTIONS = 5
 NPTS = 100
@@ -81,7 +79,7 @@ class FloatingInstance(object):
         self.params['yaw']                       = 0.0
         self.params['beta']                      = 0.0
         self.params['cd_usr']                    = np.inf
-        self.params['z_offset'] = 0.0
+        self.params['z_offset']                  = 0.0
         
         # Encironmental constaints
         self.params['wave_period_range_low']                = 2.0
@@ -183,14 +181,19 @@ class FloatingInstance(object):
         self.params['connection_ratio_max']                 = 0.25
         self.params['base_pontoon_attach_lower']            = 0.1
         self.params['base_pontoon_attach_upper']            = 1.0
-        self.params['base_heave_plate_diameter']            = 0.0
-        self.params['auxiliary_heave_plate_diameter']       = 0.0
+        self.params['base_ballast_heave_box_diameter']      = 0.0
+        self.params['base_ballast_heave_box_height']        = 0.0
+        self.params['base_ballast_heave_box_location']      = 0.0
+        self.params['auxiliary_ballast_heave_box_diameter']      = 0.0
+        self.params['auxiliary_ballast_heave_box_height']        = 0.0
+        self.params['auxiliary_ballast_heave_box_location']      = 0.0
         
         self.set_length_base( 30.0 )
         self.set_length_aux( 32.0 )
 
         self.params['auxiliary_outer_diameter']             = 2*6.0
-        self.params['auxiliary_heave_plate_diameter']       = 24.0
+        self.params['auxiliary_ballast_heave_box_diameter']       = 24.0
+        self.params['auxiliary_ballast_heave_box_height']         = 5.0
 
         self.params['mooring_line_length']                  = 835.5
         self.params['anchor_radius']                        = 837.6
@@ -370,10 +373,12 @@ class FloatingInstance(object):
         
         # Establish the optimization driver
         if self.optimizer in ['SOGA','SOPSO','NM']:
+            from openmdao.api import HeuristicDriverParallel
             self.prob.driver = HeuristicDriverParallel()
         elif self.optimizer in ['COBYLA','SLSQP']:
             self.prob.driver = ScipyOptimizer()
         elif self.optimizer in ['CONMIN', 'PSQP','SNOPT','NSGA2','ALPSO']:
+            from openmdao.api import pyOptSparseDriver
             self.prob.driver = pyOptSparseDriver()
         else:
             raise ValueError('Unknown or unworking optimizer. '+self.optimizer)
@@ -661,6 +666,7 @@ class FloatingInstance(object):
         raise NotImplementedError("Subclasses should implement this!")
 
     def init_figure(self):
+        from mayavi import mlab
         mysky   = np.array([135, 206, 250]) / 255.0
         mysky   = tuple(mysky.tolist())
         #fig = plt.figure()
@@ -671,6 +677,7 @@ class FloatingInstance(object):
         return fig
 
     def draw_ocean(self, fig=None):
+        from mayavi import mlab
         if fig is None: fig=self.init_figure()
         npts = 100
         
@@ -704,6 +711,7 @@ class FloatingInstance(object):
         ##mlab.mesh(-Y,X,Z, opacity=alpha, color=mywater, figure=fig)
 
     def draw_mooring(self, fig, mooring):
+        from mayavi import mlab
         mybrown = np.array([244, 170, 66]) / 255.0
         mybrown = tuple(mybrown.tolist())
         npts    = 100
@@ -725,6 +733,7 @@ class FloatingInstance(object):
 
             
     def draw_pontoons(self, fig, truss, R, freeboard):
+        from mayavi import mlab
         nE = truss.shape[0]
         c = (0.5,0,0)
         for k in xrange(nE):
@@ -733,6 +742,7 @@ class FloatingInstance(object):
 
             
     def draw_column(self, fig, centerline, freeboard, h_section, r_nodes, spacingVec=None, ckIn=None):
+        from mayavi import mlab
         npts = 20
         
         z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
@@ -784,6 +794,7 @@ class FloatingInstance(object):
                 '''
 
     def draw_ballast(self, fig, centerline, freeboard, h_section, r_nodes, h_perm, h_water):
+        from mayavi import mlab
         npts = 40
         th = np.linspace(0, 2*np.pi, npts)
         z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
@@ -809,7 +820,8 @@ class FloatingInstance(object):
         ck = (0.0, 0.1, 0.8) # Dark blue
         mlab.mesh(X, Y, Z, color=ck, figure=fig)
 
-    def draw_heave_plate(self, fig, centerline, freeboard, h_section, r_heave):
+    def draw_ballast_heave_box(self, fig, centerline, freeboard, h_section, r_heave):
+        from mayavi import mlab
         npts = 20
         z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
 
@@ -826,6 +838,7 @@ class FloatingInstance(object):
         
         
     def set_figure(self, fig, fname=None):
+        from mayavi import mlab
         #ax.set_aspect('equal')
         #set_axes_equal(ax)
         #ax.autoscale_view(tight=True)

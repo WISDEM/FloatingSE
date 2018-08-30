@@ -109,29 +109,95 @@ class BulkheadMass(Component):
 
     
 
-class HeavePlateMass(Component):
-    def __init__(self):
-        super(HeavePlateMass,self).__init__()
+class BallastHeaveBoxProperties(Component):
+    def __init__(self, nFull):
+        super(BallastHeaveBoxProperties,self).__init__()
         
+        self.add_param('d_full', val=np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
+        self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes')
         self.add_param('rho', val=0.0, units='kg/m**3', desc='material density')
-        self.add_param('heave_plate_diameter', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
-        self.add_param('heave_plate_mass_factor', val=0.0, desc='Heave plate mass correction factor')
-        self.add_output('heave_plate_mass', val=0.0, units='kg', desc='mass of heave plate')
-        self.add_output('heave_plate_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of heave plate relative to keel point')
+        
+        self.add_param('ballast_heave_box_diameter', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
+        self.add_param('ballast_heave_box_height', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
+        self.add_param('ballast_heave_box_location', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
+        self.add_param('ballast_heave_box_mass_factor', val=0.0, desc='Heave plate mass correction factor')
+
+        self.add_output('ballast_heave_box_mass', val=0.0, units='kg', desc='mass of ballast-heave box')
+        self.add_output('ballast_heave_box_cg', val=0.0, units='m', desc='z-coordinate of center of mass for ballast-heave box')
+        self.add_output('ballast_heave_box_displacement', val=0.0, units='m**3', desc='volume of water displaced by ballast-heave box')
+        self.add_output('ballast_heave_box_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of heave plate relative to keel point')
 
         # Derivatives
         self.deriv_options['type'] = 'fd'
         self.deriv_options['form'] = 'central'
         self.deriv_options['check_form'] = 'central'
         self.deriv_options['step_calc'] = 'relative'
+
         
     def solve_nonlinear(self, params, unknowns, resids):
-        R_plate   = 0.5*params['heave_plate_diameter']
+        # Unpack variables
+        z_full    = params['z_full']
+
+        R_od      = 0.5*params['d_full']
+        R_plate   = 0.5*params['ballast_heave_box_diameter']
+        h_box     = params['ballast_heave_box_height']
+
+        location  = params['ballast_heave_box_location']
+        
+        coeff     = params['ballast_heave_box_mass_factor']
+        rho       = params['rho']
+
+        # Current hard-coded, coarse specification of shell thickness
         t_plate   = R_plate / 50.0
-        m_plate   = params['heave_plate_mass_factor'] * params['rho'] * np.pi * R_plate**2.0 * t_plate
-        I_plate   = 0.25 * m_plate * R_plate**2.0 * np.array([1.0, 1.0, 2.0, 0.0, 0.0, 0.0])
-        unknowns['heave_plate_mass'] = m_plate
-        unknowns['heave_plate_I_keel'] = I_plate
+
+        # Z-locations of ballast-heave box
+        z_lower   = location * (z_full[-1] - z_full[0]) + z_full[0]
+        z_cg      = z_lower + 0.5*h_box
+        z_upper   = z_lower +     h_box
+
+        # Mass and volume properties that subtract out central column contributions for no double-counting
+        R_col     = np.interp([z_lower, z_upper], z_full, R_od)
+        A_plate   = np.pi * (R_plate**2.0 - R_col**2.0)
+        m_plate   = coeff * rho * t_plate * A_plate
+        A_box     = A_plate.sum() + 2.0 * np.pi * R_plate * h_box
+        m_box     = coeff * rho * t_plate * A_box
+
+        # Compute displcement for buoyancy calculations, but check for what is submerged
+        V_box      = np.pi * R_plate**2.0 * h_box
+        if z_lower >= 0.0:
+            V_box  = 0.0
+        elif z_upper >= 0.0:
+            V_box *= (- z_lower / h_box)
+        V_box     -= frustum.frustumVol(R_col[0], R_col[1], h_box)
+
+        # Now do moments of inertia
+        # First find MoI at cg of all components
+        R_plate += eps
+        Ixx_box   = frustum.frustumShellIxx(R_plate, R_plate, t_plate, t_plate, h_box)
+        Izz_box   = frustum.frustumShellIzz(R_plate, R_plate, t_plate, t_plate, h_box)
+        I_plateL  = 0.25 * m_plate[0] * (R_plate**2.0 - R_col[0]**2.0) * np.array([1.0, 1.0, 2.0, 0.0, 0.0, 0.0])
+        I_plateU  = 0.25 * m_plate[1] * (R_plate**2.0 - R_col[1]**2.0) * np.array([1.0, 1.0, 2.0, 0.0, 0.0, 0.0])
+
+        # Move to keel for consistency
+        I_keel    = np.zeros((3,3))
+        # Add in lower plate
+        r         = np.array([0.0, 0.0, z_lower])
+        Icg       = assembleI( I_plateL )
+        I_keel   += Icg + m_plate[0]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
+        # Add in upper plate
+        r         = np.array([0.0, 0.0, z_upper])
+        Icg       = assembleI( I_plateU )
+        I_keel   += Icg + m_plate[1]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
+        # Add in box cylinder
+        r         = np.array([0.0, 0.0, z_cg])
+        Icg       = assembleI( [Ixx_box, Ixx_box, Izz_box, 0.0, 0.0, 0.0] )
+        I_keel   += Icg + m_plate[1]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
+
+        # Store outputs
+        unknowns['ballast_heave_box_mass']         = m_box
+        unknowns['ballast_heave_box_cg']           = z_cg
+        unknowns['ballast_heave_box_displacement'] = V_box
+        unknowns['ballast_heave_box_I_keel']       = unassembleI(I_keel)
         
         
 class StiffenerMass(Component):
@@ -376,13 +442,14 @@ class ColumnProperties(Component):
         self.add_param('d_full', val=np.zeros((nFull,)), units='m', desc='outer diameter at each section node bottom to top (length = nsection + 1)')
         self.add_param('t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
         self.add_param('permanent_ballast_height', val=0.0, units='m', desc='height of permanent ballast')
-        self.add_param('heave_plate_diameter', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
+        self.add_param('ballast_heave_box_diameter', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
         
         # Mass correction factors from simple rules here to real life
         self.add_param('shell_mass', val=np.zeros(nFull-1), units='kg', desc='mass of spar shell')
         self.add_param('stiffener_mass', val=np.zeros(nFull-1), units='kg', desc='mass of spar stiffeners')
         self.add_param('bulkhead_mass', val=np.zeros(nFull), units='kg', desc='mass of spar bulkheads')
-        self.add_param('heave_plate_mass', val=0.0, units='kg', desc='mass of heave plate')
+        self.add_param('ballast_heave_box_mass', val=0.0, units='kg', desc='mass of heave plate')
+        self.add_param('ballast_heave_box_cg', val=0.0, units='m', desc='z-coordinate of center of mass for ballast-heave box')
         self.add_param('column_mass_factor', val=0.0, desc='Overall spar mass correction factor')
         self.add_param('outfitting_mass_fraction', val=0.0, desc='Mass fraction added for outfitting')
 
@@ -390,7 +457,10 @@ class ColumnProperties(Component):
         self.add_param('shell_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of outer shell relative to keel point')
         self.add_param('bulkhead_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of bulkheads relative to keel point')
         self.add_param('stiffener_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of stiffeners relative to keel point')
-        self.add_param('heave_plate_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of heave plate relative to keel point')
+        self.add_param('ballast_heave_box_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of heave plate relative to keel point')
+
+        # For buoyancy
+        self.add_param('ballast_heave_box_displacement', val=0.0, units='m**3', desc='volume of water displaced by ballast-heave box')
         
         # Cost rates
         self.add_param('ballast_cost_rate', val=0.0, units='USD/kg', desc='Cost per unit mass of ballast')
@@ -476,14 +546,15 @@ class ColumnProperties(Component):
         coeff        = params['column_mass_factor']
         z_nodes      = params['z_full']
         z_section    = params['z_section']
+        z_box        = params['ballast_heave_box_cg']
         m_shell      = params['shell_mass']
         m_stiffener  = params['stiffener_mass']
         m_bulkhead   = params['bulkhead_mass']
-        m_plate      = params['heave_plate_mass']
+        m_box        = params['ballast_heave_box_mass']
         I_shell      = params['shell_I_keel']
         I_stiffener  = params['stiffener_I_keel']
         I_bulkhead   = params['bulkhead_I_keel']
-        I_plate      = params['heave_plate_I_keel']
+        I_box        = params['ballast_heave_box_I_keel']
         
         m_spar = 0.0
         z_cg = 0.0
@@ -497,9 +568,9 @@ class ColumnProperties(Component):
         m_spar     += m_bulkhead.sum()
         z_cg       += np.dot(m_bulkhead, z_nodes)
 
-        # Mass assumed to be at column base
-        m_spar     += m_plate
-        z_cg       += m_plate*z_nodes[0]
+        # Mass with variable location
+        m_spar     += m_box
+        z_cg       += m_box*z_box
 
         # Account for components not explicitly calculated here
         m_spar     *= coeff
@@ -510,17 +581,18 @@ class ColumnProperties(Component):
         # Apportion every mass to a section for buckling stress computation later
         self.section_mass = coeff*(m_shell + m_stiffener + m_bulkhead[:-1])
         self.section_mass[-1] += coeff*m_bulkhead[-1]
-        self.section_mass[0]  += m_plate
+        ibox = np.where(z_box >= z_nodes)[0][-1]
+        self.section_mass[ibox] += m_box
 
         # Store outputs addressed so far
         unknowns['spar_mass']       = m_spar
         unknowns['outfitting_mass'] = out_frac * m_spar
 
         # Add up moments of inertia at keel, make sure to scale mass appropriately
-        I_spar = ((1+out_frac) * coeff) * (I_shell + I_stiffener + I_bulkhead + I_plate)
+        I_spar = ((1+out_frac) * coeff) * (I_shell + I_stiffener + I_bulkhead + I_box)
 
         # Return total spar mass and position of spar cg
-        return m_spar, z_cg, I_spar
+        return m_spar, z_cg, I_spar, ibox
 
 
     def compute_ballast_mass_cg(self, params, unknowns):
@@ -615,14 +687,16 @@ class ColumnProperties(Component):
         """
         # Unpack variables
         R_od              = 0.5*params['d_full']
-        R_plate           = 0.5*params['heave_plate_diameter']
+        R_plate           = 0.5*params['ballast_heave_box_diameter']
         t_wall            = params['t_full']
         z_nodes           = params['z_full']
+        z_box             = params['ballast_heave_box_cg']
+        V_box             = params['ballast_heave_box_displacement']
         rho_water         = params['water_density']
         self.section_mass = np.zeros((z_nodes.size-1,))
         
         # Add in contributions from the spar and permanent ballast assumed to start at draft point
-        m_spar   , cg_spar, I_spar       = self.compute_spar_mass_cg(params, unknowns)
+        m_spar   , cg_spar, I_spar, ibox = self.compute_spar_mass_cg(params, unknowns)
         m_ballast, cg_ballast, I_ballast = self.compute_ballast_mass_cg(params, unknowns)
         m_outfit           = unknowns['outfitting_mass']
         m_total            = m_spar + m_ballast + m_outfit
@@ -651,6 +725,7 @@ class ColumnProperties(Component):
         V_under = frustum.frustumVol(r_under[:-1], r_under[1:], np.diff(z_under))
         add0    = np.maximum(0, self.section_mass.size-V_under.size)
         unknowns['displaced_volume'] = np.r_[V_under, np.zeros(add0)]
+        unknowns['displaced_volume'][ibox] += V_box
 
         # Compute Center of Buoyancy in z-coordinates (0=waterline)
         # First get z-coordinates of CG of all frustums
@@ -658,7 +733,7 @@ class ColumnProperties(Component):
         z_cg_under += z_under[:-1]
         # Now take weighted average of these CG points with volume
         V_under += eps
-        z_cb     = np.dot(V_under, z_cg_under) / V_under.sum()
+        z_cb     = ( (V_box*z_box) + np.dot(V_under, z_cg_under)) / unknowns['displaced_volume'].sum()
         unknowns['z_center_of_buoyancy'] = z_cb
 
         # Find total hydrostatic force by section- sign says in which direction force acts
@@ -668,6 +743,7 @@ class ColumnProperties(Component):
             F_hydro[0] += np.pi * r_under[0]**2 * (-z_under[0])
             if z_nodes[-1] < 0.0:
                 F_hydro[-1] -= np.pi * r_under[-1]**2 * (-z_under[-1])
+            F_hydro[ibox] += V_box
             F_hydro    *= rho_water * gravity
         unknowns['hydrostatic_force'] = np.r_[F_hydro, np.zeros(add0)]
         
@@ -855,13 +931,14 @@ class Column(Group):
                                                                    'stiffener_mass','stiffener_I_keel',
                                                                    'flange_spacing_ratio','stiffener_radius_ratio'])
 
-        self.add('plate', HeavePlateMass(), promotes=['*'])
+        self.add('plate', BallastHeaveBoxProperties(nFull), promotes=['*'])
 
         self.add('col', ColumnProperties(nFull), promotes=['water_density','d_full','t_full','z_full','z_section',
-                                                           'permanent_ballast_density','permanent_ballast_height','heave_plate_diameter',
-                                                           'bulkhead_mass','stiffener_mass','heave_plate_mass',
+                                                           'permanent_ballast_density','permanent_ballast_height',
+                                                           'ballast_heave_box_diameter','ballast_heave_box_mass','ballast_heave_box_cg',
+                                                           'ballast_heave_box_displacement','bulkhead_mass','stiffener_mass',
                                                            'column_mass_factor','outfitting_mass_fraction',
-                                                           'bulkhead_I_keel','stiffener_I_keel','heave_plate_I_keel','spar_mass',
+                                                           'bulkhead_I_keel','stiffener_I_keel','ballast_heave_box_I_keel','spar_mass',
                                                            'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
                                                            'variable_ballast_interp_radius','variable_ballast_interp_zpts',
                                                            'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater','I_column',
