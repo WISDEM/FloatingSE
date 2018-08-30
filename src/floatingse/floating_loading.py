@@ -103,6 +103,7 @@ class FloatingFrame(Component):
         self.add_param('number_of_mooring_connections', val=3, desc='number of mooring connections on vessel')
         self.add_param('mooring_lines_per_connection', val=1, desc='number of mooring lines per connection')
         self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
+        self.add_param('mooring_stiffness', val=np.zeros((6,6)), units='N/m', desc='Linearized stiffness matrix of mooring system at neutral (no offset) conditions.')
         self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_radius', val=0.0, units='m',desc='Radius from center of structure to fairlead connection points')
         self.add_param('fairlead_support_outer_diameter', val=0.0, units='m',desc='fairlead support outer diameter')
@@ -257,6 +258,7 @@ class FloatingFrame(Component):
 
         n_connect      = int(params['number_of_mooring_connections'])
         n_lines        = int(params['mooring_lines_per_connection'])
+        K_mooring      = np.diag( params['mooring_stiffness'] )
         F_mooring      = params['mooring_neutral_load']
         R_fairlead     = params['fairlead_radius']
         
@@ -778,8 +780,14 @@ class FloatingFrame(Component):
         cg_dist = np.sum( (np.c_[xnode, ynode, znode] - unknowns['center_of_mass'][np.newaxis,:])**2, axis=1 )
         cg_node = np.argmin(cg_dist)
         # Free=0, Rigid=1
-        rid = np.array([baseBeginID]) #np.array([cg_node+1]) #np.array(fairleadID)
-        Rx = Ry = Rz = Rxx = Ryy = Rzz = np.inf * np.ones(rid.shape)
+        rid = np.array([cg_node+1]) #np.array([baseBeginID]) #np.array(fairleadID)
+        #Rx = Ry = Rz = Rxx = Ryy = Rzz = np.inf * np.ones(rid.shape)
+        Rx  = np.array([ K_mooring[0] ])
+        Ry  = np.array([ K_mooring[1] ])
+        Rz  = np.array([ K_mooring[2] ])
+        Rxx = np.array([ K_mooring[3] ])
+        Ryy = np.array([ K_mooring[4] ])
+        Rzz = np.array([ K_mooring[5] ])
 
         # Get reactions object from frame3dd
         reactions = frame3dd.ReactionData(rid, Rx, Ry, Rz, Rxx, Ryy, Rzz, rigid=np.inf)
