@@ -27,6 +27,12 @@ class SemiInstance(FloatingInstance):
         self.draw_ballast(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                           0.5*self.params['base_outer_diameter']-self.params['base_wall_thickness'],
                           self.params['base_permanent_ballast_height'], self.prob['subs.variable_ballast_height'])
+        
+        self.draw_ballast_heave_box(fig, [0.0, 0.0], self.params['base_freeboard'],
+                                    self.params['base_section_height'],
+                                    self.params['base_ballast_heave_box_location'],
+                                    0.5*self.params['base_ballast_heave_box_diameter'],
+                                    self.params['base_ballast_heave_box_height'])
 
         R_semi  = self.params['radius_to_auxiliary_column']
         ncolumn = int(self.params['number_of_auxiliary_columns'])
@@ -41,8 +47,11 @@ class SemiInstance(FloatingInstance):
                               0.5*self.params['auxiliary_outer_diameter']-self.params['auxiliary_wall_thickness'],
                               self.params['auxiliary_permanent_ballast_height'], 0.0)
 
-            self.draw_heave_plate(fig, [x[k], y[k]], self.params['auxiliary_freeboard'], self.params['auxiliary_section_height'],
-                                  0.5*self.params['auxiliary_heave_plate_diameter'])
+            self.draw_ballast_heave_box(fig, [x[k], y[k]], self.params['auxiliary_freeboard'],
+                                        self.params['auxiliary_section_height'],
+                                        self.params['auxiliary_ballast_heave_box_location'],
+                                        0.5*self.params['auxiliary_ballast_heave_box_diameter'],
+                                        self.params['auxiliary_ballast_heave_box_height'])
             
             
         self.draw_column(fig, [0.0, 0.0], self.params['hub_height'], self.params['tower_section_height'],

@@ -820,22 +820,31 @@ class FloatingInstance(object):
         ck = (0.0, 0.1, 0.8) # Dark blue
         mlab.mesh(X, Y, Z, color=ck, figure=fig)
 
-    def draw_ballast_heave_box(self, fig, centerline, freeboard, h_section, r_heave):
+    def draw_ballast_heave_box(self, fig, centerline, freeboard, h_section, loc, r_box, h_box):
         from mayavi import mlab
         npts = 20
         z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
+        z_lower = loc*(z_nodes[-1] - z_nodes[0]) + z_nodes[0]
 
-        r  = np.linspace(0, r_heave, npts)
+        # Lower and Upper surfaces
+        r  = np.linspace(0, r_box, npts)
         th = np.linspace(0, 2*np.pi, npts)
         R, TH = np.meshgrid(r, th)
         X = R*np.cos(TH) + centerline[0]
         Y = R*np.sin(TH) + centerline[1]
-        Z = z_nodes[0] * np.ones(X.shape)
+        Z = z_lower * np.ones(X.shape)
         ck = (0.9,)*3
-        mlab.mesh(X,Y,Z, opacity=1.0, color=ck, figure=fig)
-        Z += r_heave / 50.0
-        mlab.mesh(X,Y,Z, opacity=1.0, color=ck, figure=fig)
-        
+        mlab.mesh(X,Y,Z, opacity=0.7, color=ck, figure=fig)
+        Z += h_box
+        mlab.mesh(X,Y,Z, opacity=0.7, color=ck, figure=fig)
+
+        # Cylinder part
+        z  = z_lower + np.linspace(0, h_box, npts)
+        Z, TH  = np.meshgrid(z, th)
+        R = r_box * np.ones(Z.shape)
+        X = R*np.cos(TH) + centerline[0]
+        Y = R*np.sin(TH) + centerline[1]
+        mlab.mesh(X, Y, Z, opacity=0.7, color=ck, figure=fig)
         
     def set_figure(self, fig, fname=None):
         from mayavi import mlab
