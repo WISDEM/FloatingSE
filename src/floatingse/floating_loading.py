@@ -330,12 +330,14 @@ class FloatingFrame(Component):
         znode = np.copy( z_base )
         xnode = np.zeros(znode.shape)
         ynode = np.zeros(znode.shape)
+        rnode = np.copy( R_od_base)
 
         towerBeginID = baseEndID
         myz = np.zeros(len(z_tower)-1)
         xnode = np.append(xnode, myz)
         ynode = np.append(ynode, myz)
         znode = np.append(znode, z_tower[1:] + freeboard )
+        rnode = np.append(rnode, R_od_tower[1:])
         towerEndID = xnode.size
 
         # Create dummy node so that the tower isn't the last in a chain.
@@ -344,6 +346,7 @@ class FloatingFrame(Component):
         xnode = np.append(xnode, 0.0)
         ynode = np.append(ynode, 0.0)
         znode = np.append(znode, znode[-1]+1.0 )
+        rnode = np.append(rnode, 0.0)
         
         # Get x and y positions of surrounding ballast columns
         ballastLowerID = []
@@ -362,6 +365,7 @@ class FloatingFrame(Component):
             xnode = np.append(xnode, ballastx[k]*myones)
             ynode = np.append(ynode, ballasty[k]*myones)
             znode = np.append(znode, z_ballast )
+            rnode = np.append(rnode, R_od_ballast )
             ballastUpperID.append( xnode.size )
 
         # Add nodes where mooring lines attach, which may be offset from columns
@@ -371,6 +375,7 @@ class FloatingFrame(Component):
         xnode     = np.append(xnode, mooringx)
         ynode     = np.append(ynode, mooringy)
         znode     = np.append(znode, z_fairlead*np.ones(n_connect) )
+        rnode     = np.append(rnode, 0.0)
             
         # Add nodes midway around outer ring for cross bracing
         if outerCrossFlag and ncolumn > 0:
@@ -381,6 +386,7 @@ class FloatingFrame(Component):
             xnode = np.append(xnode, crossx)
             ynode = np.append(ynode, crossy)
             znode = np.append(znode, z_ballast[0]*np.ones(ncolumn))
+            rnode = np.append(rnode, 0.0)
 
             #crossOuterUpperID = xnode.size + np.arange(ncolumn) + 1
             #xnode = np.append(xnode, crossx)
@@ -389,7 +395,7 @@ class FloatingFrame(Component):
 
         # Create Node Data object
         nnode = 1 + np.arange(xnode.size)
-        rnode = np.zeros(xnode.shape)
+        rnode = np.zeros(xnode.shape) # z-spacing too narrow for use of rnodes
         nodes = frame3dd.NodeData(nnode, xnode, ynode, znode, rnode)
 
         
