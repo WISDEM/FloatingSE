@@ -307,11 +307,11 @@ class FloatingInstance(object):
             self.params['tower_wall_thickness'] = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
 
             if self.params.has_key('rna_mass'):
-                self.params['rna_mass'] = 350e3 #285598.8
-                self.params['rna_I'] = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
-                self.params['rna_cg'] = np.array([-1.13197635, 0.0, 0.50875268])
-                self.params['rna_force']   = np.array([ 2.11271060e+06, 0.0, -7.25225356e+06])
-                self.params['rna_moment']  = np.array([29259007.24076359,  1422330.08481948, -3075245.58067333])
+                self.params['rna_mass'] = 672300.5303006992
+                self.params['rna_I'] = np.array([1.67424279e+08, 1.05417282e+08, 8.52142680e+07, 0.0, 1.53820004e+06, 0.0])
+                self.params['rna_cg'] = np.array([-0.60484688, 0.0, 2.5177933 ])
+                self.params['rna_force']   = np.array([ 2.11271060e+06, 0.0, -6.81485569e+06])
+                self.params['rna_moment']  = np.array([29259007.24076359, 245729.82542406, -3075245.58067333])
                 self.params['sg.Rhub']     = 2.3
             
         else:
