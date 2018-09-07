@@ -437,7 +437,7 @@ class FloatingInstance(object):
             ['base.wave_height_freeboard_ratio', None, 1.0, None],
             ['aux.wave_height_freeboard_ratio', None, 1.0, None],
             
-            #['aux.fairlead_draft_ratio', 0.0, 1.0, None],
+            ['aux.fairlead_draft_ratio', 0.0, 1.0, None],
             ['sg.base_auxiliary_spacing', 1.0, None, None],
             
             # Ensure that the radius doesn't change dramatically over a section
@@ -834,9 +834,9 @@ class FloatingInstance(object):
         Y = R*np.sin(TH) + centerline[1]
         Z = z_lower * np.ones(X.shape)
         ck = (0.9,)*3
-        mlab.mesh(X,Y,Z, opacity=0.7, color=ck, figure=fig)
+        mlab.mesh(X,Y,Z, opacity=0.5, color=ck, figure=fig)
         Z += h_box
-        mlab.mesh(X,Y,Z, opacity=0.7, color=ck, figure=fig)
+        mlab.mesh(X,Y,Z, opacity=0.5, color=ck, figure=fig)
 
         # Cylinder part
         z  = z_lower + np.linspace(0, h_box, npts)
@@ -844,7 +844,7 @@ class FloatingInstance(object):
         R = r_box * np.ones(Z.shape)
         X = R*np.cos(TH) + centerline[0]
         Y = R*np.sin(TH) + centerline[1]
-        mlab.mesh(X, Y, Z, opacity=0.7, color=ck, figure=fig)
+        mlab.mesh(X, Y, Z, opacity=0.5, color=ck, figure=fig)
         
     def set_figure(self, fig, fname=None):
         from mayavi import mlab
