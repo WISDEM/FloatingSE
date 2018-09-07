@@ -1,8 +1,8 @@
 from openmdao.api import Group, IndepVarComp, Problem, Component
-from column import Column, ColumnGeometry
-from substructure import Substructure, SubstructureGeometry
-from floating_loading import FloatingLoading
-from map_mooring import MapMooring
+from .column import Column, ColumnGeometry
+from .substructure import Substructure, SubstructureGeometry
+from .floating_loading import FloatingLoading
+from .map_mooring import MapMooring
 from towerse.tower import TowerLeanSE
 import numpy as np
 

@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 import numpy.testing as npt
 import unittest
@@ -363,7 +365,7 @@ class TestSandbox(unittest.TestCase):
                                     
                                     self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
                                     if self.unknowns['substructure_mass'] == 1e30:
-                                        print nc, cap, lap, uap, lrp, urp, ocp
+                                        print(nc, cap, lap, uap, lrp, urp, ocp)
                                     self.assertNotEqual(self.unknowns['substructure_mass'], 1e30)
                                     time.sleep(1e-3)
         

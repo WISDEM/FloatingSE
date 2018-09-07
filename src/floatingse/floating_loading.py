@@ -1,3 +1,4 @@
+
 from openmdao.api import Component, Group, IndepVarComp
 import numpy as np
 import pyframe3dd.frame3dd as frame3dd
@@ -8,7 +9,7 @@ import commonse.UtilizationSupplement as util
 from commonse.WindWaveDrag import AeroHydroLoads, CylinderWindDrag, CylinderWaveDrag
 from commonse.environment import WaveBase, PowerWind
 from commonse.vertical_cylinder import CylinderDiscretization, CylinderMass
-from map_mooring import NLINES_MAX
+from .map_mooring import NLINES_MAX
 
 
 def find_nearest(array,value):

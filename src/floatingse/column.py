@@ -78,7 +78,7 @@ class BulkheadMass(Component):
         Ixx = Iyy = 0.5 * Izz
         I_keel = np.zeros((3,3))
         dz  = z_full - z_full[0]
-        for k in xrange(m_bulk.size):
+        for k in range(m_bulk.size):
             R = np.array([0.0, 0.0, dz[k]])
             Icg = assembleI( [Ixx[k], Iyy[k], Izz[k], 0.0, 0.0, 0.0] )
             I_keel += Icg + m_bulk[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
@@ -312,7 +312,7 @@ class StiffenerMass(Component):
         unknowns['stiffener_mass'] =  n_stiff * m_ring
 
         # Find total number of stiffeners in each original section
-        npts_per    = h_web.size / self.nSection
+        npts_per    = int(h_web.size / self.nSection)
         n_stiff_sec = np.zeros(self.nSection)
         for k in range(npts_per):
             n_stiff_sec += n_stiff[k::npts_per]
@@ -582,7 +582,7 @@ class ColumnProperties(Component):
         self.section_mass = coeff*(m_shell + m_stiffener + m_bulkhead[:-1])
         self.section_mass[-1] += coeff*m_bulkhead[-1]
         ibox = np.where(z_box >= z_nodes)[0][-1]
-        self.section_mass[ibox] += m_box
+        self.section_mass[ibox] += coeff*m_box
 
         # Store outputs addressed so far
         unknowns['spar_mass']       = m_spar
@@ -635,7 +635,7 @@ class ColumnProperties(Component):
         V_perm    = np.pi * np.trapz(R_id**2, zpts)
         m_perm    = rho_ballast * V_perm
         z_cg_perm = rho_ballast * np.pi * np.trapz(zpts*R_id**2, zpts) / m_perm if m_perm > 0.0 else 0.0
-        for k in xrange(z_nodes.size-1):
+        for k in range(z_nodes.size-1):
             ind = np.logical_and(zpts>=z_nodes[k], zpts<=z_nodes[k+1]) 
             self.section_mass[k] += rho_ballast * np.pi * np.trapz(R_id[ind]**2, zpts[ind])
 
@@ -644,7 +644,7 @@ class ColumnProperties(Component):
         V_slice = frustum.frustumVol(R_id[:-1], R_id[1:], np.diff(zpts))
         I_keel = np.zeros((3,3))
         dz  = frustum.frustumCG(R_id[:-1], R_id[1:], np.diff(zpts)) + zpts[:-1] - z_draft
-        for k in xrange(V_slice.size):
+        for k in range(V_slice.size):
             R = np.array([0.0, 0.0, dz[k]])
             Icg = assembleI( [Ixx[k], Iyy[k], Izz[k], 0.0, 0.0, 0.0] )
             I_keel += Icg + V_slice[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
@@ -759,7 +759,7 @@ class ColumnProperties(Component):
         zpts     = np.linspace(z_under[0], z_under[-1], npts)
         r_under  = np.interp(zpts, z_under, r_under)
         m_a      = np.zeros(6)
-        m_a[:2]  = rho_water * V_under.sum() # A11 surge, A22 sway
+        m_a[:2]  = rho_water * unknowns['displaced_volume'].sum() # A11 surge, A22 sway
         m_a[2]   = 0.5 * (8.0/3.0) * rho_water * np.maximum(R_plate, r_under.max())**3.0# A33 heave
         m_a[3:5] = np.pi * rho_water * np.trapz((zpts-z_cb)**2.0 * r_under**2.0, zpts)# A44 roll, A55 pitch
         m_a[5]   = 0.0 # A66 yaw

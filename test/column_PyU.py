@@ -138,7 +138,7 @@ class TestGeometry(unittest.TestCase):
         self.params['stiffener_web_height']  = np.array([1.0, 1.0])
         self.params['stiffener_flange_width'] = np.array([2.0, 2.0])
         self.params['stiffener_spacing'] = np.array([0.1, 0.1])
-        
+        self.params['Hs'] = 5.0
 
         self.geom = column.ColumnGeometry(NSEC, NPTS)
 
@@ -175,6 +175,7 @@ class TestProperties(unittest.TestCase):
         self.params['freeboard'] = 15.0
         self.params['fairlead'] = 10.0
         self.params['water_depth'] = 100.0
+        self.params['Hs'] = 5.0
         
         self.params['t_full'] = 0.5*myones
         self.params['d_full'] = 2*10.0*myones
@@ -184,11 +185,18 @@ class TestProperties(unittest.TestCase):
         self.params['shell_I_keel'] = 10.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
         self.params['stiffener_I_keel'] = 20.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
         self.params['bulkhead_I_keel'] = 30.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        self.params['ballast_heave_box_I_keel'] = 5.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+
+        self.params['ballast_heave_box_diameter'] = 15.0
         
         self.params['water_density'] = 1e3
         self.params['bulkhead_mass'] = 10.0*myones
         self.params['shell_mass'] = 500.0*np.ones(NPTS-1)
         self.params['stiffener_mass'] = 100.0*np.ones(NPTS-1)
+        self.params['ballast_heave_box_mass'] = 20.0
+        self.params['ballast_heave_box_cg'] = -15.0
+        self.params['ballast_heave_box_location'] = 0.3
+        self.params['ballast_heave_box_displacement'] = 300.0
         self.params['column_mass_factor'] = 1.1
         self.params['outfitting_mass_fraction'] = 0.05
 
@@ -222,19 +230,22 @@ class TestProperties(unittest.TestCase):
             self.params[pairs[0]] = pairs[1]
 
     def testSparMassCG(self):
-        m_spar, cg_spar, I_spar = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
+        m_spar, cg_spar, I_spar, ibox = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
 
         bulk  = self.params['bulkhead_mass']
         stiff = self.params['stiffener_mass']
         shell = self.params['shell_mass']
-        mycg  = 1.1*(np.dot(bulk, self.params['z_full']) + np.dot(stiff+shell, self.params['z_section']))/m_spar
+        box   = self.params['ballast_heave_box_mass']
+        boxcg = self.params['ballast_heave_box_cg']
+        mycg  = 1.1*(np.dot(bulk, self.params['z_full']) + box*boxcg + np.dot(stiff+shell, self.params['z_section']))/m_spar
         mysec = stiff+shell+bulk[:-1]
         mysec[-1] += bulk[-1]
+        mysec[ibox] += box
         mysec *= 1.1
 
-        I_expect = 1.05 * 1.1 * 60.0*np.r_[np.ones(3), np.zeros(3)]
+        I_expect = 1.05 * 1.1 * 65.0*np.r_[np.ones(3), np.zeros(3)]
         
-        self.assertAlmostEqual(self.unknowns['spar_mass'], 1.1*(bulk.sum()+stiff.sum()+shell.sum()) )
+        self.assertAlmostEqual(self.unknowns['spar_mass'], 1.1*(bulk.sum()+stiff.sum()+shell.sum()+box) )
         self.assertAlmostEqual(self.unknowns['spar_mass'], m_spar )
         self.assertEqual(self.unknowns['outfitting_mass'], 0.05*m_spar )
         self.assertAlmostEqual(cg_spar, mycg )
@@ -270,7 +281,7 @@ class TestProperties(unittest.TestCase):
         rho_w = self.params['water_density']
 
         self.myspar.balance_column(self.params, self.unknowns)
-        m_spar, cg_spar, I_spar = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
+        m_spar, cg_spar, I_spar, ibox = self.myspar.compute_spar_mass_cg(self.params, self.unknowns)
         m_ballast, cg_ballast, I_ballast = self.myspar.compute_ballast_mass_cg(self.params, self.unknowns)
         m_out = 0.05 * m_spar
         m_expect = m_spar + m_ballast + m_out
@@ -279,8 +290,11 @@ class TestProperties(unittest.TestCase):
         self.assertAlmostEqual(m_expect, self.unknowns['total_mass'].sum())
         self.assertAlmostEqual(cg_system, self.unknowns['z_center_of_mass'])
 
-        V_expect = np.pi * 100.0 * 35.0
-        cb_expect = -17.5
+        V_spar = np.pi * 100.0 * 35.0
+        V_box    = self.params['ballast_heave_box_displacement']
+        box_cg   = self.params['ballast_heave_box_cg']
+        V_expect = V_spar + V_box
+        cb_expect = (-17.5*V_spar + V_box*box_cg) / V_expect
         Ixx = 0.25 * np.pi * 1e4
         Axx = np.pi * 1e2
         self.assertAlmostEqual(self.unknowns['displaced_volume'].sum(), V_expect)
@@ -298,7 +312,7 @@ class TestProperties(unittest.TestCase):
         m_a = np.zeros(6)
         m_a[:2] = V_expect * rho_w
         m_a[2]  = 0.5 * (8.0/3.0) * rho_w * 10.0**3
-        m_a[3:5] = np.pi * rho_w * 100.0 * 2.0 * 17.5**3.0 / 3.0
+        m_a[3:5] = np.pi * rho_w * 100.0 * ((0-cb_expect)**3.0 - (-35-cb_expect)**3.0) / 3.0
         npt.assert_almost_equal(self.unknowns['added_mass'], m_a, decimal=-4)
         
         # Test if everything under water
@@ -306,8 +320,9 @@ class TestProperties(unittest.TestCase):
         self.params['z_section'] += dz 
         self.params['z_full'] += dz 
         self.myspar.balance_column(self.params, self.unknowns)
-        V_expect = np.pi * 100.0 * 50.0
-        cb_expect = -25.0 + self.params['z_full'][-1]
+        V_spar = np.pi * 100.0 * 50.0
+        V_expect = V_spar + V_box
+        cb_expect = (V_spar*(-25.0 + self.params['z_full'][-1])  + V_box*box_cg) / V_expect
         self.assertAlmostEqual(self.unknowns['displaced_volume'].sum(), V_expect)
         self.assertAlmostEqual(self.unknowns['hydrostatic_force'].sum(), V_expect*rho_w*g)
         self.assertAlmostEqual(self.unknowns['z_center_of_buoyancy'], cb_expect)

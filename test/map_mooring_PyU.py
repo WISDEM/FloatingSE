@@ -17,7 +17,7 @@ myones = np.ones((100,))
 truth=['---------------------- LINE DICTIONARY ---------------------------------------',
 'LineType  Diam      MassDenInAir   EA            CB   CIntDamp  Ca   Cdn    Cdt',
 '(-)       (m)       (kg/m)        (N)           (-)   (Pa-s)    (-)  (-)    (-)',
-'chain   0.05    23.98352   118593500.0   0.65   1.0E8   0.6   -1.0   0.05',
+'chain   0.05    49.75   213500000.0   0.65   1.0E8   0.6   -1.0   0.05',
 '---------------------- NODE PROPERTIES ---------------------------------------',
 'Node Type X     Y    Z   M     V FX FY FZ',
 '(-)  (-) (m)   (m)  (m) (kg) (m^3) (kN) (kN) (kN)',
@@ -78,7 +78,8 @@ class TestMapMooring(unittest.TestCase):
         self.params['anchor_type'] = 'suctionpile'
         self.params['drag_embedment_extra_length'] = 300.0
         self.params['max_offset'] = 10.0
-        self.params['max_heel'] = 10.0
+        self.params['max_survival_heel'] = 10.0
+        self.params['operational_heel'] = 10.0
         self.params['gamma'] = 1.35
 
         # Needed for geometry prep
@@ -87,7 +88,7 @@ class TestMapMooring(unittest.TestCase):
         self.params['stiffener_web_height']  = np.array([1.0, 1.0])
         self.params['stiffener_flange_width'] = np.array([2.0, 2.0])
         self.params['stiffener_spacing'] = np.array([0.1, 0.1])
-        
+        self.params['Hs'] = 5.0
         self.params['mooring_cost_rate'] = 1.1
 
         self.params['tower_base_radius'] = 4.0
@@ -155,7 +156,8 @@ class TestMapMooring(unittest.TestCase):
         self.mymap.runMAP(self.params, self.unknowns)
 
         self.assertEqual(np.count_nonzero(self.unknowns['neutral_load']), 9)
-        self.assertEqual(np.count_nonzero(self.unknowns['max_heel_restoring_force']), 9)
+        self.assertEqual(np.count_nonzero(self.unknowns['mooring_stiffness']), 36)
+        self.assertEqual(np.count_nonzero(self.unknowns['operational_heel_restoring_force']), 9)
         self.assertGreater(np.count_nonzero(self.unknowns['plot_matrix']), 9*20-3)
 
     def testCost(self):
