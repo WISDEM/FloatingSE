@@ -28,13 +28,14 @@ class TestSubs(unittest.TestCase):
         self.params['mooring_pitch_restoring_force'][3:,:] = 0.0
         self.params['mooring_cost'] = 256.0
         self.params['mooring_stiffness'] = np.ones((6,6))
+        self.params['mooring_moments_of_inertia'] = np.array([10.0, 10.0, 2.0, 0.0, 0.0, 0.0])
         self.params['fairlead'] = 0.5
         self.params['fairlead_radius'] = 5.0
-        self.params['max_heel'] = 10.0
+        self.params['max_survival_heel'] = 10.0
+        self.params['operational_heel'] = 10.0
 
         self.params['pontoon_cost'] = 512.0
         
-        self.params['tower_base'] = 8.0
 
         self.params['wave_period'] = 50.0
         
@@ -56,13 +57,17 @@ class TestSubs(unittest.TestCase):
         self.params['auxiliary_column_center_of_buoyancy'] = -4.0
         self.params['auxiliary_column_added_mass'] = np.array([10.0, 10.0, 2.0, 30.0, 30.0, 0.0])
         self.params['auxiliary_column_moments_of_inertia'] = 1e1 * np.array([10.0, 10.0, 2.0, 0.0, 0.0, 0.0])
+        self.params['auxiliary_freeboard'] = 10.0
+        self.params['auxiliary_draft'] = 15.0
 
         self.params['tower_z_full'] = np.linspace(0, 90, 3*NSECTIONS+1)
         self.params['tower_mass'] = 2e2
+        self.params['tower_outer_diameter'] = 5.0*np.ones(NPTS)
+        self.params['tower_I_base'] = 1e5*np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
         self.params['rna_mass'] = 6e1
         self.params['rna_cg'] = np.array([0.0, 0.0, 5.0])
         self.params['rna_I'] = 1e5*np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
-        self.params['tower_I_base'] = 1e5*np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        self.params['Rhub'] = 3.0
         
         self.params['number_of_auxiliary_columns'] = 3
         self.params['water_ballast_radius_vector'] = 40.0 * np.ones(5)
@@ -71,6 +76,8 @@ class TestSubs(unittest.TestCase):
         self.params['z_center_of_buoyancy'] = -2.0
 
         self.params['water_density'] = 1e3
+        self.params['wave_period_range_low'] = 2.0
+        self.params['wave_period_range_high'] = 20.0
 
         self.mysemi = subs.Substructure(NPTS)
         self.mysemiG = subs.SubstructureGeometry(2)
@@ -78,6 +85,8 @@ class TestSubs(unittest.TestCase):
         
     def testSetGeometry(self):
         self.params['number_of_auxiliary_columns'] = 3
+        self.params['Rhub'] = 3.0
+        self.params['tower_outer_diameter'] = 2.0*5.0*np.ones(3)
         self.params['base_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['auxiliary_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
         self.params['auxiliary_z_nodes'] = np.array([-35.0, -15.0, 15.0])
@@ -85,19 +94,25 @@ class TestSubs(unittest.TestCase):
         self.params['radius_to_auxiliary_column'] = 25.0
         self.params['fairlead'] = 10.0
         self.params['fairlead_offset_from_shell'] = 1.0
+        self.params['auxiliary_freeboard'] = 10.0
+        self.params['auxiliary_draft'] = 15.0
         self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
 
         # Semi
         self.assertEqual(self.unknowns['fairlead_radius'], 11.0+25.0)
-        self.assertEqual(self.unknowns['base_auxiliary_spacing'], 20.0/25.0)
-        self.assertEqual(self.unknowns['transition_buffer'], 10-0.5*8)
+        self.assertEqual(self.unknowns['base_auxiliary_spacing'], 25.0 - 10.0 - 10.0)
+        self.assertEqual(self.unknowns['tower_transition_buffer'], 10-5.0)
+        self.assertEqual(self.unknowns['nacelle_transition_buffer'], 4.0-5.0)
+        self.assertEqual(self.unknowns['auxiliary_freeboard_heel_margin'], 10.0 - 25.0*np.sin(np.deg2rad(10.0)))
+        self.assertEqual(self.unknowns['auxiliary_draft_heel_margin'], 15.0 - 25.0*np.sin(np.deg2rad(10.0)))
 
         # Spar
         self.params['number_of_auxiliary_columns'] = 0
         self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
         self.assertEqual(self.unknowns['fairlead_radius'], 11.0)
-        self.assertEqual(self.unknowns['base_auxiliary_spacing'], 20.0/25.0)
-        self.assertEqual(self.unknowns['transition_buffer'], 10-0.5*8)
+        self.assertEqual(self.unknowns['base_auxiliary_spacing'], 25.0 - 10.0 - 10.0)
+        self.assertEqual(self.unknowns['tower_transition_buffer'], 10-5.0)
+        self.assertEqual(self.unknowns['nacelle_transition_buffer'], 4.0-5.0)
 
         
     def testBalance(self):
@@ -129,10 +144,11 @@ class TestSubs(unittest.TestCase):
         I_expect = 150.0 + (50.0 + 9.0*(20.0*np.cos(np.deg2rad(np.array([0.0, 120., 240.0]))) )**2).sum()
         static_expect = -1.0 + 2.0
         meta_expect = I_expect/1e4 - static_expect
+        wind_fact = np.cos(np.deg2rad(10.0))**2.0
         self.assertEqual(self.unknowns['buoyancy_to_gravity'], static_expect)
         self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
         self.assertEqual(self.unknowns['offset_force_ratio'], 26.0/1e2)
-        self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (5e4)/(1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))
+        self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (wind_fact*5e4)/(1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))
 
         self.params['number_of_auxiliary_columns'] = 0
         self.mysemi.compute_stability(self.params, self.unknowns)
@@ -142,11 +158,11 @@ class TestSubs(unittest.TestCase):
         self.assertEqual(self.unknowns['buoyancy_to_gravity'], static_expect)
         self.assertEqual(self.unknowns['metacentric_height'], meta_expect)
         self.assertEqual(self.unknowns['offset_force_ratio'], 26.0/1e2)
-        self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (5e4)/(1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))
+        self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (wind_fact*5e4)/(1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))
 
         self.params['fairlead'] = 1.0
         self.params['mooring_pitch_restoring_force'][:3,-1] = 1.0
-        self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (5e4)/(1*5 + 1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))
+        self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (wind_fact*5e4)/(1*5 + 1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))
 
 
     def testPeriods(self):
@@ -197,12 +213,27 @@ class TestSubs(unittest.TestCase):
         self.mysemi.compute_rigid_body_periods(self.params, self.unknowns)
         self.mysemi.check_frequency_margins(self.params, self.unknowns)
 
+        myones = np.ones(6)
         T_sys    = self.unknowns['rigid_body_periods']
-        T_wave   = 50.0
-        T_struct = 0.01
+        T_wave_low  = self.params['wave_period_range_low']*myones
+        T_wave_high = self.params['wave_period_range_high']*myones
+        f_struct    = self.params['structural_frequencies']
+        T_struct    = 1.0 / f_struct
 
-        npt.assert_equal(self.unknowns['period_margin'], np.abs(T_sys-T_wave)/T_wave )
-        npt.assert_equal(self.unknowns['modal_margin'], np.abs(T_struct-T_wave)/T_wave )
+        T_wave_high[-1] = 1e-16
+        T_wave_low[-1] = 1e30
+
+        ind = T_sys>T_wave_low
+        npt.assert_equal(self.unknowns['period_margin_high'][ind], T_sys[ind]/T_wave_high[ind] )
+
+        ind = T_sys<T_wave_high
+        npt.assert_equal(self.unknowns['period_margin_low'][ind], T_sys[ind]/T_wave_low[ind] )
+
+        ind = T_struct>T_wave_low
+        npt.assert_equal(self.unknowns['modal_margin_high'][ind], T_struct[ind]/T_wave_high[ind] )
+
+        ind = T_struct<T_wave_high
+        npt.assert_equal(self.unknowns['modal_margin_low'][ind], T_struct[ind]/T_wave_low[ind] )
         
     def testCost(self):
         self.mysemi.compute_costs(self.params, self.unknowns)

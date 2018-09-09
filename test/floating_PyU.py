@@ -60,6 +60,8 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['base_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
         self.myfloat['base_wall_thickness'] = 0.05 * np.ones(NSECTION+1)               # Shell thickness at each section node (linear lofting between) [m]
         self.myfloat['base_bulkhead_thickness'] = 0.05*np.array([1, 1, 0, 0, 1, 0]) # Locations/thickness of internal bulkheads at section interfaces [m]
+        self.myfloat['base_ballast_heave_box_diameter'] = 0.0
+        self.myfloat['base_ballast_heave_box_height'] = 0.0
 
         # Column ring stiffener parameters
         self.myfloat['base_stiffener_web_height']       = 0.10 * np.ones(NSECTION) # (by section) [m]
@@ -69,24 +71,25 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['base_stiffener_spacing']          = np.array([1.5, 2.8, 2.8, 3.0, 5.0]) # (by section) [m]
 
         # Mooring parameters
-        self.myfloat['number_of_mooring_lines']    = 3             # Evenly spaced around structure
+        self.myfloat['number_of_mooring_connections']    = 3             # Evenly spaced around structure
+        self.myfloat['mooring_lines_per_connection']    = 1             # Evenly spaced around structure
         self.myfloat['mooring_type']               = 'chain'       # Options are chain, nylon, polyester, fiber, or iwrc
         self.myfloat['anchor_type']                = 'suctionpile' # Options are SUCTIONPILE or DRAGEMBEDMENT
         self.myfloat['mooring_diameter']           = 0.09          # Diameter of mooring line/chain [m]
         self.myfloat['fairlead']                   = 70.0          # Distance below waterline for attachment [m]
         self.myfloat['fairlead_offset_from_shell'] = 0.5           # Offset from shell surface for mooring attachment [m]
-        self.myfloat['mooring_line_length']        = 902.2         # Unstretched mooring line length
+        self.myfloat['mooring_line_length']        = 300+902.2         # Unstretched mooring line length
         self.myfloat['anchor_radius']              = 853.87        # Distance from centerline to sea floor landing [m]
-        self.myfloat['drag_embedment_extra_length'] = 300.0        # Extra length beyond sea flor landing to ensure anchors only see horizontal forces [m]
         self.myfloat['fairlead_support_outer_diameter'] = 3.2    # Diameter of all fairlead support elements [m]
         self.myfloat['fairlead_support_wall_thickness'] = 0.0175 # Thickness of all fairlead support elements [m]
 
         # Mooring constraints
         self.myfloat['mooring_max_offset'] = 0.1*self.myfloat['water_depth'] # Max surge/sway offset [m]      
-        self.myfloat['mooring_max_heel']   = 10.0 # Max heel (pitching) angle [deg]
+        self.myfloat['max_survival_heel']   = 10.0 # Max heel (pitching) angle [deg]
+        self.myfloat['mooring_operational_heel']   = 5.0 # Max heel (pitching) angle [deg]
 
         # Design constraints
-        self.myfloat['min_taper_ratio'] = 0.4                # For manufacturability of rolling steel
+        self.myfloat['max_taper_ratio'] = 0.4                # For manufacturability of rolling steel
         self.myfloat['min_diameter_thickness_ratio'] = 120.0 # For weld-ability
 
         # API 2U flag
@@ -103,12 +106,13 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['auxiliary_stiffener_flange_width'] =  0.1 * np.ones(NSECTION)
         self.myfloat['auxiliary_stiffener_flange_thickness'] =  0.1 * np.ones(NSECTION)
         self.myfloat['auxiliary_stiffener_spacing'] =  0.1 * np.ones(NSECTION)
+        self.myfloat['auxiliary_freeboard'] =  0.1
         self.myfloat['pontoon_outer_diameter'] = 1.0
         self.myfloat['pontoon_wall_thickness'] = 0.1
 
         # Set environment to that used in OC3 testing campaign
         self.myfloat['water_depth'] = 320.0  # Distance to sea floor [m]
-        self.myfloat['hmax']        = 0.0    # Significant wave height [m]
+        self.myfloat['Hs']        = 0.0    # Significant wave height [m]
         self.myfloat['T']           = 1e3    # Wave period [s]
         self.myfloat['Uref']        = 0.0    # Wind reference speed [m/s]
         self.myfloat['zref']        = 119.0  # Wind reference height [m]

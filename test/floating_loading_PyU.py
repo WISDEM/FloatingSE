@@ -57,6 +57,7 @@ def getParams():
     params['mooring_lines_per_connection'] = 1
     params['mooring_neutral_load'] = 1e2*np.ones((15,3))
     params['mooring_stiffness'] = 1e10 * np.eye(6)
+    params['mooring_moments_of_inertia'] = np.ones(6)
     
     params['fairlead'] = 7.5
     params['fairlead_radius'] = 23.5
@@ -286,6 +287,7 @@ class TestFrame(unittest.TestCase):
         self.params['number_of_mooring_connections'] = 3
         self.params['mooring_lines_per_connection'] = 1
         self.params['mooring_neutral_load'] = 10.0*np.ones((15,3))
+        self.params['mooring_moments_of_inertia'] = np.ones(6)
         self.params['fairlead_radius'] = 0.1
         self.params['fairlead_support_outer_diameter'] = 2*np.sqrt(2.0/np.pi)
         self.params['fairlead_support_wall_thickness'] = np.sqrt(2.0/np.pi) - np.sqrt(1.0/np.pi)
@@ -294,15 +296,17 @@ class TestFrame(unittest.TestCase):
 
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
-        m = NSECTIONS*2 + 1 + 3*20.0*1.0*0.1
-        self.assertAlmostEqual(self.unknowns['structural_mass'], m, 4)
-        self.assertAlmostEqual(self.unknowns['substructure_mass'], NSECTIONS, 5)
-        npt.assert_almost_equal(self.unknowns['total_force'], 3*10 + np.array([10.0, 10.0, 10-m*g]), decimal=1)
+        msub = NSECTIONS + 3*20.0*1.0*0.1
+        mtowrna = NSECTIONS + 1
+        mtot = msub + mtowrna
+        self.assertAlmostEqual(self.unknowns['structural_mass'], mtot, 4)
+        self.assertAlmostEqual(self.unknowns['substructure_mass'], msub, 5)
+        npt.assert_almost_equal(self.unknowns['total_force'], 10*3 + np.array([10.0, 10.0, 10-mtot*g]), decimal=1)
         npt.assert_almost_equal(self.unknowns['total_moment'], np.array([20.0, 20.0, 20.0]), decimal=2)
 
         self.params['rna_cg'] = np.array([5.0, 5.0, 5.0])
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
-        npt.assert_almost_equal(self.unknowns['total_force'], 3*10 + np.array([10.0, 10.0, 10-m*g]), decimal=1)
+        npt.assert_almost_equal(self.unknowns['total_force'], 3*10 + np.array([10.0, 10.0, 10-mtot*g]), decimal=1)
         #self.assertAlmostEqual(self.unknowns['total_moment'][-1], 20.0)
         
 class TestSandbox(unittest.TestCase):
@@ -372,8 +376,8 @@ class TestSandbox(unittest.TestCase):
         
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestSandbox))
     suite.addTest(unittest.makeSuite(TestFrame))
+    suite.addTest(unittest.makeSuite(TestSandbox))
     return suite
 
 if __name__ == '__main__':
