@@ -105,6 +105,7 @@ class FloatingFrame(Component):
         self.add_param('mooring_lines_per_connection', val=1, desc='number of mooring lines per connection')
         self.add_param('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N', desc='z-force of mooring lines on structure')
         self.add_param('mooring_stiffness', val=np.zeros((6,6)), units='N/m', desc='Linearized stiffness matrix of mooring system at neutral (no offset) conditions.')
+        self.add_param('mooring_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of mooring system about fairlead-centerline point [xx yy zz xy xz yz]')
         self.add_param('fairlead', val=0.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_radius', val=0.0, units='m',desc='Radius from center of structure to fairlead connection points')
         self.add_param('fairlead_support_outer_diameter', val=0.0, units='m',desc='fairlead support outer diameter')
@@ -260,6 +261,7 @@ class FloatingFrame(Component):
         n_connect      = int(params['number_of_mooring_connections'])
         n_lines        = int(params['mooring_lines_per_connection'])
         K_mooring      = np.diag( params['mooring_stiffness'] )
+        I_mooring      = params['mooring_moments_of_inertia']
         F_mooring      = params['mooring_neutral_load']
         R_fairlead     = params['fairlead_radius']
         
@@ -715,6 +717,7 @@ class FloatingFrame(Component):
         # Finally add in all the uniform loads on buoyancy
         load.changeUniformLoads(EL, Ux, Uy, Uz)
 
+        # Point loading for rotor thrust and mooring lines
         # Point loads for mooring loading
         nnode_connect = len(fairleadID)
         nF  = np.array(fairleadID, dtype=np.int32)
@@ -730,8 +733,6 @@ class FloatingFrame(Component):
             Fx[iline] += F_mooring[idx,0].sum()
             Fy[iline] += F_mooring[idx,1].sum()
             Fz[iline] += F_mooring[idx,2].sum()
-
-        # Point loading for rotor thrust and mooring lines
         # Note: extra momemt from mass accounted for below
         nF  = np.append(nF , towerEndID)
         Fx  = np.append(Fx , F_rna[0] )
@@ -748,7 +749,7 @@ class FloatingFrame(Component):
 
         # ---MASS SUMMARIES---
         # Mass summaries now that we've tabulated all of the pontoons
-        if ncolumn > 0:
+        if baseEID > 1: # Have some pontoons or fairlead supports
             # Buoyancy assembly from incremental calculations above
             V_pontoon = F_truss/rhoWater/gravity
             z_cb      = z_cb[-1] / F_truss if F_truss > 0.0 else 0.0
@@ -774,6 +775,7 @@ class FloatingFrame(Component):
         unknowns['substructure_center_of_mass'] = (ncolumn*m_ballast.sum()*cg_ballast + m_base.sum()*cg_base +
                                                    m_pontoon*cg_pontoon) / unknowns['substructure_mass']
         m_total = unknowns['substructure_mass'] + m_rna + m_tower.sum()
+        unknowns['structural_mass'] = m_total
         unknowns['center_of_mass']  = (m_rna*cg_rna + m_tower.sum()*cg_tower +
                                        unknowns['substructure_mass']*unknowns['substructure_center_of_mass']) / m_total
 
@@ -787,15 +789,20 @@ class FloatingFrame(Component):
         cg_dist = np.sum( (np.c_[xnode, ynode, znode] - unknowns['center_of_mass'][np.newaxis,:])**2, axis=1 )
         cg_node = np.argmin(cg_dist)
         # Free=0, Rigid=1
-        rid = np.array([cg_node+1]) #np.array([baseBeginID]) #np.array(fairleadID)
-        #Rx = Ry = Rz = Rxx = Ryy = Rzz = np.inf * np.ones(rid.shape)
-        Rx  = np.array([ K_mooring[0] ])
-        Ry  = np.array([ K_mooring[1] ])
-        Rz  = np.array([ K_mooring[2] ])
-        Rxx = np.array([ K_mooring[3] ])
-        Ryy = np.array([ K_mooring[4] ])
-        Rzz = np.array([ K_mooring[5] ])
-
+        rid = np.array([baseBeginID]) #np.array(fairleadID) #np.array([cg_node+1]) #
+        Rx  = np.inf * np.ones(rid.shape)
+        Ry  = np.inf * np.ones(rid.shape)
+        Rz  = np.inf * np.ones(rid.shape)
+        Rxx = np.inf * np.ones(rid.shape)
+        Ryy = np.inf * np.ones(rid.shape)
+        Rzz = np.inf * np.ones(rid.shape)
+        rid = np.append(rid, fairleadID)
+        Rx  = np.append(Rx,  K_mooring[0] /nnode_connect * np.ones(nnode_connect) )
+        Ry  = np.append(Ry,  K_mooring[1] /nnode_connect * np.ones(nnode_connect) )
+        Rz  = np.append(Rz,  K_mooring[2] /nnode_connect * np.ones(nnode_connect) )
+        Rxx = np.append(Rxx,  K_mooring[3]/nnode_connect * np.ones(nnode_connect) )
+        Ryy = np.append(Ryy,  K_mooring[4]/nnode_connect * np.ones(nnode_connect) )
+        Rzz = np.append(Rzz,  K_mooring[5]/nnode_connect * np.ones(nnode_connect) )
         # Get reactions object from frame3dd
         reactions = frame3dd.ReactionData(rid, Rx, Ry, Rz, Rxx, Ryy, Rzz, rigid=np.inf)
 
@@ -804,7 +811,7 @@ class FloatingFrame(Component):
 
         # Initialize frame3dd object
         myframe = frame3dd.Frame(nodes, reactions, elements, other)
-
+        
         # Add in extra mass of rna
         inode   = np.array([towerEndID], dtype=np.int32) # rna
         m_extra = np.array([m_rna])
@@ -824,13 +831,15 @@ class FloatingFrame(Component):
 
 
         # ---DYNAMIC ANALYSIS---
-        nM = NFREQ          # number of desired dynamic modes of vibration
+        # This needs to be compared to FAST until I trust it enough to use it.
+        # Have to test BCs, results, mooring stiffness, mooring mass/MOI, etc
+        nM = 0 #NFREQ          # number of desired dynamic modes of vibration
         Mmethod = 1         # 1: subspace Jacobi     2: Stodola
         lump = 0            # 0: consistent mass ... 1: lumped mass matrix
-        tol = 1e-6          # mode shape tolerance
-        shift = 0.0         # shift value ... for unrestrained structures
+        tol = 1e-5          # mode shape tolerance
+        shift = 0.0        # shift value ... for unrestrained or partially restrained structures
         
-        myframe.enableDynamics(nM, Mmethod, lump, tol, shift)
+        #myframe.enableDynamics(nM, Mmethod, lump, tol, shift)
 
         # ---DEBUGGING---
         #myframe.write('debug.3dd') # For debugging
@@ -846,17 +855,17 @@ class FloatingFrame(Component):
         nE    = nelem.size
         iCase = 0
 
-        # natural frequncies
-        unknowns['structural_frequencies'] = np.array( modal.freq )
+        # natural frequncies- catch nans and zeros
+        temp = np.zeros(NFREQ) #np.array( modal.freq )
+        temp[np.isnan(temp)] = 0.0
+        unknowns['structural_frequencies'] = temp + eps
 
         # deflections due to loading (from cylinder top and wind/wave loads)
         unknowns['top_deflection'] = displacements.dx[iCase, towerEndID-1]  # in yaw-aligned direction
 
         # Find cg (center of gravity) for whole system
-        unknowns['structural_mass'] = mass.total_mass
         F_base = -1.0 * np.array([reactions.Fx.sum(), reactions.Fy.sum(), reactions.Fz.sum()])
         M_base = -1.0 * np.array([reactions.Mxx.sum(), reactions.Myy.sum(), reactions.Mzz.sum()])
-
         r_cg_base = np.array([0.0, 0.0, (znode[baseBeginID] - unknowns['center_of_mass'][-1])])
         delta     = np.cross(r_cg_base, F_base)
 

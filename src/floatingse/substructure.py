@@ -300,7 +300,7 @@ class Substructure(Component):
         # Water plane area of all components with parallel axis theorem
         Iwater_system = Iwater_base
         radii = R_semi * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
-        for k in xrange(ncolumn):
+        for k in range(ncolumn):
             Iwater_system += Iwater_column + Awater_column*radii[k]**2
         unknowns['Iwaterplane_system'] = Iwater_column
             
@@ -321,7 +321,7 @@ class Substructure(Component):
         moory  = R_fairlead * np.sin( np.linspace(0, 2*np.pi, nlines+1)[:-1] )
         r_moor = np.c_[moorx, moory, (z_fairlead - z_cg)*np.ones(moorx.shape)]
         Msum   = 0.0
-        for k in xrange(nlines):
+        for k in range(nlines):
             dvF   = DirectionVector.fromArray(F_restore_pitch[k,:])
             dvR   = DirectionVector.fromArray(r_moor[k,:]).yawToHub(oper_heel)
             M     = dvR.cross(dvF)
@@ -403,7 +403,7 @@ class Substructure(Component):
         radii_x   = R_semi * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
         radii_y   = R_semi * np.sin( np.linspace(0, 2*np.pi, ncolumn+1) )
         I_column  = assembleI( I_column )
-        for k in xrange(ncolumn):
+        for k in range(ncolumn):
             R        = np.array([radii_x[k], radii_y[k], z_cg_column]) - r_cg
             I_total += I_column + m_column*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
         # Add in variable ballast
@@ -443,7 +443,7 @@ class Substructure(Component):
         I_total   = I_base + m_a_base[0]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
         # Add up added moments of intertia of all columns for other entries
         I_column  = assembleI( np.r_[m_a_column[3:], np.zeros(3)] )
-        for k in xrange(ncolumn):
+        for k in range(ncolumn):
             R        = np.array([radii_x[k], radii_y[k], z_cb_column]) - r_cg
             I_total += I_column + m_a_column[0]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
         A_mat[3:] = unassembleI( I_total )[:3]

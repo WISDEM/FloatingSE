@@ -473,7 +473,7 @@ class MapMooring(Component):
                 r = xyzpts[k,ii,:] - r0
                 R[k,ii,:] = unassembleI(np.dot(r,r)*np.eye(3) - np.outer(r,r))
         Imat = self.wet_mass_per_length * np.trapz(R, x=xyzpts_ds[:,:,np.newaxis], axis=1)
-        unknowns['mooring_moments_of_inertia'] = Imat.sum(axis=0)
+        unknowns['mooring_moments_of_inertia'] = np.abs( Imat.sum(axis=0) )
 
         # Get the restoring moment at maximum angle of heel
         # Since we don't know the substucture CG, have to just get the forces of the lines now and do the cross product later

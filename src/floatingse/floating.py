@@ -224,7 +224,7 @@ class FloatingSE(Group):
         self.connect('aux.d_full', ['load.auxiliary_d_full', 'sg.auxiliary_outer_diameter'])
         self.connect('aux.t_full', 'load.auxiliary_t_full')
 
-        self.connect('mm.mooring_moments_of_inertia', 'subs.mooring_moments_of_inertia')
+        self.connect('mm.mooring_moments_of_inertia', ['load.mooring_moments_of_inertia','subs.mooring_moments_of_inertia'])
         self.connect('mm.neutral_load', ['load.mooring_neutral_load','subs.mooring_neutral_load'])
         self.connect('mm.max_offset_restoring_force', 'subs.mooring_surge_restoring_force')
         self.connect('mm.operational_heel_restoring_force', 'subs.mooring_pitch_restoring_force')
