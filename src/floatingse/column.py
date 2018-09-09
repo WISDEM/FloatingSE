@@ -157,7 +157,8 @@ class BallastHeaveBoxProperties(Component):
 
         # Mass and volume properties that subtract out central column contributions for no double-counting
         R_col     = np.interp([z_lower, z_upper], z_full, R_od)
-        A_plate   = np.pi * (R_plate**2.0 - R_col**2.0)
+        if not np.any(R_plate > R_col): R_plate = 0.0
+        A_plate   = np.maximum(0.0, np.pi * (R_plate**2.0 - R_col**2.0))
         m_plate   = coeff * rho * t_plate * A_plate
         A_box     = A_plate.sum() + 2.0 * np.pi * R_plate * h_box
         m_box     = coeff * rho * t_plate * A_box
@@ -169,6 +170,7 @@ class BallastHeaveBoxProperties(Component):
         elif z_upper >= 0.0:
             V_box *= (- z_lower / h_box)
         V_box     -= frustum.frustumVol(R_col[0], R_col[1], h_box)
+        V_box      = np.maximum(0.0, V_box)
 
         # Now do moments of inertia
         # First find MoI at cg of all components
@@ -180,18 +182,19 @@ class BallastHeaveBoxProperties(Component):
 
         # Move to keel for consistency
         I_keel    = np.zeros((3,3))
-        # Add in lower plate
-        r         = np.array([0.0, 0.0, z_lower])
-        Icg       = assembleI( I_plateL )
-        I_keel   += Icg + m_plate[0]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
-        # Add in upper plate
-        r         = np.array([0.0, 0.0, z_upper])
-        Icg       = assembleI( I_plateU )
-        I_keel   += Icg + m_plate[1]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
-        # Add in box cylinder
-        r         = np.array([0.0, 0.0, z_cg])
-        Icg       = assembleI( [Ixx_box, Ixx_box, Izz_box, 0.0, 0.0, 0.0] )
-        I_keel   += Icg + m_plate[1]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
+        if R_plate > eps:
+            # Add in lower plate
+            r         = np.array([0.0, 0.0, z_lower])
+            Icg       = assembleI( I_plateL )
+            I_keel   += Icg + m_plate[0]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
+            # Add in upper plate
+            r         = np.array([0.0, 0.0, z_upper])
+            Icg       = assembleI( I_plateU )
+            I_keel   += Icg + m_plate[1]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
+            # Add in box cylinder
+            r         = np.array([0.0, 0.0, z_cg])
+            Icg       = assembleI( [Ixx_box, Ixx_box, Izz_box, 0.0, 0.0, 0.0] )
+            I_keel   += Icg + m_plate[1]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
 
         # Store outputs
         unknowns['ballast_heave_box_mass']         = m_box
