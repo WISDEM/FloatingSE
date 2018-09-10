@@ -63,7 +63,71 @@ class TestBulk(unittest.TestCase):
         self.assertEqual(J['bulkhead_mass', 't_full'].shape, (11,11))
     '''
 
+
+class TestBallastHeave(unittest.TestCase):
+    def setUp(self):
+        self.params = {}
+        self.unknowns = {}
+        self.resid = None
+
+        self.params['d_full'] = 10.0*myones
+        self.params['z_full'] = np.linspace(0, 1, NPTS) - 0.5
+        self.params['rho'] = 1e3
         
+        self.params['ballast_heave_box_diameter'] = 12.0
+        self.params['ballast_heave_box_height'] = 0.25
+        self.params['ballast_heave_box_location'] = 0.0
+        self.params['ballast_heave_box_mass_factor'] = 1.1
+
+        self.box = column.BallastHeaveBoxProperties(NPTS)
+
+    def testNormal(self):
+        self.box.solve_nonlinear(self.params, self.unknowns, self.resid)
+
+        A_box = np.pi * (6*6 - 5*5)
+        V_box = np.pi * (6*6 - 5*5) * 0.25
+        m_expect = (2*A_box + 0.25*2*np.pi*6) * (6.0/50.0) * 1e3 * 1.1
+        self.assertEqual(self.unknowns['ballast_heave_box_mass'], m_expect)
+        self.assertEqual(self.unknowns['ballast_heave_box_cg'], -0.5 + 0.5*0.25)
+        self.assertAlmostEqual(self.unknowns['ballast_heave_box_displacement'], V_box)
+        #self.assertEqual(self.unknowns['ballast_heave_box_I_keel'], 0.0)
+
+    def testTopAbove(self):
+        self.params['ballast_heave_box_height'] = 0.75
+        self.box.solve_nonlinear(self.params, self.unknowns, self.resid)
+
+        A_box = np.pi * (6*6 - 5*5)
+        V_box = np.pi * (6*6 - 5*5) * 0.5
+        m_expect = (2*A_box + 0.75*2*np.pi*6) * (6.0/50.0) * 1e3 * 1.1
+        self.assertAlmostEqual(self.unknowns['ballast_heave_box_mass'], m_expect)
+        self.assertAlmostEqual(self.unknowns['ballast_heave_box_cg'], -0.5 + 0.5*0.75)
+        self.assertAlmostEqual(self.unknowns['ballast_heave_box_displacement'], V_box)
+
+    def testBottomAbove(self):
+        self.params['ballast_heave_box_location'] = 0.6
+        self.box.solve_nonlinear(self.params, self.unknowns, self.resid)
+
+        A_box = np.pi * (6*6 - 5*5)
+        V_box = np.pi * (6*6 - 5*5) * 0.0
+        m_expect = (2*A_box + 0.25*2*np.pi*6) * (6.0/50.0) * 1e3 * 1.1
+        self.assertAlmostEqual(self.unknowns['ballast_heave_box_mass'], m_expect)
+        self.assertAlmostEqual(self.unknowns['ballast_heave_box_cg'], 0.1 + 0.5*0.25)
+        self.assertAlmostEqual(self.unknowns['ballast_heave_box_displacement'], V_box)
+
+    def testTooNarrow(self):
+        self.params['ballast_heave_box_diameter'] = 8.0
+        self.box.solve_nonlinear(self.params, self.unknowns, self.resid)
+
+        A_box = np.pi * (6*6 - 5*5)
+        V_box = np.pi * (6*6 - 5*5) * 0.0
+        m_expect = (2*A_box + 0.25*2*np.pi*6) * (6.0/50.0) * 1e3 * 1.1
+        self.assertAlmostEqual(self.unknowns['ballast_heave_box_mass'], 0.0)
+        self.assertEqual(self.unknowns['ballast_heave_box_cg'], -0.5 + 0.5*0.25)
+        self.assertAlmostEqual(self.unknowns['ballast_heave_box_displacement'], 0.0)
+
+
+        
+    
 class TestStiff(unittest.TestCase):
     def setUp(self):
         self.params = {}
@@ -407,6 +471,7 @@ def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestSectional))
     suite.addTest(unittest.makeSuite(TestBulk))
+    suite.addTest(unittest.makeSuite(TestBallastHeave))
     suite.addTest(unittest.makeSuite(TestStiff))
     suite.addTest(unittest.makeSuite(TestGeometry))
     suite.addTest(unittest.makeSuite(TestProperties))

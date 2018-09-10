@@ -165,11 +165,11 @@ class BallastHeaveBoxProperties(Component):
 
         # Compute displcement for buoyancy calculations, but check for what is submerged
         V_box      = np.pi * R_plate**2.0 * h_box
+        V_box     -= frustum.frustumVol(R_col[0], R_col[1], h_box)
         if z_lower >= 0.0:
             V_box  = 0.0
         elif z_upper >= 0.0:
             V_box *= (- z_lower / h_box)
-        V_box     -= frustum.frustumVol(R_col[0], R_col[1], h_box)
         V_box      = np.maximum(0.0, V_box)
 
         # Now do moments of inertia
