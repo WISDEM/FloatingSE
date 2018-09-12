@@ -659,7 +659,7 @@ class ColumnProperties(Component):
         
         # Find height of water ballast numerically by finding the height that integrates to the mass we want
         # This step is completed in spar.py or semi.py because we must account for other substructure elements too
-        zpts    = np.linspace(z_water_start, z_nodes[-1], npts)
+        zpts    = np.linspace(z_water_start, 0.0, npts)
         R_id    = np.interp(zpts, z_nodes, R_od-t_wall)
         unknowns['variable_ballast_interp_zpts']   = zpts
         unknowns['variable_ballast_interp_radius'] = R_id
