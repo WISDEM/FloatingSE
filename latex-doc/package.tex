@@ -21,24 +21,25 @@ package files is included in Table \ref{tbl:package}.
 {\footnotesize
   \begin{tabularx}{\textwidth}{ l l X } \hline
     \textbf{File name} & \textbf{Unit test file} & \textbf{Description} \\ \hline \hline
+\mytt{floating.py} & \mytt{floating\_PyU.py} & Top level \textit{FloatingSE} OpenMDAO Group.\\
 \mytt{column.py} & \mytt{column\_PyU.py} & OpenMDAO Components and Group calculating
   mass, buoyancy, and static stability of vertical frustum columns.\\
-\mytt{floating.py} && Top level \textit{FloatingSE} OpenMDAO Group.\\
-\mytt{floatingInstance.py} && Parent class controlling
-  optimization drivers, constraints, and visualization. \\
-\mytt{floating\_loading.py} & \mytt{floating\_loading\_PyU.py} &OpenMDAO Components and Group for
+\mytt{loading.py} & \mytt{loading\_PyU.py} &OpenMDAO Components and Group for
   Frame3DD analysis of complete turbine structure and final summation of
   mass and displacement.\\
-\mytt{mapMooring.py} & \mytt{mapMooring\_PyU.py} &Mooring analysis.\\
-\mytt{mapapi.py} && Updated python interface to the Mooring Analysis
-Program (MAP++).\\
-\mytt{semiInstance.py} && Semisubmersible example implementing
-  OC4 design parameters, optimization, and visualization.\\
-\mytt{sparInstance.py} && Spar example implementing OC3 design
-  parameters, optimization, and visualization.\\
+\mytt{map\_mooring.py} & \mytt{mapMooring\_PyU.py} &Mooring analysis
+using pyMAP++ module.\\
 \mytt{substructure.py} & \mytt{substructure\_PyU.py} &Final buoyancy and stability checks of
   the substructure.\\
 &\mytt{package\_PyU.py} & Convenience aggregator of all unit test files.\\
+\mytt{instance/floating\_instance.py} && Parent class controlling
+  optimization drivers, constraints, and visualization. \\
+\mytt{instance/spar\_instance.py} && Spar example implementing design
+  parameters and visualization.\\
+\mytt{instance/semi\_instance.py} && Semisubmersible example implementing
+  design parameters and visualization.\\
+\mytt{instance/tlp\_instance.py} && Tension leg platform example implementing
+  design parameters and visualization.\\
 \hline \end{tabularx}
 }
 \end{center} \end{table}
@@ -52,11 +53,13 @@ calls to Matplotlib and Mayavi.  All of the python dependencies are free
 and open-source.
 
 \subsection{WISDEM Dependencies}
-The basic functioning of \textit{FloatingSE} relies heavily on \textit{CommonSE}, another
-WISDEM module that has general utilities applicable across the WISDEM
-suite.  To do a structural analysis on the entire floating turbine
-structure, some OpenMDAO Components from \textit{TowerSE} are also called
-directly.  In turn, other utilities managed within WISDEM are also
-called, such as \textit{Akima} (for differentiable splines), and \textit{pyFrame3DD} (for
-structural analysis).  Note that for these other WISDEM modules,
-additional Python packages are required, as well as C and Fortran compilers.
+The basic functioning of \textit{FloatingSE} relies heavily on
+\textit{CommonSE}, another WISDEM module that has general utilities
+applicable across the WISDEM suite.  To do a structural analysis on the
+entire floating turbine structure, some OpenMDAO Components from
+\textit{TowerSE} are also called directly.  In turn, other utilities
+managed within WISDEM are also called, such as \textit{Akima} (for
+differentiable splines), \textit{pyFrame3DD} (for structural analysis),
+and \textit{pyMAP} (for mooring analysis).  Note that for these other
+WISDEM modules, additional Python packages are required, as well as C
+and Fortran compilers.

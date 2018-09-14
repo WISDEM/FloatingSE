@@ -155,53 +155,34 @@ dynamic structural analysis of 2-D and 3-D frames and trusses with
 elastic and geometric stiffness. It computes the static deflections,
 reactions, internal element forces, natural frequencies, and modal
 shapes using direct stiffness and mass assembly \citep{frame3dd}.  The
-WISDEM toolkit developed a python interface, \textit{pyFrame3DD}, to avoid the
-use of intermediate input and output text files.
+WISDEM toolkit developed a python interface, \textit{pyFrame3DD}, to
+avoid the use of intermediate input and output text files.  All of the
+loads integration happens within Frame3DD, where the whole floating
+turbine load path, from the rotor to the keel of the substructure, is
+modeled with simple Timoshenko frame elements \citep{timoshenko}.
 
-All of the loads integration happens within Frame3DD, where the whole
-floating turbine load path, from the rotor to the keel of the
-substructure, is modeled with simple Timoshenko frame elements
-\citep{timoshenko}.  The forces, moments, and mass properties of the
-rotor-nacelle assembly (RNA) are inputs to \textit{FloatingSE} (mass
-properties are assumed to be relative to the tower top position).  It
-assumed that the RNA is a rigid body with respect to the tower modes and
-the mass properties, forces, and moments, are applied to the
-corresponding node in the model.  Long slender components, such as the
-tower and substructure columns, are broken up into a finer
-discretization than the physical ``cans'' that they are actually made
-of.  This finer discretization gives greater resolution of internal
-forces and natural frequencies.  The wind and wave forces per unit
-length in Equations \ref{eqn:drag} and \ref{eqn:morison} are applied as
-trapezoidally varying loads along the column elements.  Substructure
-pontoons are represented as single frame elements.  Aside from the RNA,
-wind, and wave loads, other loads applied to the structure include the
-gravity loads, and the buoyancy acting on the submerged elements.
-
-One rigid boundary condition for all 6 degrees of freedom (DOF) is
-imposed at the windward mooring line connection, which is assumed to be
-aligned with the wind, wave, and rotor thrust loads.  This is an
-approximation, of course, as no node position is truly fixed on a
-compliant, floating platform.  However, for the statically loaded
-numerical model to be well-posed, boundary conditions must exist for all
-6 DOF.
-
-Frame elements are described by their cross sectional properties (area,
-moments of inertia, modulus of elasticity, and mass density) and
-starting and ending nodes.  For simple geometries, such as pontoons with
-tubular cross sections, these properties are straightforward
-calculations.  For the turbine tower, tubular cross section properties
-are also used, albeit at a finer discretization.  For substructure
-columns, which may have permanent or variable ballast and bulkheads,
-it is assumed that these extra features are not load-bearing, so
-tubular cross section properties are also used.  However, the material mass
-density of the frame element is scaled to reflect the true mass of the
-whole section, including ballast, to ensure that gravity loads are
-captured correctly.  Thus, for the tower,
+\subsubsection{Discretization}
+Long slender components, such as the tower and substructure columns, are
+broken up into a finer discretization than the physical ``cans'' that
+they are actually made of.  This finer discretization gives greater
+resolution of internal forces and natural frequencies.  Substructure
+pontoons are represented as single frame elements.  Frame elements are
+described by their cross sectional properties (area, moments of inertia,
+modulus of elasticity, and mass density) and starting and ending nodes.
+For simple geometries, such as pontoons with tubular cross sections,
+these properties are straightforward calculations.  For the turbine
+tower, tubular cross section properties are also used, albeit at a finer
+discretization.  For substructure columns, which may have permanent or
+variable ballast and bulkheads, it is assumed that these extra features
+are not load-bearing, so tubular cross section properties are also used.
+However, the material mass density of the frame element is scaled to
+reflect the true mass of the whole section, including ballast, to ensure
+that gravity loads are captured correctly.  Thus, for the tower,
 columns, and pontoons, only cylindrical (tubular) cross-sections are
 supported for now.  Future development may support other cross-sectional
-geometries.  For the tubular cross sections, the critical properties needed by
-Frame3DD given user inputs of diameter, $d$, and tube (or wall)
-thickness, $t$, are,
+geometries.  For the tubular cross sections, the critical properties
+needed by Frame3DD given user inputs of diameter, $d$, and tube (or
+wall) thickness, $t$, are,
 \begin{align*}
   \textrm{Outer radius, } r_o &= d/2\\
   \textrm{Inner radius, } r_i &= r_o - t\\
@@ -224,6 +205,30 @@ opposed to an analytical expression.
   \end{center}
 \end{figure}
 
+\subsubsection{Loads}
+The forces, moments, and mass properties of the rotor-nacelle assembly
+(RNA) are inputs to \textit{FloatingSE} (mass properties are assumed to
+be relative to the tower top position).  It assumed that the RNA is a
+rigid body with respect to the tower modes and the mass properties,
+forces, and moments, are applied to the corresponding node in the model.
+The forces along each mooring line are applied upon their connection
+point nodes on the structure.  The wind and wave forces per unit length
+in Equations \ref{eqn:drag} and \ref{eqn:morison} are applied as
+trapezoidally varying loads along the column elements.  Other loads
+applied to the structure include the gravity loads, and the buoyancy
+acting on the submerged elements.
+
+\subsubsection{Boundary Conditions}
+Multiple boundary conditions are applied to the structure.  The mooring
+system stiffness matrix (linearized about the neutral position) is
+applied at the mooring connection nodes.  However, even with the mooring
+stiffness, the finite element analysis would otherwise still regard the
+structure as unrestrained and incapable of supporting any static loads.
+Thus, in order to successfully compute stress and buckling limits in a
+well-posed problem, an additional rigid boundary condition (in all 6
+DOF) is imposed at the bottom node of the base column.
+
+\subsubsection{Outputs}
 Simulation outputs include mass properties of the structure, member
 stresses, and summary forces and moments on the body.  Mass properties
 include the total mass of the floating turbine and the mass of the
@@ -231,14 +236,14 @@ substructure itself.  The calculations also allow for easy computation
 of the center of mass of the structure (not accounting for variable
 ballast) and the center of buoyancy (centroid of the submerged volume).
 The first two natural frequencies of the structure are also computed to
-compare against the rotor passing frequencies (1P and 3P).  Next, the
-reaction forces and moments at the boundary mooring load are taken as
-the total loading on the structure.  These are used later in the static
-stability calculations to ensure that the mooring lines provide adequate
-restoring force and moment.  Finally, the axial and shear forces are
-extracted and converted to stresses using cross-sectional properties for
-all frame elements.  These element member loads follow the sign convention in
-Figure \ref{fig:frameCS},
+compare against the range of standard wave frequencies and rotor passing
+frequencies (1P and 3P).  Next, the reaction forces and moments at the
+boundary mooring load are taken as the total loading on the structure.
+These are used later in the static stability calculations to ensure that
+the mooring lines provide adequate restoring force and moment.  Finally,
+the axial and shear forces are extracted and converted to stresses using
+cross-sectional properties for all frame elements.  These element member
+loads follow the sign convention in Figure \ref{fig:frameCS},
 \begin{align*}
   \sigma_z &= \frac{N_z}{A} - \frac{\sqrt{M_x^2 + M_y^2}}{S}\\
   \tau_{z\theta} &= \frac{T_z}{C} + \frac{\sqrt{V_x^2 + V_y^2}}{A_s}
@@ -299,10 +304,52 @@ higher hydrostatic pressure loads and use of ring stiffeners.  For these
 submerged columns, the code standard utilization ratios are taken are
 from the \citet{api2U}, Bulletin 2U (specifically the procedure outlined
 in Appendix B).  These standards also apply shell and general buckling
-criterion with a margin of safety.
+criterion with a margin of safety.  Future efforts will also apply
+Bulletin 2V, the standards for plates, to the legs that support taut
+mooring lines.
 
 
-\section{Static Stability}
+
+\section{Mooring Lines}
+The steady-state mooring system analysis is handled by the external Mooring Analysis
+Program (MAP++) library \citep{MAP}, which has convenient Python bindings
+to access the simulation output.  From its website
+(\url{https://nwtc.nrel.gov/MAP}),
+\begin{quote}
+  \textit{MAP is designed to be used in parallel with other tools to model the
+  steady-state forces on a Multi-Segmented, Quasi-Static (MSQS) mooring
+  line. The MSQS model is developed based on an extension of
+  conventional single line static solutions. Conceptually, MAP++'s MSQS
+  module solves the algebraic equations for all elements simultaneously
+  with the condition that the total force at connection points sum to
+  zero. Seabed contact, seabed friction, and externally applied forces
+  can be modeled with this tool. This allows multi-element mooring lines
+  with arbitrary connection configurations to be analyzed.}
+\end{quote}
+
+MAP++ inputs include sea depth, geometry descriptions of the mooring
+line connections, and material properties of the lines.  For chain and
+rope-based cables, these material properties are not easily derived and
+would be typically provided by a manufacturer.  We borrow from the
+approach of the popular Orcina OrcaFlex software \citep{orca} and use
+the following expressions,
+\begin{align*}
+MBL &= 2.74\times 10^7  d^2 \left(44 - 80d\right) \,\unit{N} \\
+mass &= 19.9\times 10^3 d^2 \,\unit{kg/m}\\
+A &= 2\left(\pi d^2 / 4 \right)\\
+EA &= 8.54\times 10^{10} d^2\unit{m^2}\\
+cost &= 3.415\times 10^4 d^2 \,\unit{USD}
+\end{align*}
+where $MBL$ is minimum breaking load, $d$ is the diameter of a single
+half-chain link, $A$ is the chain cross-sectional area, $E$ is the
+Young's modulus, $EA$ is the axial stiffness.  When conducting
+optimization, the expression for $MBL$ is poorly posed due to its limited
+range of diameter applicability, so a linear fit is used instead,
+\[
+MBL = 1000 \max\left(1.0, -5445.3 + 176972.7 d\right)
+\]  
+
+\section{Hydrostatic Stability}
 \label{sec:static}
 \subsection{Neutral Buoyancy}
 Any floating body requires enough water displacement to create
@@ -424,20 +471,21 @@ effective moment arm of $GZ$ from the center of mass (Figure
 through which the buoyancy force acts as it pitches through small
 displacements, for bodies with sufficient freeboard margin.
 
-The metacenter point is most easily calculated as an offset from the
+The metacenteric height, $GM$ is most easily calculated as an offset from the
 center of buoyancy ($BM$) by,
 \[
-  BM = \frac{I_w}{V}
+  h_{meta} = M - G = GM = BM + BG;\quad BM = \frac{I_w}{V}
 \]
-where $I_w$ is the second moment of area of the substructure waterplane
+where $BG$, the distance between the centers of buoyancy and gravity is
+easily calculated, $I_w$ is the second moment of area of the substructure waterplane
 (with units of \unit{$m^4$}) and $V$ is the total volume of displacement
 (with units of \unit{$m^3$}).  Note that for semisubmersible type
 geometries, $I_w$ is calculated with the parallel axis theorem for all
 of the columns at the waterplane,
 \[
-  I_w = \sum_i \left( I_{w,i} + A_{w,i}r_i^2 \right)
+  I_w = \sum_i \left( I_{w,i} + S_ir_i^2 \right)
 \]
-where $A_w$ is the cross sectional area of the $i$\th column and $r_i$
+where $S_i$ is the waterplane cross sectional area of the $i$\th column and $r_i$
 is the distance from the waterplane centroid to the $i$\th column centroid.
 
 To compute the restoring moment created by the buoyancy force, the first
@@ -464,54 +512,61 @@ contributions,
   M_{y,restore} = M_{y,moor} + M_{meta}
 \]
 
-\subsection{Heave, Roll, Yaw Stability}
-The heave, roll, and yaw degrees of freedom are not yet modeled in
-\textit{FloatingSE}.  Future improvements to the module will consider adding
-these features.
-
-\section{Mooring Lines}
-The steady-state mooring system analysis is handled by the external Mooring Analysis
-Program (MAP++) library \citep{MAP}, which has convenient Python bindings
-to access the simulation output.  From its website
-(\url{https://nwtc.nrel.gov/MAP}),
-\begin{quote}
-  \textit{MAP is designed to be used in parallel with other tools to model the
-  steady-state forces on a Multi-Segmented, Quasi-Static (MSQS) mooring
-  line. The MSQS model is developed based on an extension of
-  conventional single line static solutions. Conceptually, MAP++'s MSQS
-  module solves the algebraic equations for all elements simultaneously
-  with the condition that the total force at connection points sum to
-  zero. Seabed contact, seabed friction, and externally applied forces
-  can be modeled with this tool. This allows multi-element mooring lines
-  with arbitrary connection configurations to be analyzed.}
-\end{quote}
-
-MAP++ inputs include sea depth, geometry descriptions of the mooring
-line connections, and material properties of the lines.  For chain and
-rope-based cables, these material properties are not easily derived and
-would be typically provided by a manufacturer.  We borrow from the
-approach of the popular Orcina OrcaFlex software \citep{orca} and use
-the following expressions,
-\begin{align*}
-MBL &= 2.74\times 10^7  d^2 \left(44 - 80d\right) \,\unit{N} \\
-mass &= 19.9\times 10^3 d^2 \,\unit{kg/m}\\
-A &= 2\left(\pi d^2 / 4 \right)\\
-EA &= 8.54\times 10^{10} d^2\unit{m^2}\\
-cost &= 3.415\times 10^4 d^2 \,\unit{USD}
-\end{align*}
-where $MBL$ is minimum breaking load, $d$ is the diameter of a single
-half-chain link, $A$ is the chain cross-sectional area, $E$ is the
-Young's modulus, $EA$ is the axial stiffness.  When conducting
-optimization, the expression for $MBL$ is poorly posed due to its limited
-range of diameter applicability, so a linear fit is used instead,
+\section{Hydrostatic Stability}
+Floating bodies are typically modeled, for small motions and linearized
+behavior, as a second-order differential system with mass, damping, and
+spring stiffness terms,
 \[
-MBL = 1000 \max\left(1.0, -5445.3 + 176972.7 d\right)
-\]  
+  \left(\mbf{M} + \mbf{A}\right)\ddot{\mbf{x}} + \mbf{C}\dot{\mbf{x}} +
+  \mbf{K} = \mbf{F}\left( t \right)
+\]
+where $\mbf{x}\in\mcal{R}^6$ is the six-degree of freedom vector
+(commonly ordered as 1. surge, 2. sway, 3. heave, 4. roll, 5. pitch,
+6. yaw), $\mbf{M}$ is the mass matrix, $\mbf{A}$ is the added mass
+matrix, $\mbf{C}$ is the damping matrix, and $\mbf{K}$ is the stiffness
+matrix.  The right-hand side of the equation captures the time-dependent
+summation of all forces.
 
-\section{Verification and Validation}
-At the time of this writing, \textit{FloatingSE} has not yet been
-subjected to a verification campaign.  This is planned in the near
-future where estimates of mass properties and structural loading from
-\textit{FloatingSE} will be compared to higher-fidelity tools such as
-OpenFAST and Ansys.  Validation, where model results are compared to
-experimental results, is not currently planned at this time.
+As a low-fidelity, quasi-static sizing and cost module,
+\textit{FloatingSE} does not attempt to capture all of the matrix
+entries or forcing terms of the hydrodynamics.  A more sophisticated
+time- or frequency-domain solver, where these quantities are calculated, may be linked or included into
+\textit{FloatingSE} in the future.  Nevertheless, it does however attempt
+to compute the diagonal entries of the mass and stiffness matrices in
+order to derive the rigid body natural frequencies of the system,
+\[
+  \omega_i = \sqrt{\frac{K_{ii}}{M_{ii}+A_{ii}}} \forall i in \left[1\ldots6\right] 
+\]
+The mass matrix diagonal entries, $M_{ii}$ are simply the mass and
+moments of inertia of the whole system,
+\[
+  M_{11} = M_{22} = M_{33} = m_{sys};\quad M_{44} = I_{xx,sys};\quad M_{55} = I_{yy,sys};\quad M_{66} = I_{zz,sys};
+\]
+Where the coordinate system notation is consistent with that of Figure
+\ref{fig:diagram}.
+
+The added mass matrix diagonal entries are evaluated via standard strip
+theory for the tapered columns.  The added mass for the system is a
+summation over the columns, using the parallel axis theorem for the
+rotational degrees of freedom.  The column quantities are calculated as,
+\[
+  A_{11} = A_{22} = \rho V;\quad A_{33} = 
+  \left(\frac{1}{2}\right)\frac{8}{3} \rho \max R^3(z) ;\quad A_{44} =
+  A_{55} = \pi\rho\int\left(z-z_{cb}\right)R^2(z)dz;\quad A_{66} = 0.0;
+\]
+where $\rho$ is the water density, $R(z)$ is the column radius along its
+axis, and $V$ is the submerged volume.  The extra factor of $1/2$ in
+$A_{33}$ is included to account for the fact that the top of the column
+extends above the waterline.  Also, the integral in $A_{55}$ is only evaluated
+along the submerged portion of the column.
+
+The stiffness matrix is comprised of contributions from the mooring
+and hydrostatic stiffness.  The mooring linearized stiffness matrix is output
+directly from MAP++ and needs no additional processing within
+\textit{FloatingSE}.  The hydrostatic stiffness, for a vertical column, is derived from the same
+principals described above regarding the metacentric height,
+\[
+  K_{ii} = K_{ii}^{moor} + K_{ii}^{hydro};\quad K_{33}^{hydro} = \rho g
+  S;\quad K_{44}^{hydro} =  K_{55}^{hydro} = \rho g V h_{meta}
+\]
+where $S$ is the waterplane area of the system.

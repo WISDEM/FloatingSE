@@ -1,17 +1,20 @@
 \chapter{Geometry}
 \label{sec:geom}
 This section describes the variables and methods used to parameterize
-the substructure geometry in \textit{FloatingSE}.  Note that at the time
-of this writing, only generic spar and semisubmersible configurations
-are currently implemented in the model.  Tension leg platforms (TLPs)
-and other taut-mooring configurations will likely be added in the next
-months.  These three classical substructure designs are shown in Figure
-\ref{fig:archetype}.  The general configuration of a spar-type
-substructure is shown in Figure \ref{fig:diagram}.  The nomenclature
-used in Figure \ref{fig:diagram} and \textit{FloatingSE} is borrowed
-from the field of naval architecture.  A semisubmersible configuration
-would have a similar diagram, but with multiple vertical columns
-connected with truss and pontoon elements.
+the substructure geometry in \textit{FloatingSE}.  Typically,
+substructure designs have fallen into three classical regimes, which are
+shown in Figure \ref{fig:archetype}, each of which attains stability
+through different physical mechanisms.  A spar derives its stability from a
+deep drafted ballast.  A semisubmersible derives its stability from
+distributed waterplane area.  A tension leg platform (TLP) uses taut
+mooring lines for its stability.
+
+The general configuration of a
+spar-type substructure is shown in Figure \ref{fig:diagram}.  The
+nomenclature used in Figure \ref{fig:diagram} and \textit{FloatingSE} is
+borrowed from the field of naval architecture.  A semisubmersible
+configuration would have a similar diagram, but with multiple vertical
+columns connected with truss and pontoon elements.
 %
 \begin{figure}[htb]
   \begin{center}
@@ -176,6 +179,34 @@ balance in the model is found in Section \ref{sec:static}.
 }
 \end{center} \end{table}
 
+
+\subsection{Buoyancy Tanks (and Heave Plates)}
+Buoyancy tanks are modeled as a collar around the column and are
+not subject the same taper or connectivity constraints as the frustum
+sections.  They therefore offer added buoyancy without incurring as much
+structural mass or cost.  Additionally, they can also serve to augment
+the heave added mass like a heave plate.  The variables that govern
+their configuration are listed in Table \ref{tbl:buoyheave}.  In
+addition to their diameter and height, the user can adjust the location
+of the buoyancy tank from $0$, the column base, to $1$, the top of
+column. Buoyancy tanks can be added to either the base and/or auxiliary columns.
+%
+\begin{table}[htbp] \begin{center}
+    \caption{Variables specifying the buoyancy tank geometry within \textit{FloatingSE}.}
+    \label{tbl:ballastvar}
+{\footnotesize
+  \begin{tabular}{ l l c l } \hline
+    \textbf{Variable} & \textbf{Type} & \textbf{Units} & \textbf{Description} \\
+    \mytt{base\_buoyancy\_heave\_box\_diameter} & Float scalar & $m$& Diameter of buoyancy tank / heave plate on base column\\
+    \mytt{base\_buoyancy\_heave\_box\_height} & Float scalar & $m$& Height of buoyancy tank / heave plate on base column\\
+    \mytt{base\_buoyancy\_heave\_box\_location} & Float scalar & & Location of buoyancy tank along base column (0 for bottom, 1 for top)\\
+    \mytt{auxiliary\_buoyancy\_heave\_box\_diameter} & Float scalar & $m$& Diameter of buoyancy tank / heave plate on auxiliary column\\
+    \mytt{auxiliary\_buoyancy\_heave\_box\_height} & Float scalar & $m$& Height of buoyancy tank / heave plate on auxiliary column\\
+    \mytt{auxiliary\_buoyancy\_heave\_box\_location} & Float scalar & & Location of buoyancy tank along auxliary column (0 for bottom, 1 for top)\\
+  \hline \end{tabular}
+}
+\end{center} \end{table}
+
 \section{Pontoons and Support Structure}
 Many substructure designs include the use of pontoons that form a truss
 to connect the different components, usually columns, together.  In this
@@ -230,21 +261,16 @@ can attach directly to a substructure column or at a some offset from
 the outer surface.  Note that bridle connections are not yet
 implemented.  The mooring lines attach to the sea floor at a variable
 distance from the substructure centerline and their total length is
-governed by their scope ratio, a ratio of the line length to the
-distance from the fairlead connection to the sea floor,
-\[
-  L = ScopeRatio \times \left( z_{fairlead} - z_{seafloor} \right)
-\]
-where $L$ is the total line length.
+also specified by the user.
 
 By default, the mooring system is assumed to use a steel chain with drag
-embedment anchors. As a placeholder, other mooring and anchor types are available for
-selection, but their behavior has not yet been tested or verified.
-Alternative mooring line types include nylon, polyester, steel wire rope
-(IWRC) and fiber-core wire rope.  The only alternative anchor type is
-currently suction pile anchors, but there are plans to include gravity
-anchors as well.  The variables that control the mooring system
-properties are listed in Table \ref{tbl:moorvar}.
+embedment anchors. Other mooring available for selection are nylon,
+polyester, steel wire rope (IWRC) and fiber-core wire rope.  The only
+alternative anchor type is currently suction pile anchors, but there are
+plans to include gravity anchors as well.  The standard configuration
+for TLPs is the use of taut nylon mooring lines with suction-pile
+anchors.  The variables that control the mooring system properties are
+listed in Table \ref{tbl:moorvar}.
 
 \begin{table}[htbp] \begin{center}
     \caption{Variables specifying the mooring system within \textit{FloatingSE}.}
@@ -252,14 +278,13 @@ properties are listed in Table \ref{tbl:moorvar}.
 {\footnotesize
   \begin{tabular}{ l l c l } \hline
     \textbf{Variable} & \textbf{Type} & \textbf{Units} & \textbf{Description} \\
-    \mytt{number\_of\_mooring\_lines} & Integer scalar && Number of mooring lines evenly spaced around structure\\
+    \mytt{number\_of\_mooring\_connections} & Integer scalar && Number of mooring connection points evenly spaced around structure\\
+    \mytt{mooring\_lines\_per\_connection} & Integer scalar && Number of mooring lines at each connection point\\
     \mytt{mooring\_diameter} & Float scalar & $m$& Diameter of mooring line/chain \\
+    \mytt{mooring\_line\_length} & Float scalar &$m$& Total unstretched line length of mooring line\\
     \mytt{fairlead} & Float scalar & $m$& Distance below waterline for attachment \\
     \mytt{fairlead\_offset\_from\_shell} & Float scalar & $m$ & Offset from shell surface for mooring attachment \\
-    \mytt{scope\_ratio} & Float scalar && Ratio of line length to distance to sea floor (from fairlead)\\
     \mytt{anchor\_radius} & Float scalar & $m$& Distance from centerline to sea floor landing \\
-    \mytt{drag\_embedment\_extra\_length} & Float scalar &$m$& Extra
-    length beyond sea floor landing so anchors only see horizontal forces\\
     \mytt{mooring\_type} & Enumerated & & Options are CHAIN, NYLON, POLYESTER, FIBER, or IWRC\\
     \mytt{anchor\_type} & Enumerated & & Options are SUCTIONPILE or DRAGEMBEDMENT\\
   \hline \end{tabular}
