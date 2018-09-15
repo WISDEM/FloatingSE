@@ -946,7 +946,7 @@ class Column(Group):
                                                            'variable_ballast_interp_radius','variable_ballast_interp_zpts',
                                                            'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater','I_column',
                                                            'displaced_volume','hydrostatic_force','added_mass','total_mass','total_cost',
-                                                           'ballast_mass','ballast_I_keel', 'ballast_z_cg'])
+                                                           'ballast_mass','ballast_I_keel', 'ballast_z_cg','ballast_cost'])
 
         self.add('wind', PowerWind(nFull), promotes=['Uref','zref','shearExp','z0'])
         self.add('wave', LinearWaves(nFull), promotes=['Uc','hmax','T'])

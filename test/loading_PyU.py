@@ -4,7 +4,7 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import time
-import floatingse.floating_loading as sP
+import floatingse.loading as sP
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 

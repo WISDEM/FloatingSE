@@ -2,7 +2,7 @@ import unittest
 
 import column_PyU
 import map_mooring_PyU
-import floating_loading_PyU
+import loading_PyU
 import substructure_PyU
 import floating_PyU
 
@@ -12,7 +12,7 @@ import numpy.testing as npt
 def suiteAll():
     suite = unittest.TestSuite( (column_PyU.suite(),
                                  map_mooring_PyU.suite(),
-                                 floating_loading_PyU.suite(),
+                                 loading_PyU.suite(),
                                  substructure_PyU.suite(),
                                  floating_PyU.suite()
     ) )

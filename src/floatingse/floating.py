@@ -1,7 +1,7 @@
 from openmdao.api import Group, IndepVarComp, Problem, Component
 from .column import Column, ColumnGeometry
 from .substructure import Substructure, SubstructureGeometry
-from .floating_loading import FloatingLoading
+from .loading import Loading
 from .map_mooring import MapMooring
 from towerse.tower import TowerLeanSE
 import numpy as np
@@ -36,7 +36,7 @@ class FloatingSE(Group):
         self.add('mm', MapMooring(), promotes=['water_density','water_depth','mooring_stiffness','mooring_mass','mooring_cost'])
         
         # Add in the connecting truss
-        self.add('load', FloatingLoading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
+        self.add('load', Loading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
                                                                           'z0','beta','Uref','zref','shearExp','beta','cd_usr',
                                                                           'fairlead_support_outer_diameter','fairlead_support_wall_thickness',
                                                                           'pontoon_outer_diameter','pontoon_wall_thickness','outer_cross_pontoons_int',

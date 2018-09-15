@@ -1006,10 +1006,10 @@ class TrussIntegerToBoolean(Component):
 #  Assembly
 # -----------------
 
-class FloatingLoading(Group):
+class Loading(Group):
 
     def __init__(self, nSection, nFull):
-        super(FloatingLoading, self).__init__()
+        super(Loading, self).__init__()
         
         # Independent variables that are unique to TowerSE
         self.add('base_pontoon_attach_lower',  IndepVarComp('base_pontoon_attach_lower', 0.0), promotes=['*'])
