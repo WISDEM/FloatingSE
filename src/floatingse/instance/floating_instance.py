@@ -487,9 +487,19 @@ class FloatingInstance(object):
             
             # Pontoon stress safety factor
             ['load.pontoon_stress', None, 1.0, None],
+
+            # Frame3DD estimates of stress and buckling
             ['load.tower_stress', None, 1.0, None],
             ['load.tower_shell_buckling', None, 1.0, None],
             ['load.tower_global_buckling', None, 1.0, None],
+
+            ['load.base_column_stress', None, 1.0, None],
+            ['load.base_column_shell_buckling', None, 1.0, None],
+            ['load.base_column_global_buckling', None, 1.0, None],
+
+            ['load.auxiliary_column_stress', None, 1.0, None],
+            ['load.auxiliary_column_shell_buckling', None, 1.0, None],
+            ['load.auxiliary_column_global_buckling', None, 1.0, None],
             
             # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
             ['subs.variable_ballast_height_ratio', 0.0, 1.0, None],

@@ -975,7 +975,6 @@ class FloatingFrame(Component):
 
 
 
-
 class TrussIntegerToBoolean(Component):
     def __init__(self):
         super(TrussIntegerToBoolean,self).__init__()

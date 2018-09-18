@@ -80,10 +80,11 @@ class SparInstance(FloatingInstance):
         self.draw_column(fig, [0.0, 0.0], self.params['hub_height'], self.params['tower_section_height'],
                          0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)
 
-        self.draw_ballast_heave_box(fig, [0.0, 0.0], self.params['base_freeboard'],
-                                    self.params['base_section_height'],
-                                    self.params['base_ballast_heave_box_location'],
-                                    0.5*self.params['base_ballast_heave_box_diameter'],
-                                    self.params['base_ballast_heave_box_height'])
+        if self.prob['base.ballast_heave_box_mass'] > 0.0:
+            self.draw_ballast_heave_box(fig, [0.0, 0.0], self.params['base_freeboard'],
+                                        self.params['base_section_height'],
+                                        self.params['base_ballast_heave_box_location'],
+                                        0.5*self.params['base_ballast_heave_box_diameter'],
+                                        self.params['base_ballast_heave_box_height'])
         
         self.set_figure(fig, fname)
