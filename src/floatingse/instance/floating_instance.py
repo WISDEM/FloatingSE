@@ -48,10 +48,10 @@ class FloatingInstance(object):
     def __init__(self):
         self.prob = Problem()
         self.params = {}
-        self.optimizerSet = False
-        self.desvarSet = False
-        self.constraintSet = False
+        self.design_variables = []
+        self.constraints = []
         self.optimizer = None
+        self.objective = None
 
         # Environmental parameters
         self.params['water_depth']               = 200.0
@@ -320,21 +320,36 @@ class FloatingInstance(object):
     def save(self, fname):
         assert type(fname) == type(''), 'Input filename must be a string'
         with open(fname,'wb') as fp:
-            pickle.dump(self.params, fp)
+            pickle.dump((self.params, self.design_variables, self.constraints, self.objective, self.optimizer), fp)
             
     def load(self, fname):
         assert type(fname) == type(''), 'Input filename must be a string'
         with open(fname,'rb') as fp:
-            newparams = pickle.load(fp)
-        for k in newparams.keys():
-            self.params[k] = newparams[k]
+            newobj = pickle.load(fp)
+
+        if isinstance(newobj, tuple):
+            newparams, newdesvar, newcons, newobj, newopt = newobj
+            for k in newparams.keys():
+                self.params[k] = newparams[k]
+
+            self.set_optimizer(newopt)
+            for k in newdesvar:
+                self.add_design_variable(k[0], k[1], k[2])
+            for k in newcons:
+                self.add_constraint(k[0], k[1], k[2], k[3])
+            self.add_objective(newobj[0], newobj[1])
+            
+        # Compatibility with older files
+        elif isinstance(newobj, dict):
+            for k in newobj.keys():
+                self.params[k] = newobj[k]
         
     def get_assembly(self):
         return FloatingSE(NSECTIONS)
 
     
     def add_design_variable(self, varStr, lowVal, highVal):
-        if not self.optimizerSet:
+        if self.optimizer is None:
             raise RuntimeError('Must set the optimizer to set the driver first')
         
         assert type(varStr) == type(''), 'Input variable must be a string'
@@ -347,11 +362,12 @@ class FloatingInstance(object):
         else:
             self.prob.driver.add_desvar(varStr, lower=lowVal, upper=highVal)
 
-        self.desvarSet = True
+        # Internal record keeping
+        self.design_variables.append([varStr, lowVal, highVal])
 
-        
+                                     
     def add_constraint(self, varStr, lowVal, highVal, eqVal):
-        if not self.optimizerSet:
+        if self.optimizer is None:
             raise RuntimeError('Must set the optimizer to set the driver first')
         
         assert type(varStr) == type(''), 'Input variable must be a string'
@@ -364,12 +380,18 @@ class FloatingInstance(object):
 
         self.prob.driver.add_constraint(varStr, lower=lowVal, upper=highVal, equals=eqVal)
 
-        self.constraintSet = True
+        # Internal record keeping
+        self.constraints.append([varStr, lowVal, highVal, eqVal])
         
             
     def set_optimizer(self, optStr):
         assert type(optStr) == type(''), 'Input optimizer must be a string'
         self.optimizer = optStr.upper()
+
+        # Reset all design variables and constraints
+        self.design_variables = []
+        self.constraints = []
+        self.objective = None
         
         # Establish the optimization driver
         if self.optimizer in ['SOGA','SOPSO','NM']:
@@ -383,8 +405,6 @@ class FloatingInstance(object):
         else:
             raise ValueError('Unknown or unworking optimizer. '+self.optimizer)
 
-        self.optimizerSet = True
-        
         # Set default options
         self.prob.driver.options['optimizer'] = self.optimizer
         if self.optimizer == 'CONMIN':
@@ -409,7 +429,7 @@ class FloatingInstance(object):
 
 
     def set_options(self, indict):
-        if not self.optimizerSet:
+        if self.optimizer is None:
             raise RuntimeError('Must set the optimizer to set the driver first')
         assert isinstance(indict, dict), 'Options must be passed as a string:value dictionary'
         
@@ -527,38 +547,70 @@ class FloatingInstance(object):
         return conlist
 
 
-    def constraint_report(self):
-        passStr = 'yes'
-        noStr = 'NO'
+    def constraint_report(self, tol=2e-2):
+        passStr   = 'yes'
+        noStr     = 'NO'
+        activeStr = 'ACTIVE'
+        eps = 1e-12
+        
+        deslist = self.design_variables
+        for k in deslist:
+            myval   = self.params[k[0]]
+            normLin = (myval - k[1]) / (k[2] - k[1])
+            normLog = (np.log(myval+eps) - np.log(k[1]+eps)) / (np.log(k[2]+eps) - np.log(k[1]+eps))
+            margin  = np.maximum(np.minimum(normLin, 1.0-normLin), np.minimum(normLog, 1.0-normLog))
+            lowStr  = str(k[1])+' <\t'
+            highStr = '< '+str(k[2])+'\t'
+            conStr  = activeStr if np.any(margin <= tol) else ''
+            valStr  = str(self.params[k[0]])
+            print(conStr, lowStr, k[0], highStr, valStr)
         
         #print('Status\tLow\tName\tHigh\tEq\tValue')
-        conlist = self.get_constraints()
+        conlist = self.constraints if len(self.constraints) > 0 else get_constraints()
         for k in conlist:
-            lowStr = ''
-            highStr = ''
-            eqStr = ''
+            lowStr   = ''
+            highStr  = ''
+            eqStr    = ''
             passFlag = True
+            myval    = self.prob[k[0]]
+            margin   = 0.0 if type(myval) == type(0.0) else np.inf * np.ones(myval.shape)
             if not k[1] is None:
-                lowStr = str(k[1])+' <\t'
-                passFlag = passFlag and np.all(self.prob[k[0]] >= k[1])
+                lowStr   = str(k[1])+' <\t'
+                passFlag = passFlag and np.all(myval >= k[1])
+                normVal  = myval - k[1]
+                if k[1] != 0.0: normVal /= k[1]
+                margin = np.minimum(margin, np.abs(normVal))
                 
             if not k[2] is None:
-                highStr = '< '+str(k[2])+'\t'
-                passFlag = passFlag and np.all(self.prob[k[0]] <= k[2])
+                highStr  = '< '+str(k[2])+'\t'
+                passFlag = passFlag and np.all(myval <= k[2])
+                normVal  = k[2] - myval
+                if k[2] != 0.0: normVal /= k[2]
+                margin = np.minimum(margin, np.abs(normVal))
 
             if not k[3] is None:
                 highStr = '= '+str(k[3])+'\t'
-                passFlag = passFlag and np.all(self.prob[k[0]] == k[3])
+                passFlag = passFlag and np.all(myval == k[3])
+                normVal  = np.abs(k[3] - myval)
+                if k[3] != 0.0: normVal /= k[3]
+                margin = np.minimum(margin, np.abs(normVal))
 
-            conStr = passStr if passFlag else noStr
-            valStr = '' if passFlag else str(self.prob[k[0]])
+            valStr = str(myval)
+            if not passFlag:
+                conStr = noStr+'-'+activeStr
+            elif np.any(margin <= tol):
+                conStr = activeStr
+            else:
+                conStr = passStr
+                valStr = ''
             print(conStr, '\t', lowStr, k[0], '\t', highStr, eqStr, '\t', valStr)
 
             
-    def add_objective(self):
+    def add_objective(self, varname='total_cost', scale=1e-9):
         if (len(self.prob.driver._objs) == 0):
-            self.prob.driver.add_objective('total_cost', scaler=1e-9)
-
+            self.prob.driver.add_objective(varname, scaler=scale)
+            
+        self.objective = (varname, scale)
 
     def set_inputs(self):
         # Load all variables from local params dictionary
@@ -628,14 +680,14 @@ class FloatingInstance(object):
         self.prob.root = self.get_assembly()
         
         if optFlag:
-            if not self.optimizerSet:
+            if self.optimizer is None:
                 raise RuntimeError('Must set the optimizer to set the driver first')
-            if not self.desvarSet:
+            if len(self.design_variables) == 0:
                 raise RuntimeError('Must set design variables before running optimization')
-            if not self.constraintSet:
+            if len(self.constraints) == 0:
                 print('Warning: no constraints set')
-
-            self.add_objective()
+            if self.objective is None:
+                self.add_objective()
 
         # Recorder
         #recorder = DumpRecorder('floatingOptimization.dat')
@@ -656,7 +708,7 @@ class FloatingInstance(object):
         #self.prob.check_total_derivatives()
 
     def run(self):
-        if not self.optimizerSet:
+        if self.optimizer is None:
             print('WARNING: executing once because optimizer is not set')
             self.evaluate()
         else:
