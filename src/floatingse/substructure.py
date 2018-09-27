@@ -15,8 +15,8 @@ class SubstructureGeometry(Component):
         super(SubstructureGeometry,self).__init__()
 
         # Design variables
-        self.add_param('base_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('auxiliary_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('base_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('auxiliary_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('auxiliary_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('auxiliary_freeboard', val=0.0, units='m', desc='Length of column above water line')
         self.add_param('auxiliary_draft', val=0.0, units='m', desc='Length of column below water line')
@@ -25,7 +25,7 @@ class SubstructureGeometry(Component):
         self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
         self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
         self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column')
-        self.add_param('tower_outer_diameter', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('tower_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('Rhub', val=0.0, units='m', desc='rotor hub radius')
         self.add_param('max_survival_heel', val=0.0, units='deg', desc='max heel angle for turbine survival')
         
@@ -58,10 +58,10 @@ class SubstructureGeometry(Component):
         OUTPUTS  : none (all unknown dictionary values set)
         """
         # Unpack variables
-        R_od_base       = 0.5*params['base_outer_diameter']
-        R_od_ballast    = 0.5*params['auxiliary_outer_diameter']
+        R_od_base       = 0.5*params['base_d_full']
+        R_od_ballast    = 0.5*params['auxiliary_d_full']
         R_semi          = params['radius_to_auxiliary_column']
-        R_tower         = 0.5*params['tower_outer_diameter']
+        R_tower         = 0.5*params['tower_d_full']
         R_hub           = params['Rhub']
         z_nodes_ballast = params['auxiliary_z_nodes']
         z_nodes_base    = params['base_z_nodes']
@@ -114,24 +114,24 @@ class Substructure(Component):
         self.add_param('number_of_auxiliary_columns', val=0, desc='Number of ballast columns evenly spaced around base column')
         self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
 
-        self.add_param('base_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
-        self.add_param('base_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
-        self.add_param('base_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
-        self.add_param('base_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of base column by section')
+        self.add_param('base_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
+        self.add_param('base_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
+        self.add_param('base_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('base_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of base column by section')
         self.add_param('base_freeboard', val=0.0, units='m', desc='Length of spar above water line')
-        self.add_param('base_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
-        self.add_param('base_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
-        self.add_param('base_column_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of column about base [xx yy zz xy xz yz]')
-        self.add_param('base_column_added_mass', val=np.zeros(6), units='kg', desc='Diagonal of added mass matrix- masses are first 3 entries, moments are last 3')
+        self.add_param('base_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
+        self.add_param('base_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
+        self.add_param('base_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of column about base [xx yy zz xy xz yz]')
+        self.add_param('base_added_mass', val=np.zeros(6), units='kg', desc='Diagonal of added mass matrix- masses are first 3 entries, moments are last 3')
 
-        self.add_param('auxiliary_column_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
-        self.add_param('auxiliary_column_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
-        self.add_param('auxiliary_column_cost', val=0.0, units='USD', desc='Cost of spar structure')
-        self.add_param('auxiliary_column_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
-        self.add_param('auxiliary_column_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
-        self.add_param('auxiliary_column_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
-        self.add_param('auxiliary_column_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of column about base [xx yy zz xy xz yz]')
-        self.add_param('auxiliary_column_added_mass', val=np.zeros(6), units='kg', desc='Diagonal of added mass matrix- masses are first 3 entries, moments are last 3')
+        self.add_param('auxiliary_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
+        self.add_param('auxiliary_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
+        self.add_param('auxiliary_cost', val=0.0, units='USD', desc='Cost of spar structure')
+        self.add_param('auxiliary_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
+        self.add_param('auxiliary_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
+        self.add_param('auxiliary_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
+        self.add_param('auxiliary_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of column about base [xx yy zz xy xz yz]')
+        self.add_param('auxiliary_added_mass', val=np.zeros(6), units='kg', desc='Diagonal of added mass matrix- masses are first 3 entries, moments are last 3')
 
         self.add_param('tower_mass', val=0.0, units='kg', desc='Mass of tower')
         self.add_param('tower_I_base', val=np.zeros(6), units='kg*m**2', desc='Moments about tower base')
@@ -155,8 +155,6 @@ class Substructure(Component):
 
         
         # Outputs
-        self.add_output('substructure_mass', val=0.0, units='kg', desc='total mass of spar and auxiliary columns with all ballasts, no mooring')
-        self.add_output('substructure_center_of_mass', val=0.0, units='m', desc='z-center of mass of spar and auxiliary columns with all ballasts, no mooring')
         self.add_output('substructure_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of substructure (no tower or rna or mooring) [xx yy zz xy xz yz]')
         self.add_output('total_mass', val=0.0, units='kg', desc='total mass of spar and moorings')
         self.add_output('total_cost', val=0.0, units='USD', desc='total cost of spar and moorings')
@@ -274,9 +272,9 @@ class Substructure(Component):
         z_cg            = unknowns['center_of_mass'][-1]
         V_system        = params['total_displacement']
         
-        Iwater_base     = params['base_column_Iwaterplane']
-        Iwater_column   = params['auxiliary_column_Iwaterplane']
-        Awater_column   = params['auxiliary_column_Awaterplane']
+        Iwater_base     = params['base_Iwaterplane']
+        Iwater_column   = params['auxiliary_Iwaterplane']
+        Awater_column   = params['auxiliary_Awaterplane']
 
         F_surge         = params['total_force'][0]
         M_pitch         = params['total_moment'][1]
@@ -348,34 +346,34 @@ class Substructure(Component):
         ncolumn         = int(params['number_of_auxiliary_columns'])
         R_semi          = params['radius_to_auxiliary_column']
         
-        m_base          = np.sum(params['base_column_mass'])
-        m_column        = np.sum(params['auxiliary_column_mass'])
+        m_base          = np.sum(params['base_mass'])
+        m_column        = np.sum(params['auxiliary_mass'])
         m_tower         = np.sum(params['tower_mass'])
         m_rna           = params['rna_mass']
         m_mooring       = params['mooring_mass']
         m_total         = unknowns['total_mass']
         m_water         = np.maximum(0.0, unknowns['variable_ballast_mass'])
-        m_a_base        = params['base_column_added_mass']
-        m_a_column      = params['auxiliary_column_added_mass']
+        m_a_base        = params['base_added_mass']
+        m_a_column      = params['auxiliary_added_mass']
         
         rhoWater        = params['water_density']
         V_system        = params['total_displacement']
         h_metacenter    = unknowns['metacentric_height']
 
-        Awater_base     = params['base_column_Awaterplane']
-        Awater_column   = params['auxiliary_column_Awaterplane']
-        I_base          = params['base_column_moments_of_inertia']
-        I_column        = params['auxiliary_column_moments_of_inertia']
+        Awater_base     = params['base_Awaterplane']
+        Awater_column   = params['auxiliary_Awaterplane']
+        I_base          = params['base_moments_of_inertia']
+        I_column        = params['auxiliary_moments_of_inertia']
         I_mooring       = params['mooring_moments_of_inertia']
         I_water         = unknowns['variable_ballast_moments_of_inertia']
         I_tower         = params['tower_I_base']
         I_rna           = params['rna_I']
         I_waterplane    = unknowns['Iwaterplane_system']
 
-        z_cg_base       = params['base_column_center_of_mass']
-        z_cb_base       = params['base_column_center_of_buoyancy']
-        z_cg_column     = params['auxiliary_column_center_of_mass']
-        z_cb_column     = params['auxiliary_column_center_of_buoyancy']
+        z_cg_base       = params['base_center_of_mass']
+        z_cb_base       = params['base_center_of_buoyancy']
+        z_cg_column     = params['auxiliary_center_of_mass']
+        z_cb_column     = params['auxiliary_center_of_buoyancy']
         z_cb            = params['z_center_of_buoyancy']
         z_cg_water      = unknowns['variable_ballast_center_of_mass']
         z_fairlead      = params['fairlead']*(-1)
@@ -415,8 +413,6 @@ class Substructure(Component):
         z_cg_subs = (m_base*z_cg_base + ncolumn*m_column*z_cg_column + m_water*z_cg_water) / m_subs
         R              = r_cg - np.array([0.0, 0.0, z_cg_subs])
         I_substructure = I_total + m_subs*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
-        unknowns['substructure_mass'] = m_subs
-        unknowns['substructure_center_of_mass'] = z_cg_subs
         unknowns['substructure_moments_of_inertia'] = unassembleI( I_total )
 
         # Now go back to the total
@@ -497,8 +493,8 @@ class Substructure(Component):
         # Unpack variables
         ncolumn    = int(params['number_of_auxiliary_columns'])
         c_mooring  = params['mooring_cost']
-        c_aux      = params['auxiliary_column_cost']
-        c_base     = params['base_column_cost']
+        c_aux      = params['auxiliary_cost']
+        c_base     = params['base_cost']
         c_pontoon  = params['pontoon_cost']
 
         unknowns['total_cost'] = c_mooring + ncolumn*c_aux + c_base + c_pontoon

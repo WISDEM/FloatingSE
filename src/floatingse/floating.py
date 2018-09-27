@@ -12,7 +12,6 @@ class FloatingSE(Group):
     def __init__(self, nSection):
         super(FloatingSE, self).__init__()
 
-        #self.add('geomsys', SubstructureDiscretization(nSection), promotes=['z_system'])
         self.nFull = 3*nSection+1
 
         self.add('tow', TowerLeanSE(nSection+1,self.nFull), promotes=['material_density','tower_section_height',
@@ -24,35 +23,28 @@ class FloatingSE(Group):
         # Ballast columns are replicated from same design in the components
         self.add('base', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                  'Uref','zref','shearExp','beta','yaw','Uc','Hs','T','cd_usr','cm','loading',
-                                                                 'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height'])
+                                                                 'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height','fairlead',
+                                                                 'permanent_ballast_density','bulkhead_mass_factor','ballast_heave_box_mass_factor',
+                                                                 'ring_mass_factor','column_mass_factor','outfitting_mass_fraction','ballast_cost_rate',
+                                                                 'tapered_col_cost_rate','outfitting_cost_rate'])
         self.add('aux', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                 'Uref','zref','shearExp','beta','yaw','Uc','Hs','T','cd_usr','cm','loading',
-                                                                'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height'])
+                                                                'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height','fairlead',
+                                                                'permanent_ballast_density','bulkhead_mass_factor','ballast_heave_box_mass_factor',
+                                                                'ring_mass_factor','column_mass_factor','outfitting_mass_fraction','ballast_cost_rate',
+                                                                'tapered_col_cost_rate','outfitting_cost_rate'])
 
         # Run Semi Geometry for interfaces
-        self.add('sg', SubstructureGeometry(self.nFull), promotes=['number_of_auxiliary_columns'])
+        self.add('sg', SubstructureGeometry(self.nFull), promotes=['*'])
 
         # Next run MapMooring
-        self.add('mm', MapMooring(), promotes=['water_density','water_depth','mooring_stiffness','mooring_mass','mooring_cost'])
+        self.add('mm', MapMooring(), promotes=['*'])
         
         # Add in the connecting truss
-        self.add('load', Loading(nSection, self.nFull), promotes=['water_density','material_density','E','G','yield_stress',
-                                                                          'z0','beta','Uref','zref','shearExp','beta','cd_usr',
-                                                                          'fairlead_support_outer_diameter','fairlead_support_wall_thickness',
-                                                                          'pontoon_outer_diameter','pontoon_wall_thickness','outer_cross_pontoons_int',
-                                                                          'cross_attachment_pontoons_int','lower_attachment_pontoons_int',
-                                                                          'upper_attachment_pontoons_int','lower_ring_pontoons_int',
-                                                                          'upper_ring_pontoons_int','pontoon_cost_rate',
-                                                                          'connection_ratio_max','base_pontoon_attach_lower','base_pontoon_attach_upper',
-                                                                          'gamma_b','gamma_f','gamma_fatigue','gamma_m','gamma_n',
-                                                                          'rna_I','rna_cg','rna_force','rna_moment','rna_mass',
-                                                                          'number_of_auxiliary_columns','structural_frequencies','mooring_stiffness'])
+        self.add('load', Loading(nSection, self.nFull), promotes=['*'])#water_density','material_density','E','G','yield_stress',
 
         # Run main Semi analysis
-        self.add('subs', Substructure(self.nFull), promotes=['water_density','total_cost','total_mass','number_of_auxiliary_columns',
-                                                             'structural_frequencies','rigid_body_periods','rna_I','rna_cg','rna_mass',
-                                                             'tower_I_base','tower_mass','mooring_stiffness','mooring_mass','mooring_cost',
-                                                             'wave_period_range_low','wave_period_range_high'])
+        self.add('subs', Substructure(self.nFull), promotes=['*'])
 
         # Define all input variables from all models
         
@@ -73,8 +65,8 @@ class FloatingSE(Group):
         self.add('mooring_lines_per_connection', IndepVarComp('mooring_lines_per_connection', 0), promotes=['*'])
         self.add('mooring_type',               IndepVarComp('mooring_type', 'chain', pass_by_obj=True), promotes=['*'])
         self.add('anchor_type',                IndepVarComp('anchor_type', 'SUCTIONPILE', pass_by_obj=True), promotes=['*'])
-        self.add('mooring_max_offset',         IndepVarComp('mooring_max_offset', 0.0), promotes=['*'])
-        self.add('mooring_operational_heel',   IndepVarComp('mooring_operational_heel', 0.0), promotes=['*'])
+        self.add('max_offset',         IndepVarComp('max_offset', 0.0), promotes=['*'])
+        self.add('operational_heel',   IndepVarComp('operational_heel', 0.0), promotes=['*'])
         self.add('mooring_cost_rate',          IndepVarComp('mooring_cost_rate', 0.0), promotes=['*'])
         self.add('max_survival_heel',          IndepVarComp('max_survival_heel', 0.0), promotes=['*'])
 
@@ -132,52 +124,35 @@ class FloatingSE(Group):
         self.add('wave_period_range_high',  IndepVarComp('wave_period_range_high', 20.0), promotes=['*'])
 
         # Connect all input variables from all models
-        self.connect('radius_to_auxiliary_column', ['sg.radius_to_auxiliary_column', 'load.radius_to_auxiliary_column', 'subs.radius_to_auxiliary_column'])
+        self.connect('radius_to_auxiliary_column', ['radius_to_auxiliary_column', 'radius_to_auxiliary_column'])
 
-        self.connect('base_freeboard', ['tow.foundation_height', 'base.freeboard', 'subs.base_freeboard'])
+        self.connect('base_freeboard', ['tow.foundation_height', 'base.freeboard', 'base_freeboard'])
         self.connect('base_section_height', 'base.section_height')
         self.connect('base_outer_diameter', 'base.diameter')
         self.connect('base_wall_thickness', 'base.wall_thickness')
         self.connect('z_offset', 'foundation_height')
 
-        self.connect('tow.d_full', ['load.windLoads.d','sg.tower_outer_diameter']) # includes tower_d_full
-        self.connect('tow.t_full', 'load.tower_t_full')
-        self.connect('tow.z_full', ['load.wind.z','subs.tower_z_full']) # includes tower_z_full
-        self.connect('tow.cm.mass','load.tower_mass')
-        self.connect('tower_buckling_length','load.tower_buckling_length')
+        self.connect('tow.d_full', ['windLoads.d','tower_d_full']) # includes tower_d_full
+        self.connect('tow.t_full', 'tower_t_full')
+        self.connect('tow.z_full', ['loadingWind.z','tower_z_full']) # includes tower_z_full
+        self.connect('tow.cm.mass','tower_mass_section')
+        self.connect('tower_buckling_length','tower_buckling_length')
         self.connect('tow.turbine_mass','base.stack_mass_in')
-        self.connect('tow.tower_center_of_mass','load.tower_center_of_mass')
+        self.connect('tow.tower_center_of_mass','tower_center_of_mass')
         
-        self.connect('auxiliary_freeboard', ['aux.freeboard','sg.auxiliary_freeboard'])
+        self.connect('auxiliary_freeboard', ['aux.freeboard','auxiliary_freeboard'])
         self.connect('auxiliary_section_height', 'aux.section_height')
         self.connect('auxiliary_outer_diameter', 'aux.diameter')
         self.connect('auxiliary_wall_thickness', 'aux.wall_thickness')
-
-        self.connect('fairlead', ['base.fairlead','aux.fairlead','sg.fairlead','mm.fairlead','subs.fairlead','load.fairlead'])
-        self.connect('fairlead_offset_from_shell', 'sg.fairlead_offset_from_shell')
-        self.connect('max_survival_heel', ['sg.max_survival_heel','mm.max_survival_heel'])
-        
-        self.connect('mooring_line_length', 'mm.mooring_line_length')
-        self.connect('anchor_radius', 'mm.anchor_radius')
-        self.connect('mooring_diameter', 'mm.mooring_diameter')
-        self.connect('number_of_mooring_connections', ['mm.number_of_mooring_connections','load.number_of_mooring_connections'])
-        self.connect('mooring_lines_per_connection', ['mm.mooring_lines_per_connection','load.mooring_lines_per_connection'])
-        self.connect('mooring_type', 'mm.mooring_type')
-        self.connect('anchor_type', 'mm.anchor_type')
-        self.connect('mooring_max_offset', 'mm.max_offset')
-        self.connect('mooring_operational_heel', ['mm.operational_heel', 'subs.operational_heel'])
-        self.connect('mooring_cost_rate', 'mm.mooring_cost_rate')
-        self.connect('gamma_f', 'mm.gamma')
 
         self.connect('max_taper_ratio', 'max_taper')
         self.connect('min_diameter_thickness_ratio', 'min_d_to_t')
         
         # To do: connect these to independent variables
-        self.connect('base.windLoads.rho',['aux.windLoads.rho','load.windLoads.rho'])
-        self.connect('base.windLoads.mu',['aux.windLoads.mu','load.windLoads.mu'])
+        self.connect('base.windLoads.rho',['aux.windLoads.rho','windLoads.rho'])
+        self.connect('base.windLoads.mu',['aux.windLoads.mu','windLoads.mu'])
         self.connect('base.waveLoads.mu','aux.waveLoads.mu')
 
-        self.connect('permanent_ballast_density', ['base.permanent_ballast_density', 'aux.permanent_ballast_density'])
         
         self.connect('base_stiffener_web_height', 'base.stiffener_web_height')
         self.connect('base_stiffener_web_thickness', 'base.stiffener_web_thickness')
@@ -186,7 +161,7 @@ class FloatingSE(Group):
         self.connect('base_stiffener_spacing', 'base.stiffener_spacing')
         self.connect('base_bulkhead_thickness', 'base.bulkhead_thickness')
         self.connect('base_permanent_ballast_height', 'base.permanent_ballast_height')
-        self.connect('base.L_stiffener','load.base_column_buckling_length')
+        self.connect('base.L_stiffener','base_buckling_length')
         self.connect('base_ballast_heave_box_diameter', 'base.ballast_heave_box_diameter')
         self.connect('base_ballast_heave_box_height', 'base.ballast_heave_box_height')
         self.connect('base_ballast_heave_box_location', 'base.ballast_heave_box_location')
@@ -198,77 +173,57 @@ class FloatingSE(Group):
         self.connect('auxiliary_stiffener_spacing', 'aux.stiffener_spacing')
         self.connect('auxiliary_bulkhead_thickness', 'aux.bulkhead_thickness')
         self.connect('auxiliary_permanent_ballast_height', 'aux.permanent_ballast_height')
-        self.connect('aux.L_stiffener','load.auxiliary_column_buckling_length')
+        self.connect('aux.L_stiffener','auxiliary_buckling_length')
         self.connect('auxiliary_ballast_heave_box_diameter', 'aux.ballast_heave_box_diameter')
         self.connect('auxiliary_ballast_heave_box_height', 'aux.ballast_heave_box_height')
         self.connect('auxiliary_ballast_heave_box_location', 'aux.ballast_heave_box_location')
         
-        self.connect('bulkhead_mass_factor', ['base.bulkhead_mass_factor', 'aux.bulkhead_mass_factor',
-                                              'base.ballast_heave_box_mass_factor', 'aux.ballast_heave_box_mass_factor'])
-        self.connect('ring_mass_factor', ['base.ring_mass_factor', 'aux.ring_mass_factor'])
+        self.connect('bulkhead_mass_factor', 'ballast_heave_box_mass_factor')
         self.connect('shell_mass_factor', ['base.cyl_mass.outfitting_factor', 'aux.cyl_mass.outfitting_factor'])
-        self.connect('column_mass_factor', ['base.column_mass_factor', 'aux.column_mass_factor'])
-        self.connect('outfitting_mass_fraction', ['base.outfitting_mass_fraction', 'aux.outfitting_mass_fraction'])
-        self.connect('ballast_cost_rate', ['base.ballast_cost_rate', 'aux.ballast_cost_rate'])
-        self.connect('tapered_col_cost_rate', ['base.tapered_col_cost_rate', 'aux.tapered_col_cost_rate'])
-        self.connect('outfitting_cost_rate', ['base.outfitting_cost_rate', 'aux.outfitting_cost_rate'])
 
-        # Link outputs from one model to inputs to another
-        self.connect('sg.fairlead_radius', ['mm.fairlead_radius', 'load.fairlead_radius', 'subs.fairlead_radius'])
+        self.connect('base.z_full', ['base_z_nodes', 'base_z_full'])
+        self.connect('base.d_full', 'base_d_full')
+        self.connect('base.t_full', 'base_t_full')
 
-        self.connect('base.z_full', ['sg.base_z_nodes', 'load.base_z_full'])
-        self.connect('base.d_full', ['load.base_d_full', 'sg.base_outer_diameter'])
-        self.connect('base.t_full', 'load.base_t_full')
+        self.connect('aux.z_full', ['auxiliary_z_nodes', 'auxiliary_z_full'])
+        self.connect('aux.d_full', 'auxiliary_d_full')
+        self.connect('aux.t_full', 'auxiliary_t_full')
 
-        self.connect('aux.z_full', ['sg.auxiliary_z_nodes', 'load.auxiliary_z_full'])
-        self.connect('aux.d_full', ['load.auxiliary_d_full', 'sg.auxiliary_outer_diameter'])
-        self.connect('aux.t_full', 'load.auxiliary_t_full')
-
-        self.connect('mm.mooring_moments_of_inertia', ['load.mooring_moments_of_inertia','subs.mooring_moments_of_inertia'])
-        self.connect('mm.neutral_load', ['load.mooring_neutral_load','subs.mooring_neutral_load'])
-        self.connect('mm.max_offset_restoring_force', 'subs.mooring_surge_restoring_force')
-        self.connect('mm.operational_heel_restoring_force', 'subs.mooring_pitch_restoring_force')
+        self.connect('max_offset_restoring_force', 'mooring_surge_restoring_force')
+        self.connect('operational_heel_restoring_force', 'mooring_pitch_restoring_force')
         
-        self.connect('base.z_center_of_mass', ['load.base_column_center_of_mass','subs.base_column_center_of_mass'])
-        self.connect('base.z_center_of_buoyancy', ['load.base_column_center_of_buoyancy','subs.base_column_center_of_buoyancy'])
-        self.connect('base.I_column', 'subs.base_column_moments_of_inertia')
-        self.connect('base.Iwater', 'subs.base_column_Iwaterplane')
-        self.connect('base.Awater', 'subs.base_column_Awaterplane')
-        self.connect('base.displaced_volume', 'load.base_column_displaced_volume')
-        self.connect('base.hydrostatic_force', 'load.base_column_hydrostatic_force')
-        self.connect('base.added_mass', 'subs.base_column_added_mass')
-        self.connect('base.total_mass', ['load.base_column_mass', 'subs.base_column_mass'])
-        self.connect('base.total_cost', 'subs.base_column_cost')
-        self.connect('base.variable_ballast_interp_zpts', 'subs.water_ballast_zpts_vector')
-        self.connect('base.variable_ballast_interp_radius', 'subs.water_ballast_radius_vector')
-        self.connect('base.Px', 'load.base_column_Px')
-        self.connect('base.Py', 'load.base_column_Py')
-        self.connect('base.Pz', 'load.base_column_Pz')
-        self.connect('base.qdyn', 'load.base_column_qdyn')
+        self.connect('base.z_center_of_mass', 'base_center_of_mass')
+        self.connect('base.z_center_of_buoyancy', 'base_center_of_buoyancy')
+        self.connect('base.I_column', 'base_moments_of_inertia')
+        self.connect('base.Iwater', 'base_Iwaterplane')
+        self.connect('base.Awater', 'base_Awaterplane')
+        self.connect('base.displaced_volume', 'base_displaced_volume')
+        self.connect('base.hydrostatic_force', 'base_hydrostatic_force')
+        self.connect('base.added_mass', 'base_added_mass')
+        self.connect('base.total_mass', 'base_mass')
+        self.connect('base.total_cost', 'base_cost')
+        self.connect('base.variable_ballast_interp_zpts', 'water_ballast_zpts_vector')
+        self.connect('base.variable_ballast_interp_radius', 'water_ballast_radius_vector')
+        self.connect('base.Px', 'base_Px')
+        self.connect('base.Py', 'base_Py')
+        self.connect('base.Pz', 'base_Pz')
+        self.connect('base.qdyn', 'base_qdyn')
 
-        self.connect('aux.z_center_of_mass', ['load.auxiliary_column_center_of_mass','subs.auxiliary_column_center_of_mass'])
-        self.connect('aux.z_center_of_buoyancy', ['load.auxiliary_column_center_of_buoyancy','subs.auxiliary_column_center_of_buoyancy'])
-        self.connect('aux.I_column', 'subs.auxiliary_column_moments_of_inertia')
-        self.connect('aux.Iwater', 'subs.auxiliary_column_Iwaterplane')
-        self.connect('aux.Awater', 'subs.auxiliary_column_Awaterplane')
-        self.connect('aux.displaced_volume', 'load.auxiliary_column_displaced_volume')
-        self.connect('aux.hydrostatic_force', 'load.auxiliary_column_hydrostatic_force')
-        self.connect('aux.added_mass', 'subs.auxiliary_column_added_mass')
-        self.connect('aux.total_mass', ['load.auxiliary_column_mass','subs.auxiliary_column_mass'])
-        self.connect('aux.total_cost', 'subs.auxiliary_column_cost')
-        self.connect('aux.Px', 'load.auxiliary_column_Px')
-        self.connect('aux.Py', 'load.auxiliary_column_Py')
-        self.connect('aux.Pz', 'load.auxiliary_column_Pz')
-        self.connect('aux.qdyn', 'load.auxiliary_column_qdyn')
-        self.connect('aux.draft', 'sg.auxiliary_draft')
-
-        self.connect('load.structural_mass', 'subs.structural_mass')
-        self.connect('load.center_of_mass', 'subs.structure_center_of_mass')
-        self.connect('load.z_center_of_buoyancy', 'subs.z_center_of_buoyancy')
-        self.connect('load.total_displacement', 'subs.total_displacement')
-        self.connect('load.total_force', 'subs.total_force')
-        self.connect('load.total_moment', 'subs.total_moment')
-        self.connect('load.pontoon_cost', 'subs.pontoon_cost')
+        self.connect('aux.z_center_of_mass', 'auxiliary_center_of_mass')
+        self.connect('aux.z_center_of_buoyancy', 'auxiliary_center_of_buoyancy')
+        self.connect('aux.I_column', 'auxiliary_moments_of_inertia')
+        self.connect('aux.Iwater', 'auxiliary_Iwaterplane')
+        self.connect('aux.Awater', 'auxiliary_Awaterplane')
+        self.connect('aux.displaced_volume', 'auxiliary_displaced_volume')
+        self.connect('aux.hydrostatic_force', 'auxiliary_hydrostatic_force')
+        self.connect('aux.added_mass', 'auxiliary_added_mass')
+        self.connect('aux.total_mass', 'auxiliary_mass')
+        self.connect('aux.total_cost', 'auxiliary_cost')
+        self.connect('aux.Px', 'auxiliary_Px')
+        self.connect('aux.Py', 'auxiliary_Py')
+        self.connect('aux.Pz', 'auxiliary_Pz')
+        self.connect('aux.qdyn', 'auxiliary_qdyn')
+        self.connect('aux.draft', 'auxiliary_draft')
 
          # Use complex number finite differences
         typeStr = 'fd'

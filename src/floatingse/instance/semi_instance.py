@@ -14,10 +14,10 @@ class SemiInstance(FloatingInstance):
 
         self.draw_ocean(fig)
 
-        mooringMat = self.prob['mm.plot_matrix']
+        mooringMat = self.prob['mooring_plot_matrix']
         self.draw_mooring(fig, mooringMat)
 
-        pontoonMat = self.prob['load.plot_matrix']
+        pontoonMat = self.prob['plot_matrix']
         zcut = 1.0 + np.maximum( self.params['base_freeboard'], self.params['auxiliary_freeboard'] )
         self.draw_pontoons(fig, pontoonMat, 0.5*self.params['pontoon_outer_diameter'], zcut)
 
@@ -26,7 +26,7 @@ class SemiInstance(FloatingInstance):
 
         self.draw_ballast(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                           0.5*self.params['base_outer_diameter']-self.params['base_wall_thickness'],
-                          self.params['base_permanent_ballast_height'], self.prob['subs.variable_ballast_height'])
+                          self.params['base_permanent_ballast_height'], self.prob['variable_ballast_height'])
         
         if self.prob['base.ballast_heave_box_mass'] > 0.0:
             self.draw_ballast_heave_box(fig, [0.0, 0.0], self.params['base_freeboard'],

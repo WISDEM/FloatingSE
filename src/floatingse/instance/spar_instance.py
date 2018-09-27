@@ -65,17 +65,17 @@ class SparInstance(FloatingInstance):
 
         self.draw_ocean(fig)
 
-        self.draw_mooring(fig, self.prob['mm.plot_matrix'])
+        self.draw_mooring(fig, self.prob['mooring_plot_matrix'])
 
         zcut = 1.0 + self.params['base_freeboard']
-        self.draw_pontoons(fig, self.prob['load.plot_matrix'], 0.5*self.params['fairlead_support_outer_diameter'], zcut)
+        self.draw_pontoons(fig, self.prob['plot_matrix'], 0.5*self.params['fairlead_support_outer_diameter'], zcut)
 
         self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                            0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
 
         self.draw_ballast(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
                           0.5*self.params['base_outer_diameter']-self.params['base_wall_thickness'],
-                          self.params['base_permanent_ballast_height'], self.prob['subs.variable_ballast_height'])
+                          self.params['base_permanent_ballast_height'], self.prob['variable_ballast_height'])
 
         self.draw_column(fig, [0.0, 0.0], self.params['hub_height'], self.params['tower_section_height'],
                          0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)

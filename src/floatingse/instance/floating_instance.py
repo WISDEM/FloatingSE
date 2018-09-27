@@ -86,8 +86,8 @@ class FloatingInstance(object):
         self.params['wave_period_range_high']               = 20.0
         
         # Mooring parameters
-        self.params['mooring_max_offset']                   = 0.1*self.params['water_depth'] # Assumption        
-        self.params['mooring_operational_heel']             = 6.0
+        self.params['max_offset']                   = 0.1*self.params['water_depth'] # Assumption        
+        self.params['operational_heel']             = 6.0
         self.params['max_survival_heel']                    = 15.0
         self.params['mooring_type']                         = 'chain'
         self.params['anchor_type']                          = 'suctionpile'
@@ -150,7 +150,7 @@ class FloatingInstance(object):
         #self.params['rna_moment']                          = np.array([0.0, 131196.8431,  0.0])
         self.params['base_bulkhead_thickness']              = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.params['auxiliary_bulkhead_thickness']         = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
-        self.params['sg.Rhub']                              = 1.125
+        self.params['Rhub']                              = 1.125
         
         # Typically design (start at OC4 semi)
         self.params['radius_to_auxiliary_column']           = 28.867513459481287
@@ -237,7 +237,7 @@ class FloatingInstance(object):
             self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
             self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
             self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
-            self.params['sg.Rhub']                 = 1.125
+            self.params['Rhub']                 = 1.125
             self.params['base_freeboard'] = 10.0
 
             if self.params.has_key('rna_mass'):
@@ -312,7 +312,7 @@ class FloatingInstance(object):
                 self.params['rna_cg'] = np.array([-0.60484688, 0.0, 2.5177933 ])
                 self.params['rna_force']   = np.array([ 2.11271060e+06, 0.0, -6.81485569e+06])
                 self.params['rna_moment']  = np.array([29259007.24076359, 245729.82542406, -3075245.58067333])
-                self.params['sg.Rhub']     = 2.3
+                self.params['Rhub']     = 2.3
             
         else:
             raise ValueError('Inputs must be either NREL5MW or DTU10MW')
@@ -460,7 +460,7 @@ class FloatingInstance(object):
             ['aux.wave_height_freeboard_ratio', None, 1.0, None],
             
             ['aux.fairlead_draft_ratio', 0.0, 1.0, None],
-            ['sg.base_auxiliary_spacing', 1.0, None, None],
+            ['base_auxiliary_spacing', 1.0, None, None],
             
             # Ensure that the radius doesn't change dramatically over a section
             ['base.manufacturability', 0.0, None, None],
@@ -471,18 +471,18 @@ class FloatingInstance(object):
             ['tow.weldability', None, 0.0, None],
             
             # Ensure that the spar top matches the tower base
-            ['sg.tower_transition_buffer', -1.0, 1.0, None],
-            ['sg.nacelle_transition_buffer', 0.0, None, None],
+            ['tower_transition_buffer', -1.0, 1.0, None],
+            ['nacelle_transition_buffer', 0.0, None, None],
 
             # Make sure semisub columns don't get submerged
-            ['sg.auxiliary_freeboard_heel_margin', 0.0, None, None],
-            ['sg.auxiliary_draft_heel_margin', 0.0, None, None],
+            ['auxiliary_freeboard_heel_margin', 0.0, None, None],
+            ['auxiliary_draft_heel_margin', 0.0, None, None],
             
             # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
-            ['mm.axial_unity', 0.0, 1.0, None],
+            ['axial_unity', 0.0, 1.0, None],
             
             # Ensure there is sufficient mooring line length, MAP doesn't give an error about this
-            ['mm.mooring_length_max', None, 1.0, None],
+            ['mooring_length_max', None, 1.0, None],
             
             # API Bulletin 2U constraints
             ['base.flange_spacing_ratio', None, 1.0, None],
@@ -504,46 +504,46 @@ class FloatingInstance(object):
             ['aux.external_general_api', None, 1.0, None],
             
             # Pontoon tube radii
-            #['load.base_connection_ratio', 0.0, None, None],
-            #['load.auxiliary_connection_ratio', 0.0, None, None],
+            #['base_connection_ratio', 0.0, None, None],
+            #['auxiliary_connection_ratio', 0.0, None, None],
             
             # Pontoon stress safety factor
-            ['load.pontoon_stress', None, 1.0, None],
+            ['pontoon_stress', None, 1.0, None],
 
             # Frame3DD estimates of stress and buckling
-            ['load.tower_stress', None, 1.0, None],
-            ['load.tower_shell_buckling', None, 1.0, None],
-            ['load.tower_global_buckling', None, 1.0, None],
+            ['tower_stress', None, 1.0, None],
+            ['tower_shell_buckling', None, 1.0, None],
+            ['tower_global_buckling', None, 1.0, None],
 
-            ['load.base_column_stress', None, 1.0, None],
-            ['load.base_column_shell_buckling', None, 1.0, None],
-            ['load.base_column_global_buckling', None, 1.0, None],
+            ['base_column_stress', None, 1.0, None],
+            ['base_column_shell_buckling', None, 1.0, None],
+            ['base_column_global_buckling', None, 1.0, None],
 
-            ['load.auxiliary_column_stress', None, 1.0, None],
-            ['load.auxiliary_column_shell_buckling', None, 1.0, None],
-            ['load.auxiliary_column_global_buckling', None, 1.0, None],
+            ['auxiliary_column_stress', None, 1.0, None],
+            ['auxiliary_column_shell_buckling', None, 1.0, None],
+            ['auxiliary_column_global_buckling', None, 1.0, None],
             
             # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
-            ['subs.variable_ballast_height_ratio', 0.0, 1.0, None],
-            ['subs.variable_ballast_mass', 0.0, None, None],
+            ['variable_ballast_height_ratio', 0.0, 1.0, None],
+            ['variable_ballast_mass', 0.0, None, None],
             
             # Metacentric height should be positive for static stability
-            ['subs.metacentric_height', 0.1, None, None],
+            ['metacentric_height', 0.1, None, None],
             
             # Center of buoyancy should be above CG (difference should be positive, None],
-            #['subs.buoyancy_to_gravity', 0.1, None, None],
+            #['buoyancy_to_gravity', 0.1, None, None],
             
             # Surge restoring force should be greater than wave-wind forces (ratio < 1, None],
-            ['subs.offset_force_ratio', None, 1.0, None],
+            ['offset_force_ratio', None, 1.0, None],
             
             # Heel angle should be less than 6deg for ordinary operation, less than 10 for extreme conditions
-            ['subs.heel_moment_ratio', None, 1.0, None],
+            ['heel_moment_ratio', None, 1.0, None],
 
             # Wave forcing period should be different than natural periods and structural modes
-            ['subs.period_margin_low', None, 1.0, None],
-            ['subs.period_margin_high', 1.0, None, None],
-            ['subs.modal_margin_low', None, 1.0, None],
-            ['subs.modal_margin_high', 1.0, None, None]
+            ['period_margin_low', None, 1.0, None],
+            ['period_margin_high', 1.0, None, None],
+            ['modal_margin_low', None, 1.0, None],
+            ['modal_margin_high', 1.0, None, None]
         ]
         #raise NotImplementedError("Subclasses should implement this!")
         return conlist

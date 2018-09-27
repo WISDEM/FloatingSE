@@ -80,7 +80,7 @@ class TestMapMooring(unittest.TestCase):
         self.params['max_offset'] = 10.0
         self.params['max_survival_heel'] = 10.0
         self.params['operational_heel'] = 10.0
-        self.params['gamma'] = 1.35
+        self.params['gamma_f'] = 1.35
 
         # Needed for geometry prep
         self.params['stiffener_web_thickness'] = np.array([0.5, 0.5])

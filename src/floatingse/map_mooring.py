@@ -52,7 +52,7 @@ class MapMooring(Component):
         self.add_param('max_offset', val=0.0, units='m',desc='X offsets in discretization')
         self.add_param('operational_heel', val=0.0, units='deg',desc='Maximum angle of heel allowable during operation')
         self.add_param('max_survival_heel', val=0.0, units='deg', desc='max heel angle for turbine survival')
-        self.add_param('gamma', val=0.0, desc='Safety factor for mooring line tension')
+        self.add_param('gamma_f', val=0.0, desc='Safety factor for mooring line tension')
 
         # Cost rates
         self.add_param('mooring_cost_rate', val=0.0, desc='miscellaneous cost factor in percent')
@@ -64,10 +64,10 @@ class MapMooring(Component):
         self.add_output('mooring_cost', val=0.0, units='USD',desc='total cost for anchor + legs + miscellaneous costs')
         self.add_output('mooring_stiffness', val=np.zeros((6,6)), units='N/m', desc='Linearized stiffness matrix of mooring system at neutral (no offset) conditions.')
         self.add_output('anchor_cost', val=0.0, units='USD',desc='total cost for anchor')
-        self.add_output('neutral_load', val=np.zeros((NLINES_MAX,3)), units='N',desc='mooring vertical load in all mooring lines')
+        self.add_output('mooring_neutral_load', val=np.zeros((NLINES_MAX,3)), units='N',desc='mooring vertical load in all mooring lines')
         self.add_output('max_offset_restoring_force', val=0.0, units='N',desc='sum of forces in x direction after max offset')
         self.add_output('operational_heel_restoring_force', val=np.zeros((NLINES_MAX,3)), units='N',desc='forces for all mooring lines after operational heel')
-        self.add_output('plot_matrix', val=np.zeros((NLINES_MAX, NPTS_PLOT, 3)), units='m', desc='data matrix for plotting') 
+        self.add_output('mooring_plot_matrix', val=np.zeros((NLINES_MAX, NPTS_PLOT, 3)), units='m', desc='data matrix for plotting') 
 
         # Output constriants
         self.add_output('axial_unity', val=0.0, units='m',desc='range of damaged mooring')
@@ -183,7 +183,7 @@ class MapMooring(Component):
         waterDepth    = params['water_depth']
         L_mooring     = params['mooring_line_length']
         max_heel      = params['max_survival_heel']
-        gamma         = params['gamma']
+        gamma         = params['gamma_f']
         
         if L_mooring > (waterDepth - fairleadDepth):
             self.tlpFlag = False
@@ -413,7 +413,7 @@ class MapMooring(Component):
         Dmooring      = params['mooring_diameter']
         offset        = params['max_offset']
         heel          = params['operational_heel']
-        gamma         = params['gamma']
+        gamma         = params['gamma_f']
         n_connect     = int(params['number_of_mooring_connections'])
         n_lines       = int(params['mooring_lines_per_connection'])
         ntotal        = n_connect * n_lines
@@ -455,8 +455,8 @@ class MapMooring(Component):
                 # Seems to be a bug in the plot arrays from MAP++ for plotting output with taut lines
                 plotMat[k,:,2] = np.linspace(-fairleadDepth, -waterDepth, NPTS_PLOT)
                 xyzpts[k,:,2]  = np.linspace(-fairleadDepth, -waterDepth, nptsMOI)
-        unknowns['neutral_load'] = F_neutral
-        unknowns['plot_matrix']  = plotMat
+        unknowns['mooring_neutral_load'] = F_neutral
+        unknowns['mooring_plot_matrix']  = plotMat
         
         # Fine line segment length, ds = sqrt(dx^2 + dy^2 + dz^2)
         xyzpts_dx = np.gradient(xyzpts[:,:,0], axis=1)
