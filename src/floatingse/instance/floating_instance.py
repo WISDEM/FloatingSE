@@ -334,8 +334,10 @@ class FloatingInstance(object):
 
             self.set_optimizer(newopt)
             for k in newdesvar:
+                if k[0].startswith('sm.'): k[0] = k[0][3:]
                 self.add_design_variable(k[0], k[1], k[2])
             for k in newcons:
+                if k[0].startswith('sm.'): k[0] = k[0][3:]
                 self.add_constraint(k[0], k[1], k[2], k[3])
             self.add_objective(newobj[0], newobj[1])
             
