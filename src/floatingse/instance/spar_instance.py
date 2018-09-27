@@ -16,14 +16,14 @@ class SparInstance(FloatingInstance):
         self.params['outer_cross_pontoons_int'] = 0
  
         # Typically design (OC3)
-        self.params['base_freeboard'] = 10.0
+        self.params['main_freeboard'] = 10.0
         self.params['fairlead'] = 5 #70.0
-        self.set_length_base(130.0)
-        self.params['base_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])
-        self.params['base_outer_diameter'] = 2*np.array([4.7, 4.7, 4.7, 4.7, 3.25, 3.25])
-        self.params['base_wall_thickness'] = 0.05
+        self.set_length_main(130.0)
+        self.params['main_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])
+        self.params['main_outer_diameter'] = 2*np.array([4.7, 4.7, 4.7, 4.7, 3.25, 3.25])
+        self.params['main_wall_thickness'] = 0.05
         self.params['fairlead_offset_from_shell'] = 5.2-4.7
-        self.params['base_permanent_ballast_height'] = 10.0
+        self.params['main_permanent_ballast_height'] = 10.0
         
         # OC3
         self.params['water_depth'] = 320.0
@@ -51,7 +51,7 @@ class SparInstance(FloatingInstance):
         for k in range(len(conlist)):
             if ( (conlist[k][0].find('aux') >= 0) or
                  (conlist[k][0].find('pontoon') >= 0) or
-                 (conlist[k][0].find('base_connection_ratio') >= 0) ):
+                 (conlist[k][0].find('main_connection_ratio') >= 0) ):
                 poplist.append(k)
 
         poplist.reverse()
@@ -67,24 +67,24 @@ class SparInstance(FloatingInstance):
 
         self.draw_mooring(fig, self.prob['mooring_plot_matrix'])
 
-        zcut = 1.0 + self.params['base_freeboard']
+        zcut = 1.0 + self.params['main_freeboard']
         self.draw_pontoons(fig, self.prob['plot_matrix'], 0.5*self.params['fairlead_support_outer_diameter'], zcut)
 
-        self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
-                           0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
+        self.draw_column(fig, [0.0, 0.0], self.params['main_freeboard'], self.params['main_section_height'],
+                           0.5*self.params['main_outer_diameter'], self.params['main_stiffener_spacing'])
 
-        self.draw_ballast(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
-                          0.5*self.params['base_outer_diameter']-self.params['base_wall_thickness'],
-                          self.params['base_permanent_ballast_height'], self.prob['variable_ballast_height'])
+        self.draw_ballast(fig, [0.0, 0.0], self.params['main_freeboard'], self.params['main_section_height'],
+                          0.5*self.params['main_outer_diameter']-self.params['main_wall_thickness'],
+                          self.params['main_permanent_ballast_height'], self.prob['variable_ballast_height'])
 
         self.draw_column(fig, [0.0, 0.0], self.params['hub_height'], self.params['tower_section_height'],
                          0.5*self.params['tower_outer_diameter'], None, (0.9,)*3)
 
-        if self.prob['base.ballast_heave_box_mass'] > 0.0:
-            self.draw_ballast_heave_box(fig, [0.0, 0.0], self.params['base_freeboard'],
-                                        self.params['base_section_height'],
-                                        self.params['base_ballast_heave_box_location'],
-                                        0.5*self.params['base_ballast_heave_box_diameter'],
-                                        self.params['base_ballast_heave_box_height'])
+        if self.prob['main.ballast_heave_box_mass'] > 0.0:
+            self.draw_ballast_heave_box(fig, [0.0, 0.0], self.params['main_freeboard'],
+                                        self.params['main_section_height'],
+                                        self.params['main_ballast_heave_box_location'],
+                                        0.5*self.params['main_ballast_heave_box_diameter'],
+                                        self.params['main_ballast_heave_box_height'])
         
         self.set_figure(fig, fname)

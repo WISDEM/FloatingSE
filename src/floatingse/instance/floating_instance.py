@@ -148,26 +148,26 @@ class FloatingInstance(object):
         # Max wind speed
         #self.params['rna_force']                           = np.array([188038.8045, 0,  -16451.2637])
         #self.params['rna_moment']                          = np.array([0.0, 131196.8431,  0.0])
-        self.params['base_bulkhead_thickness']              = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
+        self.params['main_bulkhead_thickness']              = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.params['offset_bulkhead_thickness']         = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.params['Rhub']                              = 1.125
         
         # Typically design (start at OC4 semi)
         self.params['radius_to_offset_column']           = 28.867513459481287
         self.params['number_of_offset_columns']          = 3
-        self.params['base_freeboard']                       = 10.0
+        self.params['main_freeboard']                       = 10.0
         self.params['offset_freeboard']                  = 12.0
         self.params['fairlead']                             = 14.0
         self.params['fairlead_offset_from_shell']           = 40.868-28.867513459481287-6.0
-        self.params['base_outer_diameter']                  = 6.5
-        self.params['base_wall_thickness']                  = 0.03
+        self.params['main_outer_diameter']                  = 6.5
+        self.params['main_wall_thickness']                  = 0.03
         self.params['offset_wall_thickness']             = 0.06
-        self.params['base_permanent_ballast_height']        = 1.0
-        self.params['base_stiffener_web_height']            = 0.1
-        self.params['base_stiffener_web_thickness']         = 0.04
-        self.params['base_stiffener_flange_width']          = 0.1
-        self.params['base_stiffener_flange_thickness']      = 0.02
-        self.params['base_stiffener_spacing']               = 0.4
+        self.params['main_permanent_ballast_height']        = 1.0
+        self.params['main_stiffener_web_height']            = 0.1
+        self.params['main_stiffener_web_thickness']         = 0.04
+        self.params['main_stiffener_flange_width']          = 0.1
+        self.params['main_stiffener_flange_thickness']      = 0.02
+        self.params['main_stiffener_spacing']               = 0.4
         self.params['offset_permanent_ballast_height']   = 0.1
         self.params['offset_stiffener_web_height']       = 0.1
         self.params['offset_stiffener_web_thickness']    = 0.04
@@ -179,16 +179,16 @@ class FloatingInstance(object):
         self.params['pontoon_outer_diameter']               = 2*1.6
         self.params['pontoon_wall_thickness']               = 0.0175
         self.params['connection_ratio_max']                 = 0.25
-        self.params['base_pontoon_attach_lower']            = 0.1
-        self.params['base_pontoon_attach_upper']            = 1.0
-        self.params['base_ballast_heave_box_diameter']      = 0.0
-        self.params['base_ballast_heave_box_height']        = 0.0
-        self.params['base_ballast_heave_box_location']      = 0.0
+        self.params['main_pontoon_attach_lower']            = 0.1
+        self.params['main_pontoon_attach_upper']            = 1.0
+        self.params['main_ballast_heave_box_diameter']      = 0.0
+        self.params['main_ballast_heave_box_height']        = 0.0
+        self.params['main_ballast_heave_box_location']      = 0.0
         self.params['offset_ballast_heave_box_diameter']      = 0.0
         self.params['offset_ballast_heave_box_height']        = 0.0
         self.params['offset_ballast_heave_box_location']      = 0.0
         
-        self.set_length_base( 30.0 )
+        self.set_length_main( 30.0 )
         self.set_length_aux( 32.0 )
 
         self.params['offset_outer_diameter']             = 2*6.0
@@ -199,8 +199,8 @@ class FloatingInstance(object):
         self.params['anchor_radius']                        = 837.6
         self.params['mooring_diameter']                     = 0.0766
 
-    def set_length_base(self, inval):
-        self.params['base_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
+    def set_length_main(self, inval):
+        self.params['main_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
         
     def set_length_aux(self, inval):
         self.params['offset_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
@@ -209,15 +209,15 @@ class FloatingInstance(object):
         self.params['tower_outer_diameter']            = vecOption(self.params['tower_outer_diameter'], NSECTIONS+1)
         self.params['tower_wall_thickness']            = vecOption(self.params['tower_wall_thickness'], NSECTIONS+1)
         self.params['tower_section_height']            = vecOption(self.params['tower_section_height'], NSECTIONS+1)
-        self.params['base_outer_diameter']             = vecOption(self.params['base_outer_diameter'], NSECTIONS+1)
-        self.params['base_wall_thickness']             = vecOption(self.params['base_wall_thickness'], NSECTIONS+1)
-        self.params['base_stiffener_web_height']       = vecOption(self.params['base_stiffener_web_height'], NSECTIONS)
-        self.params['base_stiffener_web_thickness']    = vecOption(self.params['base_stiffener_web_thickness'], NSECTIONS)
-        self.params['base_stiffener_flange_width']     = vecOption(self.params['base_stiffener_flange_width'], NSECTIONS)
-        self.params['base_stiffener_flange_thickness'] = vecOption(self.params['base_stiffener_flange_thickness'], NSECTIONS)
-        self.params['base_stiffener_spacing']          = vecOption(self.params['base_stiffener_spacing'], NSECTIONS)
-        self.params['base_bulkhead_thickness']         = vecOption(self.params['base_bulkhead_thickness'], NSECTIONS+1)
-        #self.params['base_bulkhead_thickness'][:2] = 0.05
+        self.params['main_outer_diameter']             = vecOption(self.params['main_outer_diameter'], NSECTIONS+1)
+        self.params['main_wall_thickness']             = vecOption(self.params['main_wall_thickness'], NSECTIONS+1)
+        self.params['main_stiffener_web_height']       = vecOption(self.params['main_stiffener_web_height'], NSECTIONS)
+        self.params['main_stiffener_web_thickness']    = vecOption(self.params['main_stiffener_web_thickness'], NSECTIONS)
+        self.params['main_stiffener_flange_width']     = vecOption(self.params['main_stiffener_flange_width'], NSECTIONS)
+        self.params['main_stiffener_flange_thickness'] = vecOption(self.params['main_stiffener_flange_thickness'], NSECTIONS)
+        self.params['main_stiffener_spacing']          = vecOption(self.params['main_stiffener_spacing'], NSECTIONS)
+        self.params['main_bulkhead_thickness']         = vecOption(self.params['main_bulkhead_thickness'], NSECTIONS+1)
+        #self.params['main_bulkhead_thickness'][:2] = 0.05
         
         self.params['offset_outer_diameter']             = vecOption(self.params['offset_outer_diameter'], NSECTIONS+1)
         self.params['offset_wall_thickness']             = vecOption(self.params['offset_wall_thickness'], NSECTIONS+1)
@@ -238,7 +238,7 @@ class FloatingInstance(object):
             self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
             self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
             self.params['Rhub']                 = 1.125
-            self.params['base_freeboard'] = 10.0
+            self.params['main_freeboard'] = 10.0
 
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 350e3 #285598.8
@@ -293,8 +293,8 @@ class FloatingInstance(object):
 
             
             self.params['hub_height'] = 149.0
-            self.params['base_freeboard'] = 30.0
-            self.params['base_section_height'] += 3.0
+            self.params['main_freeboard'] = 30.0
+            self.params['main_section_height'] += 3.0
             towerData = np.loadtxt(dtuTowerData)
             towerData = towerData[(towerData[:,0] >= 30.0),:]
             towerData = np.vstack((towerData[0,:], towerData))
@@ -460,7 +460,7 @@ class FloatingInstance(object):
             ['off.wave_height_freeboard_ratio', None, 1.0, None],
             
             ['off.fairlead_draft_ratio', 0.0, 1.0, None],
-            ['base_offset_spacing', 1.0, None, None],
+            ['main_offset_spacing', 1.0, None, None],
             
             # Ensure that the radius doesn't change dramatically over a section
             ['main.manufacturability', 0.0, None, None],
@@ -470,7 +470,7 @@ class FloatingInstance(object):
             ['tow.manufacturability', 0.0, None, None],
             ['tow.weldability', None, 0.0, None],
             
-            # Ensure that the spar top matches the tower base
+            # Ensure that the spar top matches the tower main
             ['tower_transition_buffer', -1.0, 1.0, None],
             ['nacelle_transition_buffer', 0.0, None, None],
 
@@ -504,7 +504,7 @@ class FloatingInstance(object):
             ['off.external_general_api', None, 1.0, None],
             
             # Pontoon tube radii
-            #['base_connection_ratio', 0.0, None, None],
+            #['main_connection_ratio', 0.0, None, None],
             #['offset_connection_ratio', 0.0, None, None],
             
             # Pontoon stress safety factor
@@ -515,9 +515,9 @@ class FloatingInstance(object):
             ['tower_shell_buckling', None, 1.0, None],
             ['tower_global_buckling', None, 1.0, None],
 
-            ['base_column_stress', None, 1.0, None],
-            ['base_column_shell_buckling', None, 1.0, None],
-            ['base_column_global_buckling', None, 1.0, None],
+            ['main_column_stress', None, 1.0, None],
+            ['main_column_shell_buckling', None, 1.0, None],
+            ['main_column_global_buckling', None, 1.0, None],
 
             ['offset_column_stress', None, 1.0, None],
             ['offset_column_shell_buckling', None, 1.0, None],

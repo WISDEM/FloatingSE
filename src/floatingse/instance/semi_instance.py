@@ -18,22 +18,22 @@ class SemiInstance(FloatingInstance):
         self.draw_mooring(fig, mooringMat)
 
         pontoonMat = self.prob['plot_matrix']
-        zcut = 1.0 + np.maximum( self.params['base_freeboard'], self.params['offset_freeboard'] )
+        zcut = 1.0 + np.maximum( self.params['main_freeboard'], self.params['offset_freeboard'] )
         self.draw_pontoons(fig, pontoonMat, 0.5*self.params['pontoon_outer_diameter'], zcut)
 
-        self.draw_column(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
-                           0.5*self.params['base_outer_diameter'], self.params['base_stiffener_spacing'])
+        self.draw_column(fig, [0.0, 0.0], self.params['main_freeboard'], self.params['main_section_height'],
+                           0.5*self.params['main_outer_diameter'], self.params['main_stiffener_spacing'])
 
-        self.draw_ballast(fig, [0.0, 0.0], self.params['base_freeboard'], self.params['base_section_height'],
-                          0.5*self.params['base_outer_diameter']-self.params['base_wall_thickness'],
-                          self.params['base_permanent_ballast_height'], self.prob['variable_ballast_height'])
+        self.draw_ballast(fig, [0.0, 0.0], self.params['main_freeboard'], self.params['main_section_height'],
+                          0.5*self.params['main_outer_diameter']-self.params['main_wall_thickness'],
+                          self.params['main_permanent_ballast_height'], self.prob['variable_ballast_height'])
         
-        if self.prob['base.ballast_heave_box_mass'] > 0.0:
-            self.draw_ballast_heave_box(fig, [0.0, 0.0], self.params['base_freeboard'],
-                                        self.params['base_section_height'],
-                                        self.params['base_ballast_heave_box_location'],
-                                        0.5*self.params['base_ballast_heave_box_diameter'],
-                                        self.params['base_ballast_heave_box_height'])
+        if self.prob['main.ballast_heave_box_mass'] > 0.0:
+            self.draw_ballast_heave_box(fig, [0.0, 0.0], self.params['main_freeboard'],
+                                        self.params['main_section_height'],
+                                        self.params['main_ballast_heave_box_location'],
+                                        0.5*self.params['main_ballast_heave_box_diameter'],
+                                        self.params['main_ballast_heave_box_height'])
 
         R_semi  = self.params['radius_to_offset_column']
         ncolumn = int(self.params['number_of_offset_columns'])

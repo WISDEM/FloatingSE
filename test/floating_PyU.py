@@ -22,10 +22,10 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['outer_cross_pontoons_int']        = 0
 
         # Wind and water properties
-        self.myfloat['base.windLoads.rho'] = 1.226   # Density of air [kg/m^3]
-        self.myfloat['base.windLoads.mu']  = 1.78e-5 # Viscosity of air [kg/m/s]
+        self.myfloat['main.windLoads.rho'] = 1.226   # Density of air [kg/m^3]
+        self.myfloat['main.windLoads.mu']  = 1.78e-5 # Viscosity of air [kg/m/s]
         self.myfloat['water_density']      = 1025.0  # Density of water [kg/m^3]
-        self.myfloat['base.waveLoads.mu']  = 1.08e-3 # Viscosity of water [kg/m/s]
+        self.myfloat['main.waveLoads.mu']  = 1.08e-3 # Viscosity of water [kg/m/s]
 
         # Material properties
         self.myfloat['material_density'] = 7850.0          # Steel [kg/m^3]
@@ -54,21 +54,21 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['gamma_fatigue'] = 1.0 # Not used
 
         # Column geometry
-        self.myfloat['base_permanent_ballast_height'] = 0.0 # Height above keel for permanent ballast [m]
-        self.myfloat['base_freeboard']                = 10.0 # Height extension above waterline [m]
-        self.myfloat['base_section_height'] = np.array([49.0, 29.0, 30.0, 8.0, 14.0])  # Length of each section [m]
-        self.myfloat['base_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
-        self.myfloat['base_wall_thickness'] = 0.05 * np.ones(NSECTION+1)               # Shell thickness at each section node (linear lofting between) [m]
-        self.myfloat['base_bulkhead_thickness'] = 0.05*np.array([1, 1, 0, 0, 1, 0]) # Locations/thickness of internal bulkheads at section interfaces [m]
-        self.myfloat['base_ballast_heave_box_diameter'] = 0.0
-        self.myfloat['base_ballast_heave_box_height'] = 0.0
+        self.myfloat['main_permanent_ballast_height'] = 0.0 # Height above keel for permanent ballast [m]
+        self.myfloat['main_freeboard']                = 10.0 # Height extension above waterline [m]
+        self.myfloat['main_section_height'] = np.array([49.0, 29.0, 30.0, 8.0, 14.0])  # Length of each section [m]
+        self.myfloat['main_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
+        self.myfloat['main_wall_thickness'] = 0.05 * np.ones(NSECTION+1)               # Shell thickness at each section node (linear lofting between) [m]
+        self.myfloat['main_bulkhead_thickness'] = 0.05*np.array([1, 1, 0, 0, 1, 0]) # Locations/thickness of internal bulkheads at section interfaces [m]
+        self.myfloat['main_ballast_heave_box_diameter'] = 0.0
+        self.myfloat['main_ballast_heave_box_height'] = 0.0
 
         # Column ring stiffener parameters
-        self.myfloat['base_stiffener_web_height']       = 0.10 * np.ones(NSECTION) # (by section) [m]
-        self.myfloat['base_stiffener_web_thickness']    = 0.04 * np.ones(NSECTION) # (by section) [m]
-        self.myfloat['base_stiffener_flange_width']     = 0.10 * np.ones(NSECTION) # (by section) [m]
-        self.myfloat['base_stiffener_flange_thickness'] = 0.02 * np.ones(NSECTION) # (by section) [m]
-        self.myfloat['base_stiffener_spacing']          = np.array([1.5, 2.8, 2.8, 3.0, 5.0]) # (by section) [m]
+        self.myfloat['main_stiffener_web_height']       = 0.10 * np.ones(NSECTION) # (by section) [m]
+        self.myfloat['main_stiffener_web_thickness']    = 0.04 * np.ones(NSECTION) # (by section) [m]
+        self.myfloat['main_stiffener_flange_width']     = 0.10 * np.ones(NSECTION) # (by section) [m]
+        self.myfloat['main_stiffener_flange_thickness'] = 0.02 * np.ones(NSECTION) # (by section) [m]
+        self.myfloat['main_stiffener_spacing']          = np.array([1.5, 2.8, 2.8, 3.0, 5.0]) # (by section) [m]
 
         # Mooring parameters
         self.myfloat['number_of_mooring_connections']    = 3             # Evenly spaced around structure
@@ -125,7 +125,7 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['cd_usr']      = np.inf # Compute drag coefficient
 
         # Porperties of turbine tower
-        self.myfloat['hub_height']              = 77.6                              # Length from tower base to top (not including freeboard) [m]
+        self.myfloat['hub_height']              = 77.6                              # Length from tower main to top (not including freeboard) [m]
         self.myfloat['tower_section_height']    = 77.6/NSECTION * np.ones(NSECTION) # Length of each tower section [m]
         self.myfloat['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTION+1) # Diameter at each tower section node (linear lofting between) [m]
         self.myfloat['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTION+1) # Diameter at each tower section node (linear lofting between) [m]
@@ -153,16 +153,16 @@ class TestOC3Mass(unittest.TestCase):
         ansys_Izz    = 32297000.0
         ansys_I      = np.array([ansys_Ixx, ansys_Iyy, ansys_Izz, 0.0, 0.0, 0.0])
         
-        npt.assert_allclose(ansys_m_bulk, self.myfloat['base.bulkhead_mass'].sum(), rtol=0.03) # ANSYS uses R_od, we use R_id
-        npt.assert_allclose(ansys_m_shell, self.myfloat['base.cyl_mass.mass'].sum(), rtol=0.01)
-        npt.assert_allclose(ansys_m_stiff, self.myfloat['base.stiffener_mass'].sum(), rtol=0.01)
-        npt.assert_allclose(ansys_m_spar, self.myfloat['base.total_mass'].sum(), rtol=0.01)
-        npt.assert_allclose(ansys_cg, self.myfloat['base.z_center_of_mass'], rtol=0.01)
-        npt.assert_allclose(ansys_I, self.myfloat['base.I_column'], rtol=0.02)
+        npt.assert_allclose(ansys_m_bulk, self.myfloat['main.bulkhead_mass'].sum(), rtol=0.03) # ANSYS uses R_od, we use R_id
+        npt.assert_allclose(ansys_m_shell, self.myfloat['main.cyl_mass.mass'].sum(), rtol=0.01)
+        npt.assert_allclose(ansys_m_stiff, self.myfloat['main.stiffener_mass'].sum(), rtol=0.01)
+        npt.assert_allclose(ansys_m_spar, self.myfloat['main.total_mass'].sum(), rtol=0.01)
+        npt.assert_allclose(ansys_cg, self.myfloat['main.z_center_of_mass'], rtol=0.01)
+        npt.assert_allclose(ansys_I, self.myfloat['main.I_column'], rtol=0.02)
         '''        
-        print 'stiffeners per section', prob['base.stiff.number_of_stiffeners']
+        print 'stiffeners per section', prob['main.stiff.number_of_stiffeners']
         print 'total system center of mass (spar + ballast) [m]', prob['subs.center_of_mass']
-        print 'spar displaced volume (m^3)', prob['base.displaced_volume'].sum()
+        print 'spar displaced volume (m^3)', prob['main.displaced_volume'].sum()
         print '\nMoments of inertia [Ixx Iyy Izz Ixy Ixz Iyz] (kg*m^2)'
         print 'Tower mass [kg]', prob['tower_mass']
         '''        

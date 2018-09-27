@@ -64,27 +64,27 @@ def getParams():
     params['fairlead_support_outer_diameter'] = 2.0
     params['fairlead_support_wall_thickness'] = 1.0
     
-    params['base_pontoon_attach_upper'] = 1.0
-    params['base_pontoon_attach_lower'] = 0.0
+    params['main_pontoon_attach_upper'] = 1.0
+    params['main_pontoon_attach_lower'] = 0.0
 
     params['radius_to_offset_column'] = 10.0
     params['pontoon_outer_diameter'] = 2.0
     params['pontoon_wall_thickness'] = 1.0
 
-    params['base_z_full'] = np.array([-15.0, -12.5, -10.0, 0.0, 5.0, 10.0])
-    params['base_d_full'] = 2*10.0 * np.ones(NPTS)
-    params['base_t_full'] = 0.1 * np.ones(NPTS)
-    params['base_column_mass'] = 1e2 * np.ones(NSECTIONS)
-    params['base_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
-    params['base_column_displaced_volume'] = 1e2 * np.ones(NSECTIONS)
-    params['base_column_hydrostatic_force'] = np.zeros(NSECTIONS)
-    params['base_column_hydrostatic_force'][0] = params['base_column_displaced_volume'].sum()*g*params['water_density']
-    params['base_column_center_of_buoyancy'] = -10.0
-    params['base_column_center_of_mass'] = -6.0
-    params['base_column_Px'] = 50.0 * np.ones(NPTS)
-    params['base_column_Py'] = np.zeros(NPTS)
-    params['base_column_Pz'] = np.zeros(NPTS)
-    params['base_column_qdyn'] = 70.0 * np.ones(NPTS)
+    params['main_z_full'] = np.array([-15.0, -12.5, -10.0, 0.0, 5.0, 10.0])
+    params['main_d_full'] = 2*10.0 * np.ones(NPTS)
+    params['main_t_full'] = 0.1 * np.ones(NPTS)
+    params['main_column_mass'] = 1e2 * np.ones(NSECTIONS)
+    params['main_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
+    params['main_column_displaced_volume'] = 1e2 * np.ones(NSECTIONS)
+    params['main_column_hydrostatic_force'] = np.zeros(NSECTIONS)
+    params['main_column_hydrostatic_force'][0] = params['main_column_displaced_volume'].sum()*g*params['water_density']
+    params['main_column_center_of_buoyancy'] = -10.0
+    params['main_column_center_of_mass'] = -6.0
+    params['main_column_Px'] = 50.0 * np.ones(NPTS)
+    params['main_column_Py'] = np.zeros(NPTS)
+    params['main_column_Pz'] = np.zeros(NPTS)
+    params['main_column_qdyn'] = 70.0 * np.ones(NPTS)
 
     params['offset_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
     params['offset_d_full'] = 2*2.0 * np.ones(NPTS)
@@ -93,7 +93,7 @@ def getParams():
     params['offset_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
     params['offset_column_displaced_volume'] = 1e1 * np.ones(NSECTIONS)
     params['offset_column_hydrostatic_force'] = np.zeros(NSECTIONS)
-    params['offset_column_hydrostatic_force'][0] = params['base_column_displaced_volume'].sum()*g*params['water_density']
+    params['offset_column_hydrostatic_force'][0] = params['main_column_displaced_volume'].sum()*g*params['water_density']
     params['offset_column_center_of_buoyancy'] = -5.0
     params['offset_column_center_of_mass'] = -3.0
     params['offset_column_Px'] = 50.0 * np.ones(NPTS)
@@ -145,7 +145,7 @@ class TestFrame(unittest.TestCase):
         self.params['offset_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 3.0])
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
-        npt.assert_equal(self.unknowns['base_connection_ratio'], 0.25-0.1)
+        npt.assert_equal(self.unknowns['main_connection_ratio'], 0.25-0.1)
         npt.assert_equal(self.unknowns['offset_connection_ratio'], 0.25-0.5)
         #DrawTruss(self.mytruss)
         
@@ -184,8 +184,8 @@ class TestFrame(unittest.TestCase):
         self.params['lower_ring_pontoons'] = False
         self.params['upper_ring_pontoons'] = False
         self.params['outer_cross_pontoons'] = False
-        self.params['pontoon_base_attach_upper'] = 1.0
-        self.params['pontoon_base_attach_lower'] = 0.0
+        self.params['pontoon_main_attach_upper'] = 1.0
+        self.params['pontoon_main_attach_lower'] = 0.0
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         V = np.pi * Ro*Ro * R_semi * ncyl
@@ -252,13 +252,13 @@ class TestFrame(unittest.TestCase):
 
     def testForces(self):
         self.params['offset_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
-        self.params['base_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
+        self.params['main_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
         self.params['tower_z_full'] = np.linspace(0, 1e-4, NPTS)
         self.params['fairlead'] = 0.0
         self.params['number_of_offset_columns'] = 0
-        self.params['base_column_mass'] = 1.0 * np.ones(NSECTIONS)
-        self.params['base_column_center_of_mass'] = 0.0
-        self.params['base_column_hydrostatic_force'] = 1e-12 * np.ones(NSECTIONS)
+        self.params['main_column_mass'] = 1.0 * np.ones(NSECTIONS)
+        self.params['main_column_center_of_mass'] = 0.0
+        self.params['main_column_hydrostatic_force'] = 1e-12 * np.ones(NSECTIONS)
         self.params['offset_column_mass'] = 0.0 * np.ones(NSECTIONS)
         self.params['offset_column_center_of_mass'] = 0.0
         self.params['offset_column_hydrostatic_force'] = 1e-12 * np.ones(NSECTIONS)
@@ -269,10 +269,10 @@ class TestFrame(unittest.TestCase):
         self.params['rna_moment'] = 20.0*np.ones(3)
         self.params['rna_cg'] = np.array([0.0, 0.0, 0.0])
         self.params['rna_I'] = np.zeros(6)
-        self.params['base_column_Px'] = 0.0 * np.ones(NSECTIONS)
+        self.params['main_column_Px'] = 0.0 * np.ones(NSECTIONS)
         self.params['offset_column_Px'] = 0.0 * np.ones(NSECTIONS)
         self.params['tower_Px'] = 0.0 * np.ones(NSECTIONS)
-        self.params['base_column_qdyn'] = 0.0 * np.ones(NPTS)
+        self.params['main_column_qdyn'] = 0.0 * np.ones(NPTS)
         self.params['offset_column_qdyn'] = 0.0 * np.ones(NPTS)
         self.params['tower_qdyn'] = 0.0 * np.ones(NPTS)
         self.params['cross_attachment_pontoons'] = False
@@ -281,8 +281,8 @@ class TestFrame(unittest.TestCase):
         self.params['lower_ring_pontoons'] = False
         self.params['upper_ring_pontoons'] = False
         self.params['outer_cross_pontoons'] = False
-        self.params['base_pontoon_attach_upper'] = 1.0
-        self.params['base_pontoon_attach_lower'] = 0.0
+        self.params['main_pontoon_attach_upper'] = 1.0
+        self.params['main_pontoon_attach_lower'] = 0.0
         self.params['water_density'] = 1e-12
         self.params['number_of_mooring_connections'] = 3
         self.params['mooring_lines_per_connection'] = 1
@@ -335,7 +335,7 @@ class TestSandbox(unittest.TestCase):
         self.assertEqual(self.unknowns['substructure_mass'], 1e30)
 
         self.params['number_of_offset_columns'] = 3
-        self.params['base_z_full'][-2] = self.params['base_z_full'][-3] + 1e-12
+        self.params['main_z_full'][-2] = self.params['main_z_full'][-3] + 1e-12
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
         self.assertEqual(self.unknowns['substructure_mass'], 1e30)
 
