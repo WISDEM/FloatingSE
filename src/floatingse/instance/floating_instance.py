@@ -104,6 +104,7 @@ class FloatingInstance(object):
         self.params['loading']                              = 'hydrostatic'
 
         # Design constraints
+        self.params['max_draft']                      = 150.0
         self.params['max_taper_ratio']                      = 0.4
         self.params['min_diameter_thickness_ratio']         = 120.0
 
@@ -157,7 +158,7 @@ class FloatingInstance(object):
         self.params['number_of_offset_columns']          = 3
         self.params['main_freeboard']                       = 10.0
         self.params['offset_freeboard']                  = 12.0
-        self.params['fairlead']                             = 14.0
+        self.params['fairlead_location']                    = 0.1875 # Want 14 m
         self.params['fairlead_offset_from_shell']           = 40.868-28.867513459481287-6.0
         self.params['main_outer_diameter']                  = 6.5
         self.params['main_wall_thickness']                  = 0.03
@@ -181,19 +182,19 @@ class FloatingInstance(object):
         self.params['connection_ratio_max']                 = 0.25
         self.params['main_pontoon_attach_lower']            = 0.1
         self.params['main_pontoon_attach_upper']            = 1.0
-        self.params['main_ballast_heave_box_diameter']      = 0.0
-        self.params['main_ballast_heave_box_height']        = 0.0
-        self.params['main_ballast_heave_box_location']      = 0.0
-        self.params['offset_ballast_heave_box_diameter']      = 0.0
-        self.params['offset_ballast_heave_box_height']        = 0.0
-        self.params['offset_ballast_heave_box_location']      = 0.0
+        self.params['main_buoyancy_tank_diameter']      = 0.0
+        self.params['main_buoyancy_tank_height']        = 0.0
+        self.params['main_buoyancy_tank_location']      = 0.0
+        self.params['offset_buoyancy_tank_diameter']      = 0.0
+        self.params['offset_buoyancy_tank_height']        = 0.0
+        self.params['offset_buoyancy_tank_location']      = 0.0
         
         self.set_length_main( 30.0 )
         self.set_length_aux( 32.0 )
 
         self.params['offset_outer_diameter']             = 2*6.0
-        self.params['offset_ballast_heave_box_diameter']       = 24.0
-        self.params['offset_ballast_heave_box_height']         = 5.0
+        self.params['offset_buoyancy_tank_diameter']       = 24.0
+        self.params['offset_buoyancy_tank_height']         = 5.0
 
         self.params['mooring_line_length']                  = 835.5
         self.params['anchor_radius']                        = 837.6
@@ -451,15 +452,11 @@ class FloatingInstance(object):
             ['tow.height_constraint', -1e-2, 1e-2, None],
             
             # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
-            # Ensure that fairlead attaches to draft
-            ['main.draft', 0.0, 100.0, None],
-            ['off.draft', 0.0, 100.0, None],
-            ['main.draft_depth_ratio', None, 0.9, None],
-            ['off.draft_depth_ratio', None, 0.9, None],
+            ['main.draft_margin', None, 1.0, None],
+            ['off.draft_margin', None, 1.0, None],
             ['main.wave_height_freeboard_ratio', None, 1.0, None],
             ['off.wave_height_freeboard_ratio', None, 1.0, None],
             
-            ['off.fairlead_draft_ratio', 0.0, 1.0, None],
             ['main_offset_spacing', 1.0, None, None],
             
             # Ensure that the radius doesn't change dramatically over a section
@@ -515,13 +512,13 @@ class FloatingInstance(object):
             ['tower_shell_buckling', None, 1.0, None],
             ['tower_global_buckling', None, 1.0, None],
 
-            ['main_column_stress', None, 1.0, None],
-            ['main_column_shell_buckling', None, 1.0, None],
-            ['main_column_global_buckling', None, 1.0, None],
+            ['main_stress', None, 1.0, None],
+            ['main_shell_buckling', None, 1.0, None],
+            ['main_global_buckling', None, 1.0, None],
 
-            ['offset_column_stress', None, 1.0, None],
-            ['offset_column_shell_buckling', None, 1.0, None],
-            ['offset_column_global_buckling', None, 1.0, None],
+            ['offset_stress', None, 1.0, None],
+            ['offset_shell_buckling', None, 1.0, None],
+            ['offset_global_buckling', None, 1.0, None],
             
             # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
             ['variable_ballast_height_ratio', 0.0, 1.0, None],
@@ -884,7 +881,7 @@ class FloatingInstance(object):
         ck = (0.0, 0.1, 0.8) # Dark blue
         mlab.mesh(X, Y, Z, color=ck, figure=fig)
 
-    def draw_ballast_heave_box(self, fig, centerline, freeboard, h_section, loc, r_box, h_box):
+    def draw_buoyancy_tank(self, fig, centerline, freeboard, h_section, loc, r_box, h_box):
         from mayavi import mlab
         npts = 20
         z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )

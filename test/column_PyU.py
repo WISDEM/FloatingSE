@@ -74,10 +74,10 @@ class TestBallastHeave(unittest.TestCase):
         self.params['z_full'] = np.linspace(0, 1, NPTS) - 0.5
         self.params['rho'] = 1e3
         
-        self.params['ballast_heave_box_diameter'] = 12.0
-        self.params['ballast_heave_box_height'] = 0.25
-        self.params['ballast_heave_box_location'] = 0.0
-        self.params['ballast_heave_box_mass_factor'] = 1.1
+        self.params['buoyancy_tank_diameter'] = 12.0
+        self.params['buoyancy_tank_height'] = 0.25
+        self.params['buoyancy_tank_location'] = 0.0
+        self.params['buoyancy_tank_mass_factor'] = 1.1
 
         self.box = column.BallastHeaveBoxProperties(NPTS)
 
@@ -87,43 +87,43 @@ class TestBallastHeave(unittest.TestCase):
         A_box = np.pi * (6*6 - 5*5)
         V_box = np.pi * (6*6 - 5*5) * 0.25
         m_expect = (2*A_box + 0.25*2*np.pi*6) * (6.0/50.0) * 1e3 * 1.1
-        self.assertEqual(self.unknowns['ballast_heave_box_mass'], m_expect)
-        self.assertEqual(self.unknowns['ballast_heave_box_cg'], -0.5 + 0.5*0.25)
-        self.assertAlmostEqual(self.unknowns['ballast_heave_box_displacement'], V_box)
-        #self.assertEqual(self.unknowns['ballast_heave_box_I_keel'], 0.0)
+        self.assertEqual(self.unknowns['buoyancy_tank_mass'], m_expect)
+        self.assertEqual(self.unknowns['buoyancy_tank_cg'], -0.5 + 0.5*0.25)
+        self.assertAlmostEqual(self.unknowns['buoyancy_tank_displacement'], V_box)
+        #self.assertEqual(self.unknowns['buoyancy_tank_I_keel'], 0.0)
 
     def testTopAbove(self):
-        self.params['ballast_heave_box_height'] = 0.75
+        self.params['buoyancy_tank_height'] = 0.75
         self.box.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         A_box = np.pi * (6*6 - 5*5)
         V_box = np.pi * (6*6 - 5*5) * 0.5
         m_expect = (2*A_box + 0.75*2*np.pi*6) * (6.0/50.0) * 1e3 * 1.1
-        self.assertAlmostEqual(self.unknowns['ballast_heave_box_mass'], m_expect)
-        self.assertAlmostEqual(self.unknowns['ballast_heave_box_cg'], -0.5 + 0.5*0.75)
-        self.assertAlmostEqual(self.unknowns['ballast_heave_box_displacement'], V_box)
+        self.assertAlmostEqual(self.unknowns['buoyancy_tank_mass'], m_expect)
+        self.assertAlmostEqual(self.unknowns['buoyancy_tank_cg'], -0.5 + 0.5*0.75)
+        self.assertAlmostEqual(self.unknowns['buoyancy_tank_displacement'], V_box)
 
     def testBottomAbove(self):
-        self.params['ballast_heave_box_location'] = 0.6
+        self.params['buoyancy_tank_location'] = 0.6
         self.box.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         A_box = np.pi * (6*6 - 5*5)
         V_box = np.pi * (6*6 - 5*5) * 0.0
         m_expect = (2*A_box + 0.25*2*np.pi*6) * (6.0/50.0) * 1e3 * 1.1
-        self.assertAlmostEqual(self.unknowns['ballast_heave_box_mass'], m_expect)
-        self.assertAlmostEqual(self.unknowns['ballast_heave_box_cg'], 0.1 + 0.5*0.25)
-        self.assertAlmostEqual(self.unknowns['ballast_heave_box_displacement'], V_box)
+        self.assertAlmostEqual(self.unknowns['buoyancy_tank_mass'], m_expect)
+        self.assertAlmostEqual(self.unknowns['buoyancy_tank_cg'], 0.1 + 0.5*0.25)
+        self.assertAlmostEqual(self.unknowns['buoyancy_tank_displacement'], V_box)
 
     def testTooNarrow(self):
-        self.params['ballast_heave_box_diameter'] = 8.0
+        self.params['buoyancy_tank_diameter'] = 8.0
         self.box.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         A_box = np.pi * (6*6 - 5*5)
         V_box = np.pi * (6*6 - 5*5) * 0.0
         m_expect = (2*A_box + 0.25*2*np.pi*6) * (6.0/50.0) * 1e3 * 1.1
-        self.assertAlmostEqual(self.unknowns['ballast_heave_box_mass'], 0.0)
-        self.assertEqual(self.unknowns['ballast_heave_box_cg'], -0.5 + 0.5*0.25)
-        self.assertAlmostEqual(self.unknowns['ballast_heave_box_displacement'], 0.0)
+        self.assertAlmostEqual(self.unknowns['buoyancy_tank_mass'], 0.0)
+        self.assertEqual(self.unknowns['buoyancy_tank_cg'], -0.5 + 0.5*0.25)
+        self.assertAlmostEqual(self.unknowns['buoyancy_tank_displacement'], 0.0)
 
 
         
@@ -249,18 +249,18 @@ class TestProperties(unittest.TestCase):
         self.params['shell_I_keel'] = 10.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
         self.params['stiffener_I_keel'] = 20.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
         self.params['bulkhead_I_keel'] = 30.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
-        self.params['ballast_heave_box_I_keel'] = 5.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        self.params['buoyancy_tank_I_keel'] = 5.0 * np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
 
-        self.params['ballast_heave_box_diameter'] = 15.0
+        self.params['buoyancy_tank_diameter'] = 15.0
         
         self.params['water_density'] = 1e3
         self.params['bulkhead_mass'] = 10.0*myones
         self.params['shell_mass'] = 500.0*np.ones(NPTS-1)
         self.params['stiffener_mass'] = 100.0*np.ones(NPTS-1)
-        self.params['ballast_heave_box_mass'] = 20.0
-        self.params['ballast_heave_box_cg'] = -15.0
-        self.params['ballast_heave_box_location'] = 0.3
-        self.params['ballast_heave_box_displacement'] = 300.0
+        self.params['buoyancy_tank_mass'] = 20.0
+        self.params['buoyancy_tank_cg'] = -15.0
+        self.params['buoyancy_tank_location'] = 0.3
+        self.params['buoyancy_tank_displacement'] = 300.0
         self.params['column_mass_factor'] = 1.1
         self.params['outfitting_mass_fraction'] = 0.05
 
@@ -299,8 +299,8 @@ class TestProperties(unittest.TestCase):
         bulk  = self.params['bulkhead_mass']
         stiff = self.params['stiffener_mass']
         shell = self.params['shell_mass']
-        box   = self.params['ballast_heave_box_mass']
-        boxcg = self.params['ballast_heave_box_cg']
+        box   = self.params['buoyancy_tank_mass']
+        boxcg = self.params['buoyancy_tank_cg']
         mycg  = 1.1*(np.dot(bulk, self.params['z_full']) + box*boxcg + np.dot(stiff+shell, self.params['z_section']))/m_spar
         mysec = stiff+shell+bulk[:-1]
         mysec[-1] += bulk[-1]
@@ -355,8 +355,8 @@ class TestProperties(unittest.TestCase):
         self.assertAlmostEqual(cg_system, self.unknowns['z_center_of_mass'])
 
         V_spar = np.pi * 100.0 * 35.0
-        V_box    = self.params['ballast_heave_box_displacement']
-        box_cg   = self.params['ballast_heave_box_cg']
+        V_box    = self.params['buoyancy_tank_displacement']
+        box_cg   = self.params['buoyancy_tank_cg']
         V_expect = V_spar + V_box
         cb_expect = (-17.5*V_spar + V_box*box_cg) / V_expect
         Ixx = 0.25 * np.pi * 1e4

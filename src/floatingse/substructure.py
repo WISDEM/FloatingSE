@@ -21,17 +21,18 @@ class SubstructureGeometry(Component):
         self.add_param('offset_freeboard', val=0.0, units='m', desc='Length of column above water line')
         self.add_param('offset_draft', val=0.0, units='m', desc='Length of column below water line')
         self.add_param('main_z_nodes', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
+        self.add_param('fairlead_location', val=0.0, desc='Fractional length from column bottom to top for mooring line attachment')
         self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
-        self.add_param('radius_to_offset_column', val=0.0, units='m',desc='Distance from main column centerpoint to ballast column centerpoint')
-        self.add_param('number_of_offset_columns', val=0, desc='Number of ballast columns evenly spaced around main column')
+        self.add_param('radius_to_offset_column', val=0.0, units='m',desc='Distance from main column centerpoint to offset column centerpoint')
+        self.add_param('number_of_offset_columns', val=0, desc='Number of offset columns evenly spaced around main column')
         self.add_param('tower_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('Rhub', val=0.0, units='m', desc='rotor hub radius')
         self.add_param('max_survival_heel', val=0.0, units='deg', desc='max heel angle for turbine survival')
         
         # Output constraints
+        self.add_output('fairlead', val=0.0, units='m', desc='Depth below water line for mooring line attachment')
         self.add_output('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
-        self.add_output('main_offset_spacing', val=0.0, desc='Radius of main and ballast columns relative to spacing')
+        self.add_output('main_offset_spacing', val=0.0, desc='Radius of main and offset columns relative to spacing')
         self.add_output('tower_transition_buffer', val=0.0, units='m', desc='Buffer between substructure main and tower main')
         self.add_output('nacelle_transition_buffer', val=0.0, units='m', desc='Buffer between tower top and nacelle main')
         self.add_output('offset_freeboard_heel_margin', val=0.0, units='m', desc='Margin so offset column does not submerge during max heel')
@@ -58,36 +59,42 @@ class SubstructureGeometry(Component):
         OUTPUTS  : none (all unknown dictionary values set)
         """
         # Unpack variables
+        ncolumns        = int(params['number_of_offset_columns'])
         R_od_main       = 0.5*params['main_d_full']
-        R_od_ballast    = 0.5*params['offset_d_full']
+        R_od_offset    = 0.5*params['offset_d_full']
         R_semi          = params['radius_to_offset_column']
         R_tower         = 0.5*params['tower_d_full']
         R_hub           = params['Rhub']
-        z_nodes_ballast = params['offset_z_nodes']
+        
+        z_nodes_offset = params['offset_z_nodes']
         z_nodes_main    = params['main_z_nodes']
-        fairlead        = params['fairlead'] # depth of mooring attachment point
+        
+        location        = params['fairlead_location']
         fair_off        = params['fairlead_offset_from_shell']
-        aux_freeboard   = params['offset_freeboard']
-        aux_draft       = params['offset_draft']
+        off_freeboard   = params['offset_freeboard']
+        off_draft       = params['offset_draft']
         max_heel        = params['max_survival_heel']
 
         # Set spacing constraint
-        unknowns['main_offset_spacing'] = R_semi - R_od_main.max() - R_od_ballast.max()
+        unknowns['main_offset_spacing'] = R_semi - R_od_main.max() - R_od_offset.max()
 
-        # Determine radius at mooring connection point (fairlead)
-        if int(params['number_of_offset_columns']) > 0:
-            unknowns['fairlead_radius'] = R_semi + fair_off + np.interp(-fairlead, z_nodes_ballast, R_od_ballast)
+        # Determine location and radius at mooring connection point (fairlead)
+        if ncolumns > 0:
+            z_fairlead = location * (z_nodes_offset[-1] - z_nodes_offset[0]) + z_nodes_offset[0]
+            unknowns['fairlead_radius'] = R_semi + fair_off + np.interp(z_fairlead, z_nodes_offset, R_od_offset)
         else:
-            unknowns['fairlead_radius'] = fair_off + np.interp(-fairlead, z_nodes_main, R_od_main)
-
+            z_fairlead = location * (z_nodes_main[-1] - z_nodes_main[0]) + z_nodes_main[0]
+            unknowns['fairlead_radius'] = fair_off + np.interp(z_fairlead, z_nodes_main, R_od_main)
+        unknowns['fairlead'] = -z_fairlead # Fairlead defined as positive below waterline
+        
         # Constrain spar top to be at least greater than tower main
         unknowns['tower_transition_buffer']   = R_od_main[-1] - R_tower[0]
         unknowns['nacelle_transition_buffer'] = R_hub + 1.0 - R_tower[-1] # Guessing at 6m size for nacelle
 
         # Make sure semi columns don't get submerged
         heel_deflect = R_semi*np.sin(np.deg2rad(max_heel))
-        unknowns['offset_freeboard_heel_margin'] = aux_freeboard - heel_deflect
-        unknowns['offset_draft_heel_margin']     = aux_draft - heel_deflect
+        unknowns['offset_freeboard_heel_margin'] = off_freeboard - heel_deflect
+        unknowns['offset_draft_heel_margin']     = off_draft - heel_deflect
 
 
 
@@ -111,8 +118,8 @@ class Substructure(Component):
         self.add_param('fairlead', val=1.0, units='m', desc='Depth below water for mooring line attachment')
         self.add_param('fairlead_radius', val=0.0, units='m', desc='Outer spar radius at fairlead depth (point of mooring attachment)')
         
-        self.add_param('number_of_offset_columns', val=0, desc='Number of ballast columns evenly spaced around main column')
-        self.add_param('radius_to_offset_column', val=0.0, units='m',desc='Distance from main column centerpoint to ballast column centerpoint')
+        self.add_param('number_of_offset_columns', val=0, desc='Number of offset columns evenly spaced around main column')
+        self.add_param('radius_to_offset_column', val=0.0, units='m',desc='Distance from main column centerpoint to offset column centerpoint')
 
         self.add_param('main_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
         self.add_param('main_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
@@ -127,7 +134,7 @@ class Substructure(Component):
         self.add_param('offset_Iwaterplane', val=0.0, units='m**4', desc='Second moment of area of waterplane cross-section')
         self.add_param('offset_Awaterplane', val=0.0, units='m**2', desc='Area of waterplane cross-section')
         self.add_param('offset_cost', val=0.0, units='USD', desc='Cost of spar structure')
-        self.add_param('offset_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
+        self.add_param('offset_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of offset column by section')
         self.add_param('offset_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
         self.add_param('offset_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
         self.add_param('offset_moments_of_inertia', val=np.zeros(6), units='kg*m**2', desc='mass moment of inertia of column about main [xx yy zz xy xz yz]')

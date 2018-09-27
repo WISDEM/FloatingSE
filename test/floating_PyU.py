@@ -60,8 +60,8 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['main_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
         self.myfloat['main_wall_thickness'] = 0.05 * np.ones(NSECTION+1)               # Shell thickness at each section node (linear lofting between) [m]
         self.myfloat['main_bulkhead_thickness'] = 0.05*np.array([1, 1, 0, 0, 1, 0]) # Locations/thickness of internal bulkheads at section interfaces [m]
-        self.myfloat['main_ballast_heave_box_diameter'] = 0.0
-        self.myfloat['main_ballast_heave_box_height'] = 0.0
+        self.myfloat['main_buoyancy_tank_diameter'] = 0.0
+        self.myfloat['main_buoyancy_tank_height'] = 0.0
 
         # Column ring stiffener parameters
         self.myfloat['main_stiffener_web_height']       = 0.10 * np.ones(NSECTION) # (by section) [m]

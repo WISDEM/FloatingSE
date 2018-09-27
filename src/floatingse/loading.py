@@ -52,20 +52,20 @@ class FloatingFrame(Component):
         self.add_param('main_pontoon_attach_upper', val=0.0, desc='Fraction of main column for upper truss attachment on main column')
         self.add_param('main_pontoon_attach_lower', val=0.0, desc='Fraction of main column lower truss attachment on main column')
 
-        # Ballast columns
+        # offset columns
         self.add_param('offset_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('offset_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('offset_t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('offset_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
+        self.add_param('offset_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of offset column by section')
         self.add_param('offset_buckling_length', val=np.zeros((nFull-1,)), units='m', desc='distance between ring stiffeners')
         self.add_param('offset_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
         self.add_param('offset_hydrostatic_force', val=np.zeros((nFull-1,)), units='N', desc='Net z-force of hydrostatic pressure by section')
         self.add_param('offset_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
         self.add_param('offset_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
-        self.add_param('offset_Px', np.zeros(nFull), units='N/m', desc='force per unit length in x-direction on ballast')
-        self.add_param('offset_Py', np.zeros(nFull), units='N/m', desc='force per unit length in y-direction on ballast')
-        self.add_param('offset_Pz', np.zeros(nFull), units='N/m', desc='force per unit length in z-direction on ballast')
-        self.add_param('offset_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on ballast')
+        self.add_param('offset_Px', np.zeros(nFull), units='N/m', desc='force per unit length in x-direction on offset')
+        self.add_param('offset_Py', np.zeros(nFull), units='N/m', desc='force per unit length in y-direction on offset')
+        self.add_param('offset_Pz', np.zeros(nFull), units='N/m', desc='force per unit length in z-direction on offset')
+        self.add_param('offset_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on offset')
 
         # Tower
         self.add_param('tower_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
@@ -80,18 +80,18 @@ class FloatingFrame(Component):
         self.add_param('tower_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on tower')
         
         # Semi geometry
-        self.add_param('radius_to_offset_column', val=0.0, units='m',desc='Distance from main column centerpoint to ballast column centerpoint')
-        self.add_param('number_of_offset_columns', val=3, desc='Number of ballast columns evenly spaced around main column')
+        self.add_param('radius_to_offset_column', val=0.0, units='m',desc='Distance from main column centerpoint to offset column centerpoint')
+        self.add_param('number_of_offset_columns', val=3, desc='Number of offset columns evenly spaced around main column')
 
         # Pontoon properties
-        self.add_param('pontoon_outer_diameter', val=0.0, units='m',desc='Outer radius of tubular pontoon that connects ballast or main columns')
-        self.add_param('pontoon_wall_thickness', val=0.0, units='m',desc='Inner radius of tubular pontoon that connects ballast or main columns')
-        self.add_param('cross_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the bottom of the central main to the tops of the outer ballast columns', pass_by_obj=True)
-        self.add_param('lower_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central main to the outer ballast columns at their bottoms', pass_by_obj=True)
-        self.add_param('upper_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central main to the outer ballast columns at their tops', pass_by_obj=True)
-        self.add_param('lower_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their bottoms', pass_by_obj=True)
-        self.add_param('upper_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their tops', pass_by_obj=True)
-        self.add_param('outer_cross_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their tops', pass_by_obj=True)
+        self.add_param('pontoon_outer_diameter', val=0.0, units='m',desc='Outer radius of tubular pontoon that connects offset or main columns')
+        self.add_param('pontoon_wall_thickness', val=0.0, units='m',desc='Inner radius of tubular pontoon that connects offset or main columns')
+        self.add_param('cross_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the bottom of the central main to the tops of the outer offset columns', pass_by_obj=True)
+        self.add_param('lower_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central main to the outer offset columns at their bottoms', pass_by_obj=True)
+        self.add_param('upper_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central main to the outer offset columns at their tops', pass_by_obj=True)
+        self.add_param('lower_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer offset columns at their bottoms', pass_by_obj=True)
+        self.add_param('upper_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer offset columns at their tops', pass_by_obj=True)
+        self.add_param('outer_cross_pontoons', val=True, desc='Inclusion of pontoons that ring around outer offset columns at their tops', pass_by_obj=True)
         
         # Turbine parameters
         self.add_param('rna_mass', val=0.0, units='kg', desc='mass of tower')
@@ -119,7 +119,7 @@ class FloatingFrame(Component):
         self.add_param('gamma_fatigue', 0.0, desc='total safety factor for fatigue')
 
         # Manufacturing
-        self.add_param('connection_ratio_max', val=0.0, desc='Maximum ratio of pontoon outer diameter to main/ballast outer diameter')
+        self.add_param('connection_ratio_max', val=0.0, desc='Maximum ratio of pontoon outer diameter to main/offset outer diameter')
         
         # Costing
         self.add_param('pontoon_cost_rate', val=6.250, units='USD/kg', desc='Finished cost rate of truss components')
@@ -209,12 +209,12 @@ class FloatingFrame(Component):
         R_semi         = params['radius_to_offset_column'] if ncolumn>0 else 0.0
         R_od_pontoon   = 0.5*params['pontoon_outer_diameter']
         R_od_main      = 0.5*params['main_d_full']
-        R_od_ballast   = 0.5*params['offset_d_full']
+        R_od_offset   = 0.5*params['offset_d_full']
         R_od_tower     = 0.5*params['tower_d_full']
         R_od_fairlead  = 0.5*params['fairlead_support_outer_diameter']
 
         t_wall_main     = params['main_t_full']
-        t_wall_ballast  = params['offset_t_full']
+        t_wall_offset  = params['offset_t_full']
         t_wall_pontoon  = params['pontoon_wall_thickness']
         t_wall_tower    = params['tower_t_full']
         t_wall_fairlead = params['fairlead_support_wall_thickness']
@@ -225,14 +225,14 @@ class FloatingFrame(Component):
         sigma_y        = params['yield_stress']
         
         z_main         = params['main_z_full']
-        z_ballast      = params['offset_z_full']
+        z_offset      = params['offset_z_full']
         z_tower        = params['tower_z_full']
         z_attach_upper = z_main[-1] if upperAttachFlag else params['main_pontoon_attach_upper']*(z_main[-1] - z_main[0]) + z_main[0]
         z_attach_lower = params['main_pontoon_attach_lower']*(z_main[-1] - z_main[0]) + z_main[0]
         z_fairlead     = -params['fairlead']
         
         m_main         = params['main_mass']
-        m_ballast      = params['offset_mass']
+        m_offset      = params['offset_mass']
         m_tower        = params['tower_mass_section']
         
         m_rna          = params['rna_mass']
@@ -244,16 +244,16 @@ class FloatingFrame(Component):
         rhoWater       = params['water_density']
         
         V_main         = params['main_displaced_volume']
-        V_ballast      = params['offset_displaced_volume']
+        V_offset      = params['offset_displaced_volume']
 
         F_hydro_main    = params['main_hydrostatic_force']
-        F_hydro_ballast = params['offset_hydrostatic_force']
+        F_hydro_offset = params['offset_hydrostatic_force']
 
         z_cb_main      = params['main_center_of_buoyancy']
-        z_cb_ballast   = params['offset_center_of_buoyancy']
+        z_cb_offset   = params['offset_center_of_buoyancy']
         
         cg_main        = np.r_[0.0, 0.0, params['main_center_of_mass']]
-        cg_ballast     = np.r_[0.0, 0.0, params['offset_center_of_mass']]
+        cg_offset     = np.r_[0.0, 0.0, params['offset_center_of_mass']]
         cg_tower       = np.r_[0.0, 0.0, params['tower_center_of_mass']]
         
         coeff          = params['pontoon_cost_rate']
@@ -273,7 +273,7 @@ class FloatingFrame(Component):
 
         # Quick ratio for unknowns
         unknowns['main_connection_ratio']    = params['connection_ratio_max'] - R_od_pontoon/R_od_main
-        unknowns['offset_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_ballast
+        unknowns['offset_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_offset
 
         # --- INPUT CHECKS -----
         # There is no truss if not offset columns
@@ -305,7 +305,7 @@ class FloatingFrame(Component):
         # Compute frustum angles
         angle_tower   = np.arctan( np.diff(R_od_tower)   / np.diff(z_tower)   )
         angle_main    = np.arctan( np.diff(R_od_main)    / np.diff(z_main)    )
-        angle_ballast = np.arctan( np.diff(R_od_ballast) / np.diff(z_ballast) )
+        angle_offset = np.arctan( np.diff(R_od_offset) / np.diff(z_offset) )
         
         # ---NODES---
         # Add nodes for main column: Using 4 nodes/3 elements per section
@@ -351,25 +351,25 @@ class FloatingFrame(Component):
         znode = np.append(znode, znode[-1]+1.0 )
         rnode = np.append(rnode, 0.0)
         
-        # Get x and y positions of surrounding ballast columns
-        ballastLowerID = []
-        ballastUpperID = []
-        ballastx = R_semi * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
-        ballasty = R_semi * np.sin( np.linspace(0, 2*np.pi, ncolumn+1) )
-        ballastx = ballastx[:-1]
-        ballasty = ballasty[:-1]
+        # Get x and y positions of surrounding offset columns
+        offsetLowerID = []
+        offsetUpperID = []
+        offsetx = R_semi * np.cos( np.linspace(0, 2*np.pi, ncolumn+1) )
+        offsety = R_semi * np.sin( np.linspace(0, 2*np.pi, ncolumn+1) )
+        offsetx = offsetx[:-1]
+        offsety = offsety[:-1]
 
-        # Add in ballast column nodes around the circle, make sure there is a node at the fairlead
-        idx = find_nearest(z_ballast, z_fairlead)
-        myones = np.ones(z_ballast.shape)
+        # Add in offset column nodes around the circle, make sure there is a node at the fairlead
+        idx = find_nearest(z_offset, z_fairlead)
+        myones = np.ones(z_offset.shape)
         for k in range(ncolumn):
-            ballastLowerID.append( xnode.size + 1 )
+            offsetLowerID.append( xnode.size + 1 )
             fairleadID.append( xnode.size + idx + 1 )
-            xnode = np.append(xnode, ballastx[k]*myones)
-            ynode = np.append(ynode, ballasty[k]*myones)
-            znode = np.append(znode, z_ballast )
-            rnode = np.append(rnode, R_od_ballast )
-            ballastUpperID.append( xnode.size )
+            xnode = np.append(xnode, offsetx[k]*myones)
+            ynode = np.append(ynode, offsety[k]*myones)
+            znode = np.append(znode, z_offset )
+            rnode = np.append(rnode, R_od_offset )
+            offsetUpperID.append( xnode.size )
 
         # Add nodes where mooring lines attach, which may be offset from columns
         mooringx  = R_fairlead * np.cos( np.linspace(0, 2*np.pi, n_connect+1) )[:-1]
@@ -382,19 +382,19 @@ class FloatingFrame(Component):
             
         # Add nodes midway around outer ring for cross bracing
         if outerCrossFlag and ncolumn > 0:
-            crossx = 0.5*(ballastx + np.roll(ballastx,1))
-            crossy = 0.5*(ballasty + np.roll(ballasty,1))
+            crossx = 0.5*(offsetx + np.roll(offsetx,1))
+            crossy = 0.5*(offsety + np.roll(offsety,1))
 
             crossOuterLowerID = xnode.size + np.arange(ncolumn) + 1
             xnode = np.append(xnode, crossx)
             ynode = np.append(ynode, crossy)
-            znode = np.append(znode, z_ballast[0]*np.ones(ncolumn))
+            znode = np.append(znode, z_offset[0]*np.ones(ncolumn))
             rnode = np.append(rnode, 0.0)
 
             #crossOuterUpperID = xnode.size + np.arange(ncolumn) + 1
             #xnode = np.append(xnode, crossx)
             #ynode = np.append(ynode, crossy)
-            #znode = np.append(znode, z_ballast[-1]*np.ones(ncolumn))
+            #znode = np.append(znode, z_offset[-1]*np.ones(ncolumn))
 
         # Create Node Data object
         nnode = 1 + np.arange(xnode.size)
@@ -406,54 +406,54 @@ class FloatingFrame(Component):
         # ---ELEMENTS / EDGES---
         N1 = np.array([], dtype=np.int32)
         N2 = np.array([], dtype=np.int32)
-        # Lower connection from central main column to ballast columns
+        # Lower connection from central main column to offset columns
         if lowerAttachFlag:
             lowerAttachEID = N1.size + 1
             for k in range(ncolumn):
                 N1 = np.append(N1, mainLowerID )
-                N2 = np.append(N2, ballastLowerID[k] )
-        # Upper connection from central main column to ballast columns
+                N2 = np.append(N2, offsetLowerID[k] )
+        # Upper connection from central main column to offset columns
         if upperAttachFlag:
             upperAttachEID = N1.size + 1
             for k in range(ncolumn):
                 N1 = np.append(N1, mainUpperID )
-                N2 = np.append(N2, ballastUpperID[k] )
-        # Cross braces from lower central main column to upper ballast columns
+                N2 = np.append(N2, offsetUpperID[k] )
+        # Cross braces from lower central main column to upper offset columns
         if crossAttachFlag:
             crossAttachEID = N1.size + 1
             for k in range(ncolumn):
                 N1 = np.append(N1, mainLowerID )
-                N2 = np.append(N2, ballastUpperID[k] )
+                N2 = np.append(N2, offsetUpperID[k] )
             # Will be used later to convert from local member c.s. to global
             cross_angle = np.arctan( (z_attach_upper - z_attach_lower) / R_semi )
-        # Lower ring around ballast columns
+        # Lower ring around offset columns
         if lowerRingFlag:
             lowerRingEID = N1.size + 1
             for k in range(ncolumn-1):
-                N1 = np.append(N1, ballastLowerID[k] )
-                N2 = np.append(N2, ballastLowerID[k+1] )
-            N1 = np.append(N1, ballastLowerID[0] )
-            N2 = np.append(N2, ballastLowerID[-1] )
-        # Upper ring around ballast columns
+                N1 = np.append(N1, offsetLowerID[k] )
+                N2 = np.append(N2, offsetLowerID[k+1] )
+            N1 = np.append(N1, offsetLowerID[0] )
+            N2 = np.append(N2, offsetLowerID[-1] )
+        # Upper ring around offset columns
         if upperRingFlag:
             upperRingEID = N1.size + 1
             for k in range(ncolumn-1):
-                N1 = np.append(N1, ballastUpperID[k] )
-                N2 = np.append(N2, ballastUpperID[k+1] )
-            N1 = np.append(N1, ballastUpperID[0] )
-            N2 = np.append(N2, ballastUpperID[-1] )
+                N1 = np.append(N1, offsetUpperID[k] )
+                N2 = np.append(N2, offsetUpperID[k+1] )
+            N1 = np.append(N1, offsetUpperID[0] )
+            N2 = np.append(N2, offsetUpperID[-1] )
         # Outer cross braces
         if outerCrossFlag:
             outerCrossEID = N1.size + 1
             for k in range(ncolumn-1):
                 N1 = np.append(N1, crossOuterLowerID[k] )
-                N2 = np.append(N2, ballastUpperID[k] )
+                N2 = np.append(N2, offsetUpperID[k] )
                 N1 = np.append(N1, crossOuterLowerID[k+1] )
-                N2 = np.append(N2, ballastUpperID[k] )
+                N2 = np.append(N2, offsetUpperID[k] )
             N1 = np.append(N1, crossOuterLowerID[-1] )
-            N2 = np.append(N2, ballastUpperID[-1] )
+            N2 = np.append(N2, offsetUpperID[-1] )
             N1 = np.append(N1, crossOuterLowerID[0] )
-            N2 = np.append(N2, ballastUpperID[-1] )
+            N2 = np.append(N2, offsetUpperID[-1] )
         # TODO: Parameterize these for upper, lower, cross connections
         # Properties for the inner connectors
         mytube = Tube(2.0*R_od_pontoon, t_wall_pontoon)
@@ -492,8 +492,8 @@ class FloatingFrame(Component):
         # First get geometry in each of the elements
         R_od_main,_      = nodal2sectional( R_od_main )
         t_wall_main,_    = nodal2sectional( t_wall_main )
-        R_od_ballast,_   = nodal2sectional( R_od_ballast )
-        t_wall_ballast,_ = nodal2sectional( t_wall_ballast )
+        R_od_offset,_   = nodal2sectional( R_od_offset )
+        t_wall_offset,_ = nodal2sectional( t_wall_offset )
         R_od_tower,_     = nodal2sectional( R_od_tower )
         t_wall_tower,_   = nodal2sectional( t_wall_tower )
         # Senu TODO: Make artificially more stiff?
@@ -548,16 +548,16 @@ class FloatingFrame(Component):
         roll = np.append(roll, 0.0 )
         dens = np.append(dens, 1e-6 ) 
         
-        ballastEID = []
-        mytube     = Tube(2.0*R_od_ballast, t_wall_ballast)
-        myrange    = np.arange(R_od_ballast.size)
+        offsetEID = []
+        mytube     = Tube(2.0*R_od_offset, t_wall_offset)
+        myrange    = np.arange(R_od_offset.size)
         myones     = np.ones(myrange.shape)
-        mydens     = m_ballast / mytube.Area / np.diff(z_ballast) + eps
+        mydens     = m_offset / mytube.Area / np.diff(z_offset) + eps
         for k in range(ncolumn):
-            ballastEID.append( N1.size + 1 )
+            offsetEID.append( N1.size + 1 )
             
-            N1   = np.append(N1  , myrange + ballastLowerID[k]    )
-            N2   = np.append(N2  , myrange + ballastLowerID[k] + 1)
+            N1   = np.append(N1  , myrange + offsetLowerID[k]    )
+            N2   = np.append(N2  , myrange + offsetLowerID[k] + 1)
             Ax   = np.append(Ax  , mytube.Area )
             As   = np.append(As  , mytube.Asx )
             Jx   = np.append(Jx  , mytube.J0 )
@@ -602,12 +602,12 @@ class FloatingFrame(Component):
         gz = -gravity
         load = frame3dd.StaticLoadCase(gx, gy, gz)
 
-        # Wind + Wave loading in local main / ballast / tower c.s.
+        # Wind + Wave loading in local main / offset / tower c.s.
         Px_main,    Py_main,    Pz_main    = params['main_Pz'], params['main_Py'], -params['main_Px']  # switch to local c.s.
-        Px_ballast, Py_ballast, Pz_ballast = params['offset_Pz'], params['offset_Py'], -params['offset_Px']  # switch to local c.s.
+        Px_offset, Py_offset, Pz_offset = params['offset_Pz'], params['offset_Py'], -params['offset_Px']  # switch to local c.s.
         Px_tower,   Py_tower,   Pz_tower   = params['tower_Pz'], params['tower_Py'], -params['tower_Px']  # switch to local c.s.
         epsOff = 1e-5
-        # Get mass right- ballasts, stiffeners, tower, rna, etc.
+        # Get mass right- offsets, stiffeners, tower, rna, etc.
         # Also account for buoyancy loads
         # Also apply wind/wave loading as trapezoidal on each element
         # NOTE: Loading is in local element coordinates 0-L, x is along element
@@ -632,21 +632,21 @@ class FloatingFrame(Component):
         wy2     = np.append(wy2, Py_tower[1:])
         wz1     = np.append(wz1, Pz_tower[:-1])
         wz2     = np.append(wz2, Pz_tower[1:])
-        # Buoyancy- ballast columns
-        nrange  = np.arange(R_od_ballast.size, dtype=np.int32)
+        # Buoyancy- offset columns
+        nrange  = np.arange(R_od_offset.size, dtype=np.int32)
         for k in range(ncolumn):
-            EL      = np.append(EL, ballastEID[k] + nrange)
-            Ux      = np.append(Ux,  F_hydro_ballast / np.diff(z_ballast) )
+            EL      = np.append(EL, offsetEID[k] + nrange)
+            Ux      = np.append(Ux,  F_hydro_offset / np.diff(z_offset) )
             x1      = np.append(x1, np.zeros(nrange.shape))
-            x2      = np.append(x2, np.diff(z_ballast) - epsOff)
-            wx1     = np.append(wx1, Px_ballast[:-1])
-            wx2     = np.append(wx2, Px_ballast[1:])
-            wy1     = np.append(wy1, Py_ballast[:-1])
-            wy2     = np.append(wy2, Py_ballast[1:])
-            wz1     = np.append(wz1, Pz_ballast[:-1])
-            wz2     = np.append(wz2, Pz_ballast[1:])
+            x2      = np.append(x2, np.diff(z_offset) - epsOff)
+            wx1     = np.append(wx1, Px_offset[:-1])
+            wx2     = np.append(wx2, Px_offset[1:])
+            wy1     = np.append(wy1, Py_offset[:-1])
+            wy2     = np.append(wy2, Py_offset[1:])
+            wz1     = np.append(wz1, Pz_offset[:-1])
+            wz2     = np.append(wz2, Pz_offset[1:])
             
-        # Add mass of main and ballast columns while we've already done the element enumeration
+        # Add mass of main and offset columns while we've already done the element enumeration
         Uz = Uy = np.zeros(Ux.shape)
         xx1 = xy1 = xz1 = x1
         xx2 = xy2 = xz2 = x2
@@ -658,7 +658,7 @@ class FloatingFrame(Component):
         Frange  = np.pi * R_od_pontoon**2 * rhoWater * gravity
         F_truss = 0.0
         z_cb    = np.zeros((3,))
-        if ncolumn > 0 and znode[ballastLowerID[0]-1] < 0.0:
+        if ncolumn > 0 and znode[offsetLowerID[0]-1] < 0.0:
             if lowerAttachFlag:
                 EL       = np.append(EL, lowerAttachEID + nrange)
                 Ux       = np.append(Ux, np.zeros(nrange.shape))
@@ -674,7 +674,7 @@ class FloatingFrame(Component):
                 F_truss += Frange * elemL[lowerRingEID-1] * ncolumn
                 z_cb    += Frange * elemL[lowerRingEID-1] * ncolumn * elemCoG[lowerRingEID-1]
             if crossAttachFlag:
-                factor   = np.minimum(1.0, (0.0 - z_attach_lower) / (znode[ballastUpperID[0]-1] - z_attach_lower) )
+                factor   = np.minimum(1.0, (0.0 - z_attach_lower) / (znode[offsetUpperID[0]-1] - z_attach_lower) )
                 EL       = np.append(EL, crossAttachEID + nrange)
                 Ux       = np.append(Ux,  factor * Frange * np.sin(cross_angle) * np.ones(nrange.shape))
                 Uy       = np.append(Uy, np.zeros(nrange.shape))
@@ -682,7 +682,7 @@ class FloatingFrame(Component):
                 F_truss += factor * Frange * elemL[crossAttachEID-1] * ncolumn
                 z_cb    += factor * Frange * elemL[crossAttachEID-1] * ncolumn * elemCoG[crossAttachEID-1,:]
             if outerCrossFlag:
-                factor   = np.minimum(1.0, (0.0 - znode[mainLowerID-1]) / (znode[ballastUpperID[0]-1] - znode[mainLowerID-1]) )
+                factor   = np.minimum(1.0, (0.0 - znode[mainLowerID-1]) / (znode[offsetUpperID[0]-1] - znode[mainLowerID-1]) )
                 # TODO: This one will take a little more math
                 #EL       = np.append(EL, outerCrossEID + np.arange(2*ncolumn, dtype=np.int32))
                 #Ux       = np.append(Ux, np.zeros(nrange.shape))
@@ -690,7 +690,7 @@ class FloatingFrame(Component):
                 #Uz       = np.append(Uz, factor * Frange * np.ones(nrange.shape))
                 F_truss += factor * Frange * elemL[outerCrossEID-1] * ncolumn
                 z_cb    += factor * Frange * elemL[outerCrossEID-1] * ncolumn * elemCoG[outerCrossEID-1,:]
-        if ncolumn > 0 and znode[ballastUpperID[0]-1] < 0.0:
+        if ncolumn > 0 and znode[offsetUpperID[0]-1] < 0.0:
             if upperAttachFlag:
                 EL       = np.append(EL, upperAttachEID + nrange)
                 Ux       = np.append(Ux, np.zeros(nrange.shape))
@@ -770,9 +770,9 @@ class FloatingFrame(Component):
             cg_pontoon = np.zeros(3)
             
         # Summary of mass and volumes
-        unknowns['total_displacement'] = V_main.sum() + ncolumn*V_ballast.sum() + V_pontoon
-        unknowns['substructure_mass']  = m_pontoon + m_main.sum() + ncolumn*m_ballast.sum()
-        unknowns['substructure_center_of_mass'] = (ncolumn*m_ballast.sum()*cg_ballast + m_main.sum()*cg_main +
+        unknowns['total_displacement'] = V_main.sum() + ncolumn*V_offset.sum() + V_pontoon
+        unknowns['substructure_mass']  = m_pontoon + m_main.sum() + ncolumn*m_offset.sum()
+        unknowns['substructure_center_of_mass'] = (ncolumn*m_offset.sum()*cg_offset + m_main.sum()*cg_main +
                                                    m_pontoon*cg_pontoon) / unknowns['substructure_mass']
         m_total = unknowns['substructure_mass'] + m_rna + m_tower.sum()
         unknowns['structural_mass'] = m_total
@@ -780,7 +780,7 @@ class FloatingFrame(Component):
                                        unknowns['substructure_mass']*unknowns['substructure_center_of_mass']) / m_total
 
         # Find cb (center of buoyancy) for whole system
-        z_cb = (V_main.sum()*z_cb_main + ncolumn*V_ballast.sum()*z_cb_ballast + V_pontoon*z_cb) / unknowns['total_displacement']
+        z_cb = (V_main.sum()*z_cb_main + ncolumn*V_offset.sum()*z_cb_offset + V_pontoon*z_cb) / unknowns['total_displacement']
         unknowns['z_center_of_buoyancy'] = z_cb
 
 
@@ -949,48 +949,48 @@ class FloatingFrame(Component):
         
         # Extract offset column for Eurocode checks
         if ncolumn > 0:
-            idx = ballastEID[0]-1 + np.arange(R_od_ballast.size, dtype=np.int32)
+            idx = offsetEID[0]-1 + np.arange(R_od_offset.size, dtype=np.int32)
             L_reinforced     = params['offset_buckling_length']
-            sigma_ax_ballast = sigma_ax[idx]
-            sigma_sh_ballast = sigma_sh[idx]
-            qdyn_ballast,_   = nodal2sectional( params['offset_qdyn'] )
-            sigma_h_ballast  = util.hoopStress(2*R_od_ballast, t_wall_ballast*np.cos(angle_ballast), qdyn_ballast)
+            sigma_ax_offset = sigma_ax[idx]
+            sigma_sh_offset = sigma_sh[idx]
+            qdyn_offset,_   = nodal2sectional( params['offset_qdyn'] )
+            sigma_h_offset  = util.hoopStress(2*R_od_offset, t_wall_offset*np.cos(angle_offset), qdyn_offset)
 
-            unknowns['offset_stress:axial'] = sigma_ax_ballast
-            unknowns['offset_stress:shear'] = sigma_sh_ballast
-            unknowns['offset_stress:hoop']  = sigma_h_ballast
-            unknowns['offset_stress:hoopStiffen'] = util.hoopStressEurocode(z_ballast, 2*R_od_ballast, t_wall_ballast, L_reinforced, qdyn_ballast)
-            unknowns['offset_stress'] = util.vonMisesStressUtilization(sigma_ax_ballast, sigma_h_ballast, sigma_sh_ballast,
+            unknowns['offset_stress:axial'] = sigma_ax_offset
+            unknowns['offset_stress:shear'] = sigma_sh_offset
+            unknowns['offset_stress:hoop']  = sigma_h_offset
+            unknowns['offset_stress:hoopStiffen'] = util.hoopStressEurocode(z_offset, 2*R_od_offset, t_wall_offset, L_reinforced, qdyn_offset)
+            unknowns['offset_stress'] = util.vonMisesStressUtilization(sigma_ax_offset, sigma_h_offset, sigma_sh_offset,
                                                                             gamma_f*gamma_m*gamma_n, sigma_y)
 
             sigma_y_vec = sigma_y * np.ones(idx.shape)
-            unknowns['offset_shell_buckling'] = util.shellBucklingEurocode(2*R_od_ballast, t_wall_ballast, sigma_ax_ballast, sigma_h_ballast, sigma_sh_ballast,
+            unknowns['offset_shell_buckling'] = util.shellBucklingEurocode(2*R_od_offset, t_wall_offset, sigma_ax_offset, sigma_h_offset, sigma_sh_offset,
                                                                                 L_reinforced, modE[idx], sigma_y_vec, gamma_f, gamma_b)
 
-            ballast_height = z_ballast[-1] - z_ballast[0]
-            unknowns['offset_global_buckling'] = util.bucklingGL(2*R_od_ballast, t_wall_ballast, Nx[idx], M[idx], ballast_height, modE[idx], sigma_y_vec, gamma_f, gamma_b)
+            offset_height = z_offset[-1] - z_offset[0]
+            unknowns['offset_global_buckling'] = util.bucklingGL(2*R_od_offset, t_wall_offset, Nx[idx], M[idx], offset_height, modE[idx], sigma_y_vec, gamma_f, gamma_b)
         
         # TODO: FATIGUE
-        # Base and ballast columns get API stress/buckling checked in Column Group because that takes into account stiffeners
+        # Base and offset columns get API stress/buckling checked in Column Group because that takes into account stiffeners
 
 
 
 class TrussIntegerToBoolean(Component):
     def __init__(self):
         super(TrussIntegerToBoolean,self).__init__()
-        self.add_param('cross_attachment_pontoons_int', val=1, desc='Inclusion of pontoons that connect the bottom of the central main to the tops of the outer ballast columns')
-        self.add_param('lower_attachment_pontoons_int', val=1, desc='Inclusion of pontoons that connect the central main to the outer ballast columns at their bottoms')
-        self.add_param('upper_attachment_pontoons_int', val=1, desc='Inclusion of pontoons that connect the central main to the outer ballast columns at their tops')
-        self.add_param('lower_ring_pontoons_int', val=1, desc='Inclusion of pontoons that ring around outer ballast columns at their bottoms')
-        self.add_param('upper_ring_pontoons_int', val=1, desc='Inclusion of pontoons that ring around outer ballast columns at their tops')
-        self.add_param('outer_cross_pontoons_int', val=1, desc='Inclusion of pontoons that ring around outer ballast columns at their tops')
+        self.add_param('cross_attachment_pontoons_int', val=1, desc='Inclusion of pontoons that connect the bottom of the central main to the tops of the outer offset columns')
+        self.add_param('lower_attachment_pontoons_int', val=1, desc='Inclusion of pontoons that connect the central main to the outer offset columns at their bottoms')
+        self.add_param('upper_attachment_pontoons_int', val=1, desc='Inclusion of pontoons that connect the central main to the outer offset columns at their tops')
+        self.add_param('lower_ring_pontoons_int', val=1, desc='Inclusion of pontoons that ring around outer offset columns at their bottoms')
+        self.add_param('upper_ring_pontoons_int', val=1, desc='Inclusion of pontoons that ring around outer offset columns at their tops')
+        self.add_param('outer_cross_pontoons_int', val=1, desc='Inclusion of pontoons that ring around outer offset columns at their tops')
 
-        self.add_output('cross_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the bottom of the central main to the tops of the outer ballast columns', pass_by_obj=True)
-        self.add_output('lower_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central main to the outer ballast columns at their bottoms', pass_by_obj=True)
-        self.add_output('upper_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central main to the outer ballast columns at their tops', pass_by_obj=True)
-        self.add_output('lower_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their bottoms', pass_by_obj=True)
-        self.add_output('upper_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their tops', pass_by_obj=True)
-        self.add_output('outer_cross_pontoons', val=True, desc='Inclusion of pontoons that ring around outer ballast columns at their tops', pass_by_obj=True)
+        self.add_output('cross_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the bottom of the central main to the tops of the outer offset columns', pass_by_obj=True)
+        self.add_output('lower_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central main to the outer offset columns at their bottoms', pass_by_obj=True)
+        self.add_output('upper_attachment_pontoons', val=True, desc='Inclusion of pontoons that connect the central main to the outer offset columns at their tops', pass_by_obj=True)
+        self.add_output('lower_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer offset columns at their bottoms', pass_by_obj=True)
+        self.add_output('upper_ring_pontoons', val=True, desc='Inclusion of pontoons that ring around outer offset columns at their tops', pass_by_obj=True)
+        self.add_output('outer_cross_pontoons', val=True, desc='Inclusion of pontoons that ring around outer offset columns at their tops', pass_by_obj=True)
 
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['cross_attachment_pontoons'] = (int(params['cross_attachment_pontoons_int']) == 1)

@@ -23,14 +23,14 @@ class FloatingSE(Group):
         # Ballast columns are replicated from same design in the components
         self.add('main', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                  'Uref','zref','shearExp','beta','yaw','Uc','Hs','T','cd_usr','cm','loading',
-                                                                 'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height','fairlead',
-                                                                 'permanent_ballast_density','bulkhead_mass_factor','ballast_heave_box_mass_factor',
+                                                                 'max_draft','max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height',
+                                                                 'permanent_ballast_density','bulkhead_mass_factor','buoyancy_tank_mass_factor',
                                                                  'ring_mass_factor','column_mass_factor','outfitting_mass_fraction','ballast_cost_rate',
                                                                  'tapered_col_cost_rate','outfitting_cost_rate'])
         self.add('off', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                 'Uref','zref','shearExp','beta','yaw','Uc','Hs','T','cd_usr','cm','loading',
-                                                                'max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height','fairlead',
-                                                                'permanent_ballast_density','bulkhead_mass_factor','ballast_heave_box_mass_factor',
+                                                                'max_draft','max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height',
+                                                                'permanent_ballast_density','bulkhead_mass_factor','buoyancy_tank_mass_factor',
                                                                 'ring_mass_factor','column_mass_factor','outfitting_mass_fraction','ballast_cost_rate',
                                                                 'tapered_col_cost_rate','outfitting_cost_rate'])
 
@@ -52,9 +52,10 @@ class FloatingSE(Group):
         self.add('radius_to_offset_column', IndepVarComp('radius_to_offset_column', 0.0), promotes=['*'])
         self.add('number_of_offset_columns',  IndepVarComp('number_of_offset_columns', 0), promotes=['*'])
         
-        self.add('fairlead',                   IndepVarComp('fairlead', 0.0), promotes=['*'])
+        self.add('fairlead_location',          IndepVarComp('fairlead_location', 0.0), promotes=['*'])
         self.add('fairlead_offset_from_shell', IndepVarComp('fairlead_offset_from_shell', 0.0), promotes=['*'])
         self.add('z_offset',                   IndepVarComp('z_offset', 0.0), promotes=['*'])
+        self.add('max_draft',                   IndepVarComp('max_draft', 0.0), promotes=['*'])
 
 
         # Mooring
@@ -84,9 +85,9 @@ class FloatingSE(Group):
         self.add('main_stiffener_spacing',          IndepVarComp('main_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
         self.add('main_bulkhead_thickness',             IndepVarComp('main_bulkhead_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('main_permanent_ballast_height',   IndepVarComp('main_permanent_ballast_height', 0.0), promotes=['*'])
-        self.add('main_ballast_heave_box_diameter',   IndepVarComp('main_ballast_heave_box_diameter', 0.0), promotes=['*'])
-        self.add('main_ballast_heave_box_height',   IndepVarComp('main_ballast_heave_box_height', 0.0), promotes=['*'])
-        self.add('main_ballast_heave_box_location',   IndepVarComp('main_ballast_heave_box_location', 0.0), promotes=['*'])
+        self.add('main_buoyancy_tank_diameter',   IndepVarComp('main_buoyancy_tank_diameter', 0.0), promotes=['*'])
+        self.add('main_buoyancy_tank_height',   IndepVarComp('main_buoyancy_tank_height', 0.0), promotes=['*'])
+        self.add('main_buoyancy_tank_location',   IndepVarComp('main_buoyancy_tank_location', 0.0), promotes=['*'])
 
         self.add('offset_freeboard',          IndepVarComp('offset_freeboard', 0.0), promotes=['*'])
         self.add('offset_section_height',     IndepVarComp('offset_section_height', np.zeros((nSection,))), promotes=['*'])
@@ -99,9 +100,9 @@ class FloatingSE(Group):
         self.add('offset_stiffener_spacing',          IndepVarComp('offset_stiffener_spacing', np.zeros((nSection,))), promotes=['*'])
         self.add('offset_bulkhead_thickness',             IndepVarComp('offset_bulkhead_thickness', np.zeros((nSection+1,))), promotes=['*'])
         self.add('offset_permanent_ballast_height',   IndepVarComp('offset_permanent_ballast_height', 0.0), promotes=['*'])
-        self.add('offset_ballast_heave_box_diameter',   IndepVarComp('offset_ballast_heave_box_diameter', 0.0), promotes=['*'])
-        self.add('offset_ballast_heave_box_height',   IndepVarComp('offset_ballast_heave_box_height', 0.0), promotes=['*'])
-        self.add('offset_ballast_heave_box_location',   IndepVarComp('offset_ballast_heave_box_location', 0.0), promotes=['*'])
+        self.add('offset_buoyancy_tank_diameter',   IndepVarComp('offset_buoyancy_tank_diameter', 0.0), promotes=['*'])
+        self.add('offset_buoyancy_tank_height',   IndepVarComp('offset_buoyancy_tank_height', 0.0), promotes=['*'])
+        self.add('offset_buoyancy_tank_location',   IndepVarComp('offset_buoyancy_tank_location', 0.0), promotes=['*'])
 
         self.add('bulkhead_mass_factor',       IndepVarComp('bulkhead_mass_factor', 0.0), promotes=['*'])
         self.add('ring_mass_factor',           IndepVarComp('ring_mass_factor', 0.0), promotes=['*'])
@@ -162,9 +163,9 @@ class FloatingSE(Group):
         self.connect('main_bulkhead_thickness', 'main.bulkhead_thickness')
         self.connect('main_permanent_ballast_height', 'main.permanent_ballast_height')
         self.connect('main.L_stiffener','main_buckling_length')
-        self.connect('main_ballast_heave_box_diameter', 'main.ballast_heave_box_diameter')
-        self.connect('main_ballast_heave_box_height', 'main.ballast_heave_box_height')
-        self.connect('main_ballast_heave_box_location', 'main.ballast_heave_box_location')
+        self.connect('main_buoyancy_tank_diameter', 'main.buoyancy_tank_diameter')
+        self.connect('main_buoyancy_tank_height', 'main.buoyancy_tank_height')
+        self.connect('main_buoyancy_tank_location', 'main.buoyancy_tank_location')
 
         self.connect('offset_stiffener_web_height', 'off.stiffener_web_height')
         self.connect('offset_stiffener_web_thickness', 'off.stiffener_web_thickness')
@@ -174,11 +175,11 @@ class FloatingSE(Group):
         self.connect('offset_bulkhead_thickness', 'off.bulkhead_thickness')
         self.connect('offset_permanent_ballast_height', 'off.permanent_ballast_height')
         self.connect('off.L_stiffener','offset_buckling_length')
-        self.connect('offset_ballast_heave_box_diameter', 'off.ballast_heave_box_diameter')
-        self.connect('offset_ballast_heave_box_height', 'off.ballast_heave_box_height')
-        self.connect('offset_ballast_heave_box_location', 'off.ballast_heave_box_location')
+        self.connect('offset_buoyancy_tank_diameter', 'off.buoyancy_tank_diameter')
+        self.connect('offset_buoyancy_tank_height', 'off.buoyancy_tank_height')
+        self.connect('offset_buoyancy_tank_location', 'off.buoyancy_tank_location')
         
-        self.connect('bulkhead_mass_factor', 'ballast_heave_box_mass_factor')
+        self.connect('bulkhead_mass_factor', 'buoyancy_tank_mass_factor')
         self.connect('shell_mass_factor', ['main.cyl_mass.outfitting_factor', 'off.cyl_mass.outfitting_factor'])
 
         self.connect('main.z_full', ['main_z_nodes', 'main_z_full'])
@@ -350,8 +351,8 @@ def sparExample():
     #prob['rna_moment'] = np.array([0.0, 131196.8431,  0.0]) # Net moment acting on RNA (x,y,z) [N*m]
     
     # Mooring constraints
-    prob['mooring_max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
-    prob['mooring_operational_heel']   = 10.0 # Max heel (pitching) angle [deg]
+    prob['max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
+    prob['operational_heel']   = 10.0 # Max heel (pitching) angle [deg]
 
     # Design constraints
     prob['max_taper_ratio'] = 0.2                # For manufacturability of rolling steel
@@ -525,8 +526,8 @@ def semiExample():
     #prob['rna_moment'] = np.array([0.0, 131196.8431,  0.0]) # Net moment acting on RNA (x,y,z) [N*m]
     
     # Mooring constraints
-    prob['mooring_max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
-    prob['mooring_operational_heel']   = 10.0 # Max heel (pitching) angle [deg]
+    prob['max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
+    prob['operational_heel']   = 10.0 # Max heel (pitching) angle [deg]
 
     # Design constraints
     prob['max_taper_ratio'] = 0.2                # For manufacturability of rolling steel
