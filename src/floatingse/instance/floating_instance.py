@@ -56,12 +56,12 @@ class FloatingInstance(object):
         # Environmental parameters
         self.params['water_depth']               = 200.0
         #self.params['air_density']              = 1.198
-        self.params['base.windLoads.rho']        = 1.198
+        self.params['main.windLoads.rho']        = 1.198
         #self.params['air_viscosity']            = 1.81e-5
-        self.params['base.windLoads.mu']         = 1.81e-5
+        self.params['main.windLoads.mu']         = 1.81e-5
         self.params['water_density']             = 1025.0
         #self.params['water_viscosity']          = 8.9e-4
-        self.params['base.waveLoads.mu']         = 8.9e-4
+        self.params['main.waveLoads.mu']         = 8.9e-4
         #self.params['wave_height']              = 10.8
         self.params['Hs']                      = 10.8
         #self.params['wave_period']              = 9.8
@@ -149,31 +149,31 @@ class FloatingInstance(object):
         #self.params['rna_force']                           = np.array([188038.8045, 0,  -16451.2637])
         #self.params['rna_moment']                          = np.array([0.0, 131196.8431,  0.0])
         self.params['base_bulkhead_thickness']              = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
-        self.params['auxiliary_bulkhead_thickness']         = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
+        self.params['offset_bulkhead_thickness']         = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.params['Rhub']                              = 1.125
         
         # Typically design (start at OC4 semi)
-        self.params['radius_to_auxiliary_column']           = 28.867513459481287
-        self.params['number_of_auxiliary_columns']          = 3
+        self.params['radius_to_offset_column']           = 28.867513459481287
+        self.params['number_of_offset_columns']          = 3
         self.params['base_freeboard']                       = 10.0
-        self.params['auxiliary_freeboard']                  = 12.0
+        self.params['offset_freeboard']                  = 12.0
         self.params['fairlead']                             = 14.0
         self.params['fairlead_offset_from_shell']           = 40.868-28.867513459481287-6.0
         self.params['base_outer_diameter']                  = 6.5
         self.params['base_wall_thickness']                  = 0.03
-        self.params['auxiliary_wall_thickness']             = 0.06
+        self.params['offset_wall_thickness']             = 0.06
         self.params['base_permanent_ballast_height']        = 1.0
         self.params['base_stiffener_web_height']            = 0.1
         self.params['base_stiffener_web_thickness']         = 0.04
         self.params['base_stiffener_flange_width']          = 0.1
         self.params['base_stiffener_flange_thickness']      = 0.02
         self.params['base_stiffener_spacing']               = 0.4
-        self.params['auxiliary_permanent_ballast_height']   = 0.1
-        self.params['auxiliary_stiffener_web_height']       = 0.1
-        self.params['auxiliary_stiffener_web_thickness']    = 0.04
-        self.params['auxiliary_stiffener_flange_width']     = 0.1
-        self.params['auxiliary_stiffener_flange_thickness'] = 0.02
-        self.params['auxiliary_stiffener_spacing']          = 0.4
+        self.params['offset_permanent_ballast_height']   = 0.1
+        self.params['offset_stiffener_web_height']       = 0.1
+        self.params['offset_stiffener_web_thickness']    = 0.04
+        self.params['offset_stiffener_flange_width']     = 0.1
+        self.params['offset_stiffener_flange_thickness'] = 0.02
+        self.params['offset_stiffener_spacing']          = 0.4
         self.params['fairlead_support_outer_diameter']      = 2*1.6
         self.params['fairlead_support_wall_thickness']      = 0.0175
         self.params['pontoon_outer_diameter']               = 2*1.6
@@ -184,16 +184,16 @@ class FloatingInstance(object):
         self.params['base_ballast_heave_box_diameter']      = 0.0
         self.params['base_ballast_heave_box_height']        = 0.0
         self.params['base_ballast_heave_box_location']      = 0.0
-        self.params['auxiliary_ballast_heave_box_diameter']      = 0.0
-        self.params['auxiliary_ballast_heave_box_height']        = 0.0
-        self.params['auxiliary_ballast_heave_box_location']      = 0.0
+        self.params['offset_ballast_heave_box_diameter']      = 0.0
+        self.params['offset_ballast_heave_box_height']        = 0.0
+        self.params['offset_ballast_heave_box_location']      = 0.0
         
         self.set_length_base( 30.0 )
         self.set_length_aux( 32.0 )
 
-        self.params['auxiliary_outer_diameter']             = 2*6.0
-        self.params['auxiliary_ballast_heave_box_diameter']       = 24.0
-        self.params['auxiliary_ballast_heave_box_height']         = 5.0
+        self.params['offset_outer_diameter']             = 2*6.0
+        self.params['offset_ballast_heave_box_diameter']       = 24.0
+        self.params['offset_ballast_heave_box_height']         = 5.0
 
         self.params['mooring_line_length']                  = 835.5
         self.params['anchor_radius']                        = 837.6
@@ -203,7 +203,7 @@ class FloatingInstance(object):
         self.params['base_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
         
     def set_length_aux(self, inval):
-        self.params['auxiliary_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
+        self.params['offset_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
         
     def check_vectors(self):
         self.params['tower_outer_diameter']            = vecOption(self.params['tower_outer_diameter'], NSECTIONS+1)
@@ -219,15 +219,15 @@ class FloatingInstance(object):
         self.params['base_bulkhead_thickness']         = vecOption(self.params['base_bulkhead_thickness'], NSECTIONS+1)
         #self.params['base_bulkhead_thickness'][:2] = 0.05
         
-        self.params['auxiliary_outer_diameter']             = vecOption(self.params['auxiliary_outer_diameter'], NSECTIONS+1)
-        self.params['auxiliary_wall_thickness']             = vecOption(self.params['auxiliary_wall_thickness'], NSECTIONS+1)
-        self.params['auxiliary_stiffener_web_height']       = vecOption(self.params['auxiliary_stiffener_web_height'], NSECTIONS)
-        self.params['auxiliary_stiffener_web_thickness']    = vecOption(self.params['auxiliary_stiffener_web_thickness'], NSECTIONS)
-        self.params['auxiliary_stiffener_flange_width']     = vecOption(self.params['auxiliary_stiffener_flange_width'], NSECTIONS)
-        self.params['auxiliary_stiffener_flange_thickness'] = vecOption(self.params['auxiliary_stiffener_flange_thickness'], NSECTIONS)
-        self.params['auxiliary_stiffener_spacing']          = vecOption(self.params['auxiliary_stiffener_spacing'], NSECTIONS)
-        self.params['auxiliary_bulkhead_thickness']         = vecOption(self.params['auxiliary_bulkhead_thickness'], NSECTIONS+1)
-        #self.params['auxiliary_bulkhead_thickness'][:2] = 0.05
+        self.params['offset_outer_diameter']             = vecOption(self.params['offset_outer_diameter'], NSECTIONS+1)
+        self.params['offset_wall_thickness']             = vecOption(self.params['offset_wall_thickness'], NSECTIONS+1)
+        self.params['offset_stiffener_web_height']       = vecOption(self.params['offset_stiffener_web_height'], NSECTIONS)
+        self.params['offset_stiffener_web_thickness']    = vecOption(self.params['offset_stiffener_web_thickness'], NSECTIONS)
+        self.params['offset_stiffener_flange_width']     = vecOption(self.params['offset_stiffener_flange_width'], NSECTIONS)
+        self.params['offset_stiffener_flange_thickness'] = vecOption(self.params['offset_stiffener_flange_thickness'], NSECTIONS)
+        self.params['offset_stiffener_spacing']          = vecOption(self.params['offset_stiffener_spacing'], NSECTIONS)
+        self.params['offset_bulkhead_thickness']         = vecOption(self.params['offset_bulkhead_thickness'], NSECTIONS+1)
+        #self.params['offset_bulkhead_thickness'][:2] = 0.05
 
 
     def set_reference(self, instr):
@@ -452,21 +452,21 @@ class FloatingInstance(object):
             
             # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
             # Ensure that fairlead attaches to draft
-            ['base.draft', 0.0, 100.0, None],
-            ['aux.draft', 0.0, 100.0, None],
-            ['base.draft_depth_ratio', None, 0.9, None],
-            ['aux.draft_depth_ratio', None, 0.9, None],
-            ['base.wave_height_freeboard_ratio', None, 1.0, None],
-            ['aux.wave_height_freeboard_ratio', None, 1.0, None],
+            ['main.draft', 0.0, 100.0, None],
+            ['off.draft', 0.0, 100.0, None],
+            ['main.draft_depth_ratio', None, 0.9, None],
+            ['off.draft_depth_ratio', None, 0.9, None],
+            ['main.wave_height_freeboard_ratio', None, 1.0, None],
+            ['off.wave_height_freeboard_ratio', None, 1.0, None],
             
-            ['aux.fairlead_draft_ratio', 0.0, 1.0, None],
-            ['base_auxiliary_spacing', 1.0, None, None],
+            ['off.fairlead_draft_ratio', 0.0, 1.0, None],
+            ['base_offset_spacing', 1.0, None, None],
             
             # Ensure that the radius doesn't change dramatically over a section
-            ['base.manufacturability', 0.0, None, None],
-            ['base.weldability', None, 0.0, None],
-            ['aux.manufacturability', 0.0, None, None],
-            ['aux.weldability', None, 0.0, None],
+            ['main.manufacturability', 0.0, None, None],
+            ['main.weldability', None, 0.0, None],
+            ['off.manufacturability', 0.0, None, None],
+            ['off.weldability', None, 0.0, None],
             ['tow.manufacturability', 0.0, None, None],
             ['tow.weldability', None, 0.0, None],
             
@@ -475,8 +475,8 @@ class FloatingInstance(object):
             ['nacelle_transition_buffer', 0.0, None, None],
 
             # Make sure semisub columns don't get submerged
-            ['auxiliary_freeboard_heel_margin', 0.0, None, None],
-            ['auxiliary_draft_heel_margin', 0.0, None, None],
+            ['offset_freeboard_heel_margin', 0.0, None, None],
+            ['offset_draft_heel_margin', 0.0, None, None],
             
             # Ensure max mooring line tension is less than X% of MBL: 60% for intact mooring, 80% for damanged
             ['axial_unity', 0.0, 1.0, None],
@@ -485,27 +485,27 @@ class FloatingInstance(object):
             ['mooring_length_max', None, 1.0, None],
             
             # API Bulletin 2U constraints
-            ['base.flange_spacing_ratio', None, 1.0, None],
-            ['base.stiffener_radius_ratio', None, 0.5, None],
-            ['base.flange_compactness', 1.0, None, None],
-            ['base.web_compactness', 1.0, None, None],
-            ['base.axial_local_api', None, 1.0, None],
-            ['base.axial_general_api', None, 1.0, None],
-            ['base.external_local_api', None, 1.0, None],
-            ['base.external_general_api', None, 1.0, None],
+            ['main.flange_spacing_ratio', None, 1.0, None],
+            ['main.stiffener_radius_ratio', None, 0.5, None],
+            ['main.flange_compactness', 1.0, None, None],
+            ['main.web_compactness', 1.0, None, None],
+            ['main.axial_local_api', None, 1.0, None],
+            ['main.axial_general_api', None, 1.0, None],
+            ['main.external_local_api', None, 1.0, None],
+            ['main.external_general_api', None, 1.0, None],
             
-            ['aux.flange_spacing_ratio', None, 1.0, None],
-            ['aux.stiffener_radius_ratio', None, 0.5, None],
-            ['aux.flange_compactness', 1.0, None, None],
-            ['aux.web_compactness', 1.0, None, None],
-            ['aux.axial_local_api', None, 1.0, None],
-            ['aux.axial_general_api', None, 1.0, None],
-            ['aux.external_local_api', None, 1.0, None],
-            ['aux.external_general_api', None, 1.0, None],
+            ['off.flange_spacing_ratio', None, 1.0, None],
+            ['off.stiffener_radius_ratio', None, 0.5, None],
+            ['off.flange_compactness', 1.0, None, None],
+            ['off.web_compactness', 1.0, None, None],
+            ['off.axial_local_api', None, 1.0, None],
+            ['off.axial_general_api', None, 1.0, None],
+            ['off.external_local_api', None, 1.0, None],
+            ['off.external_general_api', None, 1.0, None],
             
             # Pontoon tube radii
             #['base_connection_ratio', 0.0, None, None],
-            #['auxiliary_connection_ratio', 0.0, None, None],
+            #['offset_connection_ratio', 0.0, None, None],
             
             # Pontoon stress safety factor
             ['pontoon_stress', None, 1.0, None],
@@ -519,9 +519,9 @@ class FloatingInstance(object):
             ['base_column_shell_buckling', None, 1.0, None],
             ['base_column_global_buckling', None, 1.0, None],
 
-            ['auxiliary_column_stress', None, 1.0, None],
-            ['auxiliary_column_shell_buckling', None, 1.0, None],
-            ['auxiliary_column_global_buckling', None, 1.0, None],
+            ['offset_column_stress', None, 1.0, None],
+            ['offset_column_shell_buckling', None, 1.0, None],
+            ['offset_column_global_buckling', None, 1.0, None],
             
             # Achieving non-zero variable ballast height means the semi can be balanced with margin as conditions change
             ['variable_ballast_height_ratio', 0.0, 1.0, None],

@@ -12,8 +12,8 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat = Problem(root=FloatingSE(NSECTION))
         self.myfloat.setup()
 
-        # Remove all auxiliary columns
-        self.myfloat['number_of_auxiliary_columns'] = 0
+        # Remove all offset columns
+        self.myfloat['number_of_offset_columns'] = 0
         self.myfloat['cross_attachment_pontoons_int']   = 0
         self.myfloat['lower_attachment_pontoons_int']   = 0
         self.myfloat['upper_attachment_pontoons_int']   = 0
@@ -96,17 +96,17 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['loading'] = 'axial' #'hydrostatic'
 
         # Other variables to avoid divide by zeros, even though it won't matter
-        self.myfloat['radius_to_auxiliary_column'] = 15.0
-        self.myfloat['auxiliary_section_height'] = 1.0 * np.ones(NSECTION)
-        self.myfloat['auxiliary_outer_diameter'] = 5.0 * np.ones(NSECTION+1)
-        self.myfloat['auxiliary_wall_thickness'] = 0.1 * np.ones(NSECTION+1)
-        self.myfloat['auxiliary_permanent_ballast_height'] = 0.1
-        self.myfloat['auxiliary_stiffener_web_height'] = 0.1 * np.ones(NSECTION)
-        self.myfloat['auxiliary_stiffener_web_thickness'] =  0.1 * np.ones(NSECTION)
-        self.myfloat['auxiliary_stiffener_flange_width'] =  0.1 * np.ones(NSECTION)
-        self.myfloat['auxiliary_stiffener_flange_thickness'] =  0.1 * np.ones(NSECTION)
-        self.myfloat['auxiliary_stiffener_spacing'] =  0.1 * np.ones(NSECTION)
-        self.myfloat['auxiliary_freeboard'] =  0.1
+        self.myfloat['radius_to_offset_column'] = 15.0
+        self.myfloat['offset_section_height'] = 1.0 * np.ones(NSECTION)
+        self.myfloat['offset_outer_diameter'] = 5.0 * np.ones(NSECTION+1)
+        self.myfloat['offset_wall_thickness'] = 0.1 * np.ones(NSECTION+1)
+        self.myfloat['offset_permanent_ballast_height'] = 0.1
+        self.myfloat['offset_stiffener_web_height'] = 0.1 * np.ones(NSECTION)
+        self.myfloat['offset_stiffener_web_thickness'] =  0.1 * np.ones(NSECTION)
+        self.myfloat['offset_stiffener_flange_width'] =  0.1 * np.ones(NSECTION)
+        self.myfloat['offset_stiffener_flange_thickness'] =  0.1 * np.ones(NSECTION)
+        self.myfloat['offset_stiffener_spacing'] =  0.1 * np.ones(NSECTION)
+        self.myfloat['offset_freeboard'] =  0.1
         self.myfloat['pontoon_outer_diameter'] = 1.0
         self.myfloat['pontoon_wall_thickness'] = 0.1
 

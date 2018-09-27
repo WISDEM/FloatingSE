@@ -53,19 +53,19 @@ class FloatingFrame(Component):
         self.add_param('base_pontoon_attach_lower', val=0.0, desc='Fraction of base column lower truss attachment on base column')
 
         # Ballast columns
-        self.add_param('auxiliary_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('auxiliary_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('auxiliary_t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('auxiliary_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
-        self.add_param('auxiliary_buckling_length', val=np.zeros((nFull-1,)), units='m', desc='distance between ring stiffeners')
-        self.add_param('auxiliary_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
-        self.add_param('auxiliary_hydrostatic_force', val=np.zeros((nFull-1,)), units='N', desc='Net z-force of hydrostatic pressure by section')
-        self.add_param('auxiliary_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
-        self.add_param('auxiliary_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
-        self.add_param('auxiliary_Px', np.zeros(nFull), units='N/m', desc='force per unit length in x-direction on ballast')
-        self.add_param('auxiliary_Py', np.zeros(nFull), units='N/m', desc='force per unit length in y-direction on ballast')
-        self.add_param('auxiliary_Pz', np.zeros(nFull), units='N/m', desc='force per unit length in z-direction on ballast')
-        self.add_param('auxiliary_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on ballast')
+        self.add_param('offset_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('offset_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('offset_t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('offset_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of ballast column by section')
+        self.add_param('offset_buckling_length', val=np.zeros((nFull-1,)), units='m', desc='distance between ring stiffeners')
+        self.add_param('offset_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
+        self.add_param('offset_hydrostatic_force', val=np.zeros((nFull-1,)), units='N', desc='Net z-force of hydrostatic pressure by section')
+        self.add_param('offset_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of column buoyancy force')
+        self.add_param('offset_center_of_mass', val=0.0, units='m', desc='z-position of center of column mass')
+        self.add_param('offset_Px', np.zeros(nFull), units='N/m', desc='force per unit length in x-direction on ballast')
+        self.add_param('offset_Py', np.zeros(nFull), units='N/m', desc='force per unit length in y-direction on ballast')
+        self.add_param('offset_Pz', np.zeros(nFull), units='N/m', desc='force per unit length in z-direction on ballast')
+        self.add_param('offset_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on ballast')
 
         # Tower
         self.add_param('tower_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
@@ -80,8 +80,8 @@ class FloatingFrame(Component):
         self.add_param('tower_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on tower')
         
         # Semi geometry
-        self.add_param('radius_to_auxiliary_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
-        self.add_param('number_of_auxiliary_columns', val=3, desc='Number of ballast columns evenly spaced around base column')
+        self.add_param('radius_to_offset_column', val=0.0, units='m',desc='Distance from base column centerpoint to ballast column centerpoint')
+        self.add_param('number_of_offset_columns', val=3, desc='Number of ballast columns evenly spaced around base column')
 
         # Pontoon properties
         self.add_param('pontoon_outer_diameter', val=0.0, units='m',desc='Outer radius of tubular pontoon that connects ballast or base columns')
@@ -142,13 +142,13 @@ class FloatingFrame(Component):
         self.add_output('base_shell_buckling', np.zeros(nFull-1), desc='Shell buckling constraint. Should be < 1 for feasibility. Includes safety factors')
         self.add_output('base_global_buckling', np.zeros(nFull-1), desc='Global buckling constraint. Should be < 1 for feasibility. Includes safety factors')
 
-        self.add_output('auxiliary_stress', np.zeros(nFull-1), desc='Von Mises stress utilization along auxiliary column at specified locations. Incudes safety factor.')
-        self.add_output('auxiliary_stress:axial', np.zeros(nFull-1), desc='Axial stress along auxiliary column at specified locations.')
-        self.add_output('auxiliary_stress:shear', np.zeros(nFull-1), desc='Shear stress along auxiliary column at specified locations.')
-        self.add_output('auxiliary_stress:hoop', np.zeros(nFull-1), desc='Hoop stress along auxiliary column at specified locations.')
-        self.add_output('auxiliary_stress:hoopStiffen', np.zeros(nFull-1), desc='Hoop stress along auxiliary column at specified locations.')
-        self.add_output('auxiliary_shell_buckling', np.zeros(nFull-1), desc='Shell buckling constraint. Should be < 1 for feasibility. Includes safety factors')
-        self.add_output('auxiliary_global_buckling', np.zeros(nFull-1), desc='Global buckling constraint. Should be < 1 for feasibility. Includes safety factors')
+        self.add_output('offset_stress', np.zeros(nFull-1), desc='Von Mises stress utilization along offset column at specified locations. Incudes safety factor.')
+        self.add_output('offset_stress:axial', np.zeros(nFull-1), desc='Axial stress along offset column at specified locations.')
+        self.add_output('offset_stress:shear', np.zeros(nFull-1), desc='Shear stress along offset column at specified locations.')
+        self.add_output('offset_stress:hoop', np.zeros(nFull-1), desc='Hoop stress along offset column at specified locations.')
+        self.add_output('offset_stress:hoopStiffen', np.zeros(nFull-1), desc='Hoop stress along offset column at specified locations.')
+        self.add_output('offset_shell_buckling', np.zeros(nFull-1), desc='Shell buckling constraint. Should be < 1 for feasibility. Includes safety factors')
+        self.add_output('offset_global_buckling', np.zeros(nFull-1), desc='Global buckling constraint. Should be < 1 for feasibility. Includes safety factors')
 
         self.add_output('tower_stress', np.zeros(nFull-1), desc='Von Mises stress utilization along tower at specified locations.  incudes safety factor.')
         self.add_output('tower_stress:axial', np.zeros(nFull-1), desc='Axial stress along tower column at specified locations.')
@@ -160,7 +160,7 @@ class FloatingFrame(Component):
 
         self.add_output('plot_matrix', val=np.array([]), desc='Ratio of shear stress to yield stress for all pontoon elements', pass_by_obj=True)
         self.add_output('base_connection_ratio', val=np.zeros((nFull,)), desc='Ratio of pontoon outer diameter to base outer diameter')
-        self.add_output('auxiliary_connection_ratio', val=np.zeros((nFull,)), desc='Ratio of pontoon outer diameter to base outer diameter')
+        self.add_output('offset_connection_ratio', val=np.zeros((nFull,)), desc='Ratio of pontoon outer diameter to base outer diameter')
 
         self.add_output('structural_frequencies', np.zeros(NFREQ), units='Hz', desc='First six natural frequencies')
         self.add_output('substructure_mass', val=0.0, units='kg', desc='Mass of substructure elements and connecting truss')
@@ -198,7 +198,7 @@ class FloatingFrame(Component):
             return
         
         # Unpack variables
-        ncolumn         = int(params['number_of_auxiliary_columns'])
+        ncolumn         = int(params['number_of_offset_columns'])
         crossAttachFlag = params['cross_attachment_pontoons']
         lowerAttachFlag = params['lower_attachment_pontoons']
         upperAttachFlag = params['upper_attachment_pontoons']
@@ -206,15 +206,15 @@ class FloatingFrame(Component):
         upperRingFlag   = params['upper_ring_pontoons']
         outerCrossFlag  = params['outer_cross_pontoons']
         
-        R_semi         = params['radius_to_auxiliary_column'] if ncolumn>0 else 0.0
+        R_semi         = params['radius_to_offset_column'] if ncolumn>0 else 0.0
         R_od_pontoon   = 0.5*params['pontoon_outer_diameter']
         R_od_base      = 0.5*params['base_d_full']
-        R_od_ballast   = 0.5*params['auxiliary_d_full']
+        R_od_ballast   = 0.5*params['offset_d_full']
         R_od_tower     = 0.5*params['tower_d_full']
         R_od_fairlead  = 0.5*params['fairlead_support_outer_diameter']
 
         t_wall_base     = params['base_t_full']
-        t_wall_ballast  = params['auxiliary_t_full']
+        t_wall_ballast  = params['offset_t_full']
         t_wall_pontoon  = params['pontoon_wall_thickness']
         t_wall_tower    = params['tower_t_full']
         t_wall_fairlead = params['fairlead_support_wall_thickness']
@@ -225,14 +225,14 @@ class FloatingFrame(Component):
         sigma_y        = params['yield_stress']
         
         z_base         = params['base_z_full']
-        z_ballast      = params['auxiliary_z_full']
+        z_ballast      = params['offset_z_full']
         z_tower        = params['tower_z_full']
         z_attach_upper = z_base[-1] if upperAttachFlag else params['base_pontoon_attach_upper']*(z_base[-1] - z_base[0]) + z_base[0]
         z_attach_lower = params['base_pontoon_attach_lower']*(z_base[-1] - z_base[0]) + z_base[0]
         z_fairlead     = -params['fairlead']
         
         m_base         = params['base_mass']
-        m_ballast      = params['auxiliary_mass']
+        m_ballast      = params['offset_mass']
         m_tower        = params['tower_mass_section']
         
         m_rna          = params['rna_mass']
@@ -244,16 +244,16 @@ class FloatingFrame(Component):
         rhoWater       = params['water_density']
         
         V_base         = params['base_displaced_volume']
-        V_ballast      = params['auxiliary_displaced_volume']
+        V_ballast      = params['offset_displaced_volume']
 
         F_hydro_base    = params['base_hydrostatic_force']
-        F_hydro_ballast = params['auxiliary_hydrostatic_force']
+        F_hydro_ballast = params['offset_hydrostatic_force']
 
         z_cb_base      = params['base_center_of_buoyancy']
-        z_cb_ballast   = params['auxiliary_center_of_buoyancy']
+        z_cb_ballast   = params['offset_center_of_buoyancy']
         
         cg_base        = np.r_[0.0, 0.0, params['base_center_of_mass']]
-        cg_ballast     = np.r_[0.0, 0.0, params['auxiliary_center_of_mass']]
+        cg_ballast     = np.r_[0.0, 0.0, params['offset_center_of_mass']]
         cg_tower       = np.r_[0.0, 0.0, params['tower_center_of_mass']]
         
         coeff          = params['pontoon_cost_rate']
@@ -273,10 +273,10 @@ class FloatingFrame(Component):
 
         # Quick ratio for unknowns
         unknowns['base_connection_ratio']    = params['connection_ratio_max'] - R_od_pontoon/R_od_base
-        unknowns['auxiliary_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_ballast
+        unknowns['offset_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_ballast
 
         # --- INPUT CHECKS -----
-        # There is no truss if not auxiliary columns
+        # There is no truss if not offset columns
         if ncolumn == 0:
             crossAttachFlag = lowerAttachFlag = upperAttachFlag = False
             lowerRingFlag = upperRingFlag = outerCrossFlag  = False
@@ -291,7 +291,7 @@ class FloatingFrame(Component):
             bad_input()
             return
 
-        # If there are auxiliary columns, must have attachment pontoons (only have ring pontoons doesn't make sense)
+        # If there are offset columns, must have attachment pontoons (only have ring pontoons doesn't make sense)
         if (ncolumn > 0) and (not crossAttachFlag) and (not lowerAttachFlag) and (not upperAttachFlag):
             bad_input()
             return
@@ -604,7 +604,7 @@ class FloatingFrame(Component):
 
         # Wind + Wave loading in local base / ballast / tower c.s.
         Px_base,    Py_base,    Pz_base    = params['base_Pz'], params['base_Py'], -params['base_Px']  # switch to local c.s.
-        Px_ballast, Py_ballast, Pz_ballast = params['auxiliary_Pz'], params['auxiliary_Py'], -params['auxiliary_Px']  # switch to local c.s.
+        Px_ballast, Py_ballast, Pz_ballast = params['offset_Pz'], params['offset_Py'], -params['offset_Px']  # switch to local c.s.
         Px_tower,   Py_tower,   Pz_tower   = params['tower_Pz'], params['tower_Py'], -params['tower_Px']  # switch to local c.s.
         epsOff = 1e-5
         # Get mass right- ballasts, stiffeners, tower, rna, etc.
@@ -893,7 +893,7 @@ class FloatingFrame(Component):
         idx  = range(baseEID-1)
         npon = len(idx)
         if len(idx) > 0:
-            qdyn_pontoon = np.max( np.abs( np.r_[params['base_qdyn'], params['auxiliary_qdyn']] ) )
+            qdyn_pontoon = np.max( np.abs( np.r_[params['base_qdyn'], params['offset_qdyn']] ) )
             sigma_ax_pon = sigma_ax[idx]
             sigma_sh_pon = sigma_sh[idx]
             sigma_h_pon  = util.hoopStress(2*R_od_pontoon, t_wall_pontoon, qdyn_pontoon) * np.ones(sigma_ax_pon.shape)
@@ -947,28 +947,28 @@ class FloatingFrame(Component):
         unknowns['base_global_buckling'] = util.bucklingGL(2*R_od_base, t_wall_base, Nx[idx], M[idx], base_height, modE[idx], sigma_y_vec, gamma_f, gamma_b)
 
         
-        # Extract auxiliary column for Eurocode checks
+        # Extract offset column for Eurocode checks
         if ncolumn > 0:
             idx = ballastEID[0]-1 + np.arange(R_od_ballast.size, dtype=np.int32)
-            L_reinforced     = params['auxiliary_buckling_length']
+            L_reinforced     = params['offset_buckling_length']
             sigma_ax_ballast = sigma_ax[idx]
             sigma_sh_ballast = sigma_sh[idx]
-            qdyn_ballast,_   = nodal2sectional( params['auxiliary_qdyn'] )
+            qdyn_ballast,_   = nodal2sectional( params['offset_qdyn'] )
             sigma_h_ballast  = util.hoopStress(2*R_od_ballast, t_wall_ballast*np.cos(angle_ballast), qdyn_ballast)
 
-            unknowns['auxiliary_stress:axial'] = sigma_ax_ballast
-            unknowns['auxiliary_stress:shear'] = sigma_sh_ballast
-            unknowns['auxiliary_stress:hoop']  = sigma_h_ballast
-            unknowns['auxiliary_stress:hoopStiffen'] = util.hoopStressEurocode(z_ballast, 2*R_od_ballast, t_wall_ballast, L_reinforced, qdyn_ballast)
-            unknowns['auxiliary_stress'] = util.vonMisesStressUtilization(sigma_ax_ballast, sigma_h_ballast, sigma_sh_ballast,
+            unknowns['offset_stress:axial'] = sigma_ax_ballast
+            unknowns['offset_stress:shear'] = sigma_sh_ballast
+            unknowns['offset_stress:hoop']  = sigma_h_ballast
+            unknowns['offset_stress:hoopStiffen'] = util.hoopStressEurocode(z_ballast, 2*R_od_ballast, t_wall_ballast, L_reinforced, qdyn_ballast)
+            unknowns['offset_stress'] = util.vonMisesStressUtilization(sigma_ax_ballast, sigma_h_ballast, sigma_sh_ballast,
                                                                             gamma_f*gamma_m*gamma_n, sigma_y)
 
             sigma_y_vec = sigma_y * np.ones(idx.shape)
-            unknowns['auxiliary_shell_buckling'] = util.shellBucklingEurocode(2*R_od_ballast, t_wall_ballast, sigma_ax_ballast, sigma_h_ballast, sigma_sh_ballast,
+            unknowns['offset_shell_buckling'] = util.shellBucklingEurocode(2*R_od_ballast, t_wall_ballast, sigma_ax_ballast, sigma_h_ballast, sigma_sh_ballast,
                                                                                 L_reinforced, modE[idx], sigma_y_vec, gamma_f, gamma_b)
 
             ballast_height = z_ballast[-1] - z_ballast[0]
-            unknowns['auxiliary_global_buckling'] = util.bucklingGL(2*R_od_ballast, t_wall_ballast, Nx[idx], M[idx], ballast_height, modE[idx], sigma_y_vec, gamma_f, gamma_b)
+            unknowns['offset_global_buckling'] = util.bucklingGL(2*R_od_ballast, t_wall_ballast, Nx[idx], M[idx], ballast_height, modE[idx], sigma_y_vec, gamma_f, gamma_b)
         
         # TODO: FATIGUE
         # Base and ballast columns get API stress/buckling checked in Column Group because that takes into account stiffeners

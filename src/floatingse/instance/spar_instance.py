@@ -7,7 +7,7 @@ class SparInstance(FloatingInstance):
         super(SparInstance, self).__init__()
 
         # Parameters beyond those in superclass
-        self.params['number_of_auxiliary_columns'] = 0
+        self.params['number_of_offset_columns'] = 0
         self.params['cross_attachment_pontoons_int'] = 0
         self.params['lower_attachment_pontoons_int'] = 0
         self.params['upper_attachment_pontoons_int'] = 0

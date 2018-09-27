@@ -49,16 +49,16 @@ class TestSubs(unittest.TestCase):
         self.params['base_column_added_mass'] = 2*np.array([10.0, 10.0, 2.0, 30.0, 30.0, 0.0])
         self.params['base_column_moments_of_inertia'] = 1e2 * np.array([10.0, 10.0, 2.0, 0.0, 0.0, 0.0])
 
-        self.params['auxiliary_column_Iwaterplane'] = 50.0
-        self.params['auxiliary_column_Awaterplane'] = 9.0
-        self.params['auxiliary_column_cost'] = 64.0
-        self.params['auxiliary_column_mass'] = np.ones(NPTS-1)
-        self.params['auxiliary_column_center_of_mass'] = -5.0
-        self.params['auxiliary_column_center_of_buoyancy'] = -4.0
-        self.params['auxiliary_column_added_mass'] = np.array([10.0, 10.0, 2.0, 30.0, 30.0, 0.0])
-        self.params['auxiliary_column_moments_of_inertia'] = 1e1 * np.array([10.0, 10.0, 2.0, 0.0, 0.0, 0.0])
-        self.params['auxiliary_freeboard'] = 10.0
-        self.params['auxiliary_draft'] = 15.0
+        self.params['offset_column_Iwaterplane'] = 50.0
+        self.params['offset_column_Awaterplane'] = 9.0
+        self.params['offset_column_cost'] = 64.0
+        self.params['offset_column_mass'] = np.ones(NPTS-1)
+        self.params['offset_column_center_of_mass'] = -5.0
+        self.params['offset_column_center_of_buoyancy'] = -4.0
+        self.params['offset_column_added_mass'] = np.array([10.0, 10.0, 2.0, 30.0, 30.0, 0.0])
+        self.params['offset_column_moments_of_inertia'] = 1e1 * np.array([10.0, 10.0, 2.0, 0.0, 0.0, 0.0])
+        self.params['offset_freeboard'] = 10.0
+        self.params['offset_draft'] = 15.0
 
         self.params['tower_z_full'] = np.linspace(0, 90, 3*NSECTIONS+1)
         self.params['tower_mass'] = 2e2
@@ -69,10 +69,10 @@ class TestSubs(unittest.TestCase):
         self.params['rna_I'] = 1e5*np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
         self.params['Rhub'] = 3.0
         
-        self.params['number_of_auxiliary_columns'] = 3
+        self.params['number_of_offset_columns'] = 3
         self.params['water_ballast_radius_vector'] = 40.0 * np.ones(5)
         self.params['water_ballast_zpts_vector'] = np.array([-10, -9, -8, -7, -6])
-        self.params['radius_to_auxiliary_column'] = 20.0
+        self.params['radius_to_offset_column'] = 20.0
         self.params['z_center_of_buoyancy'] = -2.0
 
         self.params['water_density'] = 1e3
@@ -84,33 +84,33 @@ class TestSubs(unittest.TestCase):
 
         
     def testSetGeometry(self):
-        self.params['number_of_auxiliary_columns'] = 3
+        self.params['number_of_offset_columns'] = 3
         self.params['Rhub'] = 3.0
         self.params['tower_outer_diameter'] = 2.0*5.0*np.ones(3)
         self.params['base_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
-        self.params['auxiliary_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
-        self.params['auxiliary_z_nodes'] = np.array([-35.0, -15.0, 15.0])
+        self.params['offset_outer_diameter'] = 2*np.array([10.0, 10.0, 10.0])
+        self.params['offset_z_nodes'] = np.array([-35.0, -15.0, 15.0])
         self.params['base_z_nodes'] = np.array([-35.0, -15.0, 15.0])
-        self.params['radius_to_auxiliary_column'] = 25.0
+        self.params['radius_to_offset_column'] = 25.0
         self.params['fairlead'] = 10.0
         self.params['fairlead_offset_from_shell'] = 1.0
-        self.params['auxiliary_freeboard'] = 10.0
-        self.params['auxiliary_draft'] = 15.0
+        self.params['offset_freeboard'] = 10.0
+        self.params['offset_draft'] = 15.0
         self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
 
         # Semi
         self.assertEqual(self.unknowns['fairlead_radius'], 11.0+25.0)
-        self.assertEqual(self.unknowns['base_auxiliary_spacing'], 25.0 - 10.0 - 10.0)
+        self.assertEqual(self.unknowns['base_offset_spacing'], 25.0 - 10.0 - 10.0)
         self.assertEqual(self.unknowns['tower_transition_buffer'], 10-5.0)
         self.assertEqual(self.unknowns['nacelle_transition_buffer'], 4.0-5.0)
-        self.assertEqual(self.unknowns['auxiliary_freeboard_heel_margin'], 10.0 - 25.0*np.sin(np.deg2rad(10.0)))
-        self.assertEqual(self.unknowns['auxiliary_draft_heel_margin'], 15.0 - 25.0*np.sin(np.deg2rad(10.0)))
+        self.assertEqual(self.unknowns['offset_freeboard_heel_margin'], 10.0 - 25.0*np.sin(np.deg2rad(10.0)))
+        self.assertEqual(self.unknowns['offset_draft_heel_margin'], 15.0 - 25.0*np.sin(np.deg2rad(10.0)))
 
         # Spar
-        self.params['number_of_auxiliary_columns'] = 0
+        self.params['number_of_offset_columns'] = 0
         self.mysemiG.solve_nonlinear(self.params, self.unknowns, None)
         self.assertEqual(self.unknowns['fairlead_radius'], 11.0)
-        self.assertEqual(self.unknowns['base_auxiliary_spacing'], 25.0 - 10.0 - 10.0)
+        self.assertEqual(self.unknowns['base_offset_spacing'], 25.0 - 10.0 - 10.0)
         self.assertEqual(self.unknowns['tower_transition_buffer'], 10-5.0)
         self.assertEqual(self.unknowns['nacelle_transition_buffer'], 4.0-5.0)
 
@@ -128,7 +128,7 @@ class TestSubs(unittest.TestCase):
         self.assertEqual(self.unknowns['variable_ballast_height_ratio'], h_expect/4.0)
         npt.assert_almost_equal(self.unknowns['center_of_mass'], np.array([cg_expect_xy, cg_expect_xy, cg_expect_z]))
         
-        self.params['number_of_auxiliary_columns'] = 0
+        self.params['number_of_offset_columns'] = 0
         self.mysemi.balance(self.params, self.unknowns)
 
         self.assertEqual(self.unknowns['variable_ballast_mass'], m_water)
@@ -150,7 +150,7 @@ class TestSubs(unittest.TestCase):
         self.assertEqual(self.unknowns['offset_force_ratio'], 26.0/1e2)
         self.assertAlmostEqual(self.unknowns['heel_moment_ratio'], (wind_fact*5e4)/(1e4*g*1e3*np.sin(np.deg2rad(10))*np.abs(meta_expect)))
 
-        self.params['number_of_auxiliary_columns'] = 0
+        self.params['number_of_offset_columns'] = 0
         self.mysemi.compute_stability(self.params, self.unknowns)
 
         I_expect = 150.0
@@ -168,7 +168,7 @@ class TestSubs(unittest.TestCase):
     def testPeriods(self):
         # Spar first
         self.params['structure_center_of_mass'] = np.array([0.0, 0.0, -40.0])
-        self.params['number_of_auxiliary_columns'] = 0
+        self.params['number_of_offset_columns'] = 0
         self.mysemi.balance(self.params, self.unknowns)
         self.params['base_column_center_of_mass'] = self.unknowns['center_of_mass'][-1]
         self.params['base_column_center_of_buoyancy'] = self.unknowns['center_of_mass'][-1]+2.0

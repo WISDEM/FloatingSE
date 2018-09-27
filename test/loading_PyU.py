@@ -50,7 +50,7 @@ def getParams():
     params['upper_ring_pontoons'] = True
     params['outer_cross_pontoons'] = True
 
-    params['number_of_auxiliary_columns'] = 3
+    params['number_of_offset_columns'] = 3
     params['connection_ratio_max'] = 0.25
 
     params['number_of_mooring_connections'] = 3
@@ -67,7 +67,7 @@ def getParams():
     params['base_pontoon_attach_upper'] = 1.0
     params['base_pontoon_attach_lower'] = 0.0
 
-    params['radius_to_auxiliary_column'] = 10.0
+    params['radius_to_offset_column'] = 10.0
     params['pontoon_outer_diameter'] = 2.0
     params['pontoon_wall_thickness'] = 1.0
 
@@ -86,20 +86,20 @@ def getParams():
     params['base_column_Pz'] = np.zeros(NPTS)
     params['base_column_qdyn'] = 70.0 * np.ones(NPTS)
 
-    params['auxiliary_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
-    params['auxiliary_d_full'] = 2*2.0 * np.ones(NPTS)
-    params['auxiliary_t_full'] = 0.05 * np.ones(NPTS)
-    params['auxiliary_column_mass'] = 1e1 * np.ones(NSECTIONS)
-    params['auxiliary_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
-    params['auxiliary_column_displaced_volume'] = 1e1 * np.ones(NSECTIONS)
-    params['auxiliary_column_hydrostatic_force'] = np.zeros(NSECTIONS)
-    params['auxiliary_column_hydrostatic_force'][0] = params['base_column_displaced_volume'].sum()*g*params['water_density']
-    params['auxiliary_column_center_of_buoyancy'] = -5.0
-    params['auxiliary_column_center_of_mass'] = -3.0
-    params['auxiliary_column_Px'] = 50.0 * np.ones(NPTS)
-    params['auxiliary_column_Py'] = np.zeros(NPTS)
-    params['auxiliary_column_Pz'] = np.zeros(NPTS)
-    params['auxiliary_column_qdyn'] = 70.0 * np.ones(NPTS)
+    params['offset_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
+    params['offset_d_full'] = 2*2.0 * np.ones(NPTS)
+    params['offset_t_full'] = 0.05 * np.ones(NPTS)
+    params['offset_column_mass'] = 1e1 * np.ones(NSECTIONS)
+    params['offset_column_buckling_length'] = 2.0 * np.ones(NSECTIONS)
+    params['offset_column_displaced_volume'] = 1e1 * np.ones(NSECTIONS)
+    params['offset_column_hydrostatic_force'] = np.zeros(NSECTIONS)
+    params['offset_column_hydrostatic_force'][0] = params['base_column_displaced_volume'].sum()*g*params['water_density']
+    params['offset_column_center_of_buoyancy'] = -5.0
+    params['offset_column_center_of_mass'] = -3.0
+    params['offset_column_Px'] = 50.0 * np.ones(NPTS)
+    params['offset_column_Py'] = np.zeros(NPTS)
+    params['offset_column_Pz'] = np.zeros(NPTS)
+    params['offset_column_qdyn'] = 70.0 * np.ones(NPTS)
 
     params['tower_z_full'] = np.linspace(0, 90, NPTS)
     params['tower_d_full'] = 2*7.0 * np.ones(NPTS)
@@ -142,11 +142,11 @@ class TestFrame(unittest.TestCase):
         self.mytruss = None
 
     def testStandard(self):
-        self.params['auxiliary_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 3.0])
+        self.params['offset_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 3.0])
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         npt.assert_equal(self.unknowns['base_connection_ratio'], 0.25-0.1)
-        npt.assert_equal(self.unknowns['auxiliary_connection_ratio'], 0.25-0.5)
+        npt.assert_equal(self.unknowns['offset_connection_ratio'], 0.25-0.5)
         #DrawTruss(self.mytruss)
         
 
@@ -157,7 +157,7 @@ class TestFrame(unittest.TestCase):
         self.params['lower_ring_pontoons'] = False
         self.params['upper_ring_pontoons'] = False
         self.params['outer_cross_pontoons'] = False
-        self.params['number_of_auxiliary_columns'] = 0
+        self.params['number_of_offset_columns'] = 0
         
         #self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
@@ -165,8 +165,8 @@ class TestFrame(unittest.TestCase):
         
         
     def testOutputsIncremental(self):
-        ncyl   = self.params['number_of_auxiliary_columns']
-        R_semi = self.params['radius_to_auxiliary_column']
+        ncyl   = self.params['number_of_offset_columns']
+        R_semi = self.params['radius_to_offset_column']
         Ro     = 0.5*self.params['pontoon_outer_diameter']
         Ri     = Ro - self.params['pontoon_wall_thickness']
         rho    = self.params['material_density']
@@ -251,17 +251,17 @@ class TestFrame(unittest.TestCase):
 
 
     def testForces(self):
-        self.params['auxiliary_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
+        self.params['offset_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
         self.params['base_z_full'] = np.linspace(-1e-4, 0.0, NPTS)
         self.params['tower_z_full'] = np.linspace(0, 1e-4, NPTS)
         self.params['fairlead'] = 0.0
-        self.params['number_of_auxiliary_columns'] = 0
+        self.params['number_of_offset_columns'] = 0
         self.params['base_column_mass'] = 1.0 * np.ones(NSECTIONS)
         self.params['base_column_center_of_mass'] = 0.0
         self.params['base_column_hydrostatic_force'] = 1e-12 * np.ones(NSECTIONS)
-        self.params['auxiliary_column_mass'] = 0.0 * np.ones(NSECTIONS)
-        self.params['auxiliary_column_center_of_mass'] = 0.0
-        self.params['auxiliary_column_hydrostatic_force'] = 1e-12 * np.ones(NSECTIONS)
+        self.params['offset_column_mass'] = 0.0 * np.ones(NSECTIONS)
+        self.params['offset_column_center_of_mass'] = 0.0
+        self.params['offset_column_hydrostatic_force'] = 1e-12 * np.ones(NSECTIONS)
         self.params['tower_mass'] = 1.0 * np.ones(NSECTIONS)
         self.params['tower_center_of_mass'] = 0.0
         self.params['rna_mass'] = 1.0
@@ -270,10 +270,10 @@ class TestFrame(unittest.TestCase):
         self.params['rna_cg'] = np.array([0.0, 0.0, 0.0])
         self.params['rna_I'] = np.zeros(6)
         self.params['base_column_Px'] = 0.0 * np.ones(NSECTIONS)
-        self.params['auxiliary_column_Px'] = 0.0 * np.ones(NSECTIONS)
+        self.params['offset_column_Px'] = 0.0 * np.ones(NSECTIONS)
         self.params['tower_Px'] = 0.0 * np.ones(NSECTIONS)
         self.params['base_column_qdyn'] = 0.0 * np.ones(NPTS)
-        self.params['auxiliary_column_qdyn'] = 0.0 * np.ones(NPTS)
+        self.params['offset_column_qdyn'] = 0.0 * np.ones(NPTS)
         self.params['tower_qdyn'] = 0.0 * np.ones(NPTS)
         self.params['cross_attachment_pontoons'] = False
         self.params['lower_attachment_pontoons'] = False
@@ -292,7 +292,7 @@ class TestFrame(unittest.TestCase):
         self.params['fairlead_support_outer_diameter'] = 2*np.sqrt(2.0/np.pi)
         self.params['fairlead_support_wall_thickness'] = np.sqrt(2.0/np.pi) - np.sqrt(1.0/np.pi)
         self.params['material_density'] = 20.0
-        self.params['radius_to_auxiliary_column'] = 1.0
+        self.params['radius_to_offset_column'] = 1.0
 
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
@@ -322,25 +322,25 @@ class TestSandbox(unittest.TestCase):
 
         
     def testBadInput(self):
-        self.params['number_of_auxiliary_columns'] = 1
+        self.params['number_of_offset_columns'] = 1
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
         self.assertEqual(self.unknowns['substructure_mass'], 1e30)
 
-        self.params['number_of_auxiliary_columns'] = 2
+        self.params['number_of_offset_columns'] = 2
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
         self.assertEqual(self.unknowns['substructure_mass'], 1e30)
 
-        self.params['number_of_auxiliary_columns'] = 8
+        self.params['number_of_offset_columns'] = 8
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
         self.assertEqual(self.unknowns['substructure_mass'], 1e30)
 
-        self.params['number_of_auxiliary_columns'] = 3
+        self.params['number_of_offset_columns'] = 3
         self.params['base_z_full'][-2] = self.params['base_z_full'][-3] + 1e-12
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
         self.assertEqual(self.unknowns['substructure_mass'], 1e30)
 
     def testCombinations(self):
-        self.params['radius_to_auxiliary_column'] = 30.0
+        self.params['radius_to_offset_column'] = 30.0
         
         for nc in [0, 3, 4, 5, 6, 7]:
             
@@ -355,7 +355,7 @@ class TestSandbox(unittest.TestCase):
                             for urp in [True, False]:
                                 
                                 for ocp in [True, False]:
-                                    self.params['number_of_auxiliary_columns'] = nc
+                                    self.params['number_of_offset_columns'] = nc
                                     self.params['number_of_mooring_connections'] = np.maximum(nc, 3)
                                     self.params['mooring_lines_per_connection'] = 1
                                     self.params['cross_attachment_pontoons'] = cap
