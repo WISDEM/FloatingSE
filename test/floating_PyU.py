@@ -76,7 +76,7 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['mooring_type']               = 'chain'       # Options are chain, nylon, polyester, fiber, or iwrc
         self.myfloat['anchor_type']                = 'suctionpile' # Options are SUCTIONPILE or DRAGEMBEDMENT
         self.myfloat['mooring_diameter']           = 0.09          # Diameter of mooring line/chain [m]
-        self.myfloat['fairlead']                   = 70.0          # Distance below waterline for attachment [m]
+        self.myfloat['fairlead_location']          = 0.384615 # Want 70.0          # Distance below waterline for attachment [m]
         self.myfloat['fairlead_offset_from_shell'] = 0.5           # Offset from shell surface for mooring attachment [m]
         self.myfloat['mooring_line_length']        = 300+902.2         # Unstretched mooring line length
         self.myfloat['anchor_radius']              = 853.87        # Distance from centerline to sea floor landing [m]
@@ -84,11 +84,12 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['fairlead_support_wall_thickness'] = 0.0175 # Thickness of all fairlead support elements [m]
 
         # Mooring constraints
-        self.myfloat['mooring_max_offset'] = 0.1*self.myfloat['water_depth'] # Max surge/sway offset [m]      
+        self.myfloat['max_offset'] = 0.1*self.myfloat['water_depth'] # Max surge/sway offset [m]      
         self.myfloat['max_survival_heel']   = 10.0 # Max heel (pitching) angle [deg]
-        self.myfloat['mooring_operational_heel']   = 5.0 # Max heel (pitching) angle [deg]
+        self.myfloat['operational_heel']   = 5.0 # Max heel (pitching) angle [deg]
 
         # Design constraints
+        self.myfloat['max_draft'] = 200.0                # For manufacturability of rolling steel
         self.myfloat['max_taper_ratio'] = 0.4                # For manufacturability of rolling steel
         self.myfloat['min_diameter_thickness_ratio'] = 120.0 # For weld-ability
 
