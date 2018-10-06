@@ -8,14 +8,15 @@ are outputs of other WISDEM modules.  For example force, moment, and
 mass properties of the RNA.  An OpenMDAO Group that links these other
 modules together to form a virtual floating turbine does not explicitly
 fit within the conceptual boundaries of the \texttt{src/floatingse} package.
-However, two other files within the \textit{FloatingSE} \texttt{src}-directory
-(but outside the \texttt{src/floatingse} package) do assemble the virtual
-floating turbine Group,
+However, two files within the \textit{WISDEM} module (meant for
+high-level coupling of multiple WISDEM components) \texttt{src/floating}-directory
+do assemble the virtual floating turbine,
 
 {\small
 \begin{tabularx}{\textwidth}{ l X }
 \texttt{floating\_turbine\_assembly.py} & OpenMDAO Group that connects  multiple WISDEM modules for a complete floating offshore turbine simulation and optimization.\\
-\texttt{floating\_turbine\_instance.py} & Example implementing the above Group.
+\texttt{floating\_turbine\_instance.py} & Implements the above assembly
+and extends.
 \end{tabularx}
 }
 
@@ -89,3 +90,38 @@ found in their home modules.
 
 %\section{Example}
 %TODO
+
+\begin{table}[htbp] \begin{center}
+    \caption{Additional constraints used in full floating offshore
+      turbine optimization.}
+    \label{tbl:constraints-turb}
+    {\footnotesize
+  \begin{tabular}{ c l c l} \hline
+    \textbf{Lower} & \textbf{Name} & \textbf{Upper} & \textbf{Description}\\
+\hline \hline
+    & \textbf{Rotor} &  &\\
+ & rotor.P1\_margin & 1.00 & Blade frequency keep away from 1P rotor frequency\\
+ & rotor.Pn\_margin & 1.00 & Blade frequency keep away from 3P rotor frequency\\
+ & rotor.rotor\_buckling\_sparL & 1.00 & Rotor blade upper spar cap structural buckling unity constraint\\
+ & rotor.rotor\_buckling\_sparU & 1.00 & Rotor blade lower spar cap structural buckling unity constraint\\
+ & rotor.rotor\_buckling\_teL & 1.00 & Rotor blade upper trailing edge panel structural buckling unity constraint\\
+ & rotor.rotor\_buckling\_teU & 1.00 & Rotor blade lower trailing edge panel structural buckling unity constraint\\
+ & rotor.rotor\_damage\_sparL & 0.00 & Rotor blade upper spar cap structural damage constraint\\
+ & rotor.rotor\_damage\_sparU & 0.00 & Rotor blade lower spar cap structural damage constraint\\
+ & rotor.rotor\_damage\_teL & 0.00 & Rotor blade upper trailing edge panel structural damage constraint\\
+ & rotor.rotor\_damage\_teU & 0.00 & Rotor blade lower trailing edge panel structural damage constraint\\
+ & rotor.rotor\_strain\_sparL & 1.00 & Rotor blade upper spar cap structural strain unity constraint\\
+  -1.00 & rotor.rotor\_strain\_sparU &  & Rotor blade lower spar cap structural strain unity constraint\\
+ & rotor.rotor\_strain\_teL & 1.00 & Rotor blade upper trailing edge panel structural strain unity constraint\\
+  -1.00 & rotor.rotor\_strain\_teU &  & Rotor blade lower trailing edge panel structural strain unity constraint\\
+ & \textbf{Geometry} &  & \\
+  20.00 & tcons.ground\_clearance &  & Minimum ground clearance of rotor blades\\
+ & tcons.tip\_deflection\_ratio & 1.00 & Tip deflection limit to prevent tower strike as unity\\
+ & \textbf{Stability} &  & \\
+  1.00 & tcons.frequency1P\_margin\_high &  & Eigenfrequencies of entire structure must be below 1P frequency\\
+ & tcons.frequency1P\_margin\_low & 1.00 & Eigenfrequencies of entire structure must be above 1P frequency\\
+  1.00 & tcons.frequency3P\_margin\_high &  & Eigenfrequencies of entire structure must be below 3P frequency\\
+ & tcons.frequency3P\_margin\_low & 1.00 & Eigenfrequencies of entire structure must be above 3P frequency\\
+    \hline \end{tabular}
+  }
+\end{center} \end{table}

@@ -1,4 +1,3 @@
-
 \chapter{Verification}
 \label{sec:verify}
 
@@ -8,7 +7,7 @@ tools.  One of these, Task 30: Offshore Code Comparison Collaboration
 (OC3), shared a spar design among many participants to compare
 performance as modeled by differed tool sets.  A description of the OC3
 spar is provided in \citet{OC3}.  Since it is already a
-well-studied geometry, this design was selected as the focus of
+well-studied geometry, the OC3 spar design was selected as the focus of
 verification for \textit{FloatingSE}.  As part of the Task 30 effort,
 an ANSYS model of the OC3 spar, using shell elements combined with
 stiffeners and bulkheads, was also generated.  This was taken as
@@ -17,7 +16,7 @@ the \textit{truth} standard for comparison.
 \section{Mass Properties}
 The first step in the verification exercise was to ensure that the mass
 properties of the spar predicted by \textit{FloatingSE} matched those
-calculated by ANSYS.  The comparison is shown in Table \ref{tbl:verify},
+calculated by ANSYS.  The comparison is shown in Table \ref{tbl:verify-static},
 where \textit{FloatingSE} summary mass estimates are within $1\%$ error
 of ANSYS.  To ensure that these mass property calculations remain
 consistent over time despite changes in the underlying code, this OC3
@@ -26,7 +25,7 @@ test framework.
 
 \begin{table}[htbp] \begin{center}
     \caption{Mass property comparison for OC3 spar between ANSYS and \textit{FloatingSE}.}
-    \label{tbl:verify}
+    \label{tbl:verify-static}
 {\small
   \begin{tabular}{ l c l l l } \hline
     \textbf{Property} & \textbf{Units} & \textbf{ANSYS} & \textbf{WISDEM} & \textbf{Error}\\
@@ -48,9 +47,9 @@ test framework.
 \subsection{Without wind and waves}
 With the mass property comparison showing little difference between
 ANSYS and \textit{FloatingSE} calculations, the verification proceeded
-to static load cases.  The spar was simulated in quiescent air and water
+to static cases.  The spar was simulated in quiescent air and water
 (no wind, waves, or current), which isolated the weight of the turbine
-and hydrostatic pressure forces as the only load sources on the
+and hydrostatic pressure forces as the only sources on the
 substructure.  The effective von Mises stress, as calculated by
 \textit{FloatingSE}, was compared to the ANSYS model.  This comparison,
 as a function of the z-coordinate along the spar axis ($z=0$ at the
@@ -76,5 +75,36 @@ At this time, more complicated loading cases, with wind and wave loading
 included, have not been performed.
 
 \section{Hydrodynamic Verification}
-TODO- Check OC3 rigid body modes against projection here
+The rigid body modes predicted by \textit{FloatingSE} were compared
+against a FAST model of the OC3 spar.  FAST was used as the truth
+solution in this case because it more accurately handles mooring
+dynamics than the ANSYS structural model and more accurately captures
+hydrodynamic phenomenon.  The results are shown in Table
+\ref{tbl:verify-fast}.  The errors in the surge, sway, roll, and pitch
+frequencies are 11-12\%.  \textit{FloatingSE} actually estimates the
+heave mode frequency quite accurately, to less than 1\% error, but is
+significantly off in estimating the yaw mode frequency.  This was deemed
+acceptable as there is no focus on the yaw DOF in \textit{FloatingSE}.
+
+\begin{table}[htbp] \begin{center}
+    \caption{Rigid body eigen-mode comparison for OC3 spar between FAST and \textit{FloatingSE}.}
+    \label{tbl:verify-fast}
+{\small
+  \begin{tabular}{ l c l l l } \hline
+    \textbf{Eigenmode} & \textbf{FAST} & \textbf{WISDEM} & \textbf{Error}\\
+    \hline \hline
+    Platform surge [$Hz$] & 0.0080479 & 0.0071256 & -11.46\%\\
+    Platform sway [$Hz$] & 0.0080475 & 0.0071256 & -11.46\% \\
+    Platform heave [$Hz$] & 0.0324294 & 0.032235 & -0.60\% \\
+    Platform roll [$Hz$] & 0.0342412 & 0.0385349 & 12.54\% \\
+    Platform pitch [$Hz$] & 0.0342602 & 0.0385349 & 12.48\% \\
+    Platform yaw [$Hz$] & 0.1210301 & 0.0526347 & -56.51\% \\
+  \hline \end{tabular}
+}
+\end{center} \end{table}
+
+
+
+
+
 

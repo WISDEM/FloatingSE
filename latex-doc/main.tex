@@ -3,30 +3,35 @@
 % ---------------
 % PREAMBLE
 % ---------------
-\documentclass[tagged]{NRELreport}
-%\documentclass[tagged,10pt]{NRELarticle}
+\documentclass{book}
 \usepackage{hyperref}
 \usepackage{tabularx}
 \usepackage{units}
+%\usepackage{listings}
+\usepackage{subcaption}
+\usepackage{graphics,graphicx,color}
+\usepackage{amsmath,amsthm,amssymb,amsfonts,stmaryrd,latexsym}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\setstretch{1.1}
+\usepackage[format=hang,labelfont={small,bf},textfont=small]{caption}
+\usepackage[square,comma,numbers,sort&compress]{natbib}
 
-
-% -----------------------------------
-\addbibresource{offshore.bib}
 % -----------------------------------
 % DOCUMENT PROPERTIES
 % -----------------------------------
 \title{FloatingSE Documentation}
-\author{Garrett Barter, PhD and Senu Sirnivas}
-\date{March 30, 2018}
+\author{Garrett E. Barter and Senu Sirnivas}
+\date{October 5, 2018}
 % -------------------------------------
 % CUSTOMIZATIONS
 % -------------------------------------
 
 \newcommand{\mytt}[1]{\texttt{\scriptsize #1}}
+\newcommand{\mcal}[1]{\mathcal{#1}}
 \newcommand{\mbb}[1]{\mathbb{#1}}
 \newcommand{\mbf}[1]{\mathbf{#1}}
 \newcommand{\sbf}[1]{\boldsymbol{#1}}
-\newcommand{\mcal}[1]{\mathcal{#1}}
 % 'st' 'nd' 'rd' 'th' superscripts for numbers
 \newcommand{\first}{\raise.5ex\hbox{\small st}}
 \newcommand{\second}{\raise.5ex\hbox{\small nd}}
@@ -37,15 +42,14 @@
 % -------------------------------------
 % DOCUMENT STARTS HERE
 % -------------------------------------
-\lstset{language=Python,columns=fullflexible,keepspaces=true,breaklines=true,basicstyle=\scriptsize\ttfamily,mathescape=true,aboveskip=-6pt,belowskip=0pt}
+%\lstset{language=Python,columns=fullflexible,keepspaces=true,breaklines=true,basicstyle=\scriptsize\ttfamily,mathescape=true,aboveskip=-6pt,belowskip=0pt}
 \setcounter{tocdepth}{1}
 \begin{document}
 
-\frontmatter
 %\input{acknowledge}
 % \input{executive_summary}
 
-\mainmatter
+\maketitle
 \tableofcontents
 \listoffigures
 \listoftables
@@ -62,6 +66,9 @@
 
 % bibliography
 \cleardoublepage
-\label{sec:Bib}
-\printbibliography[heading=bibintoc]
+\begin{singlespace} \begin{small} \pagestyle{plain}
+    \bibliography{offshore}
+    \bibliographystyle{nattyice-long}
+    \addcontentsline{toc}{chapter}{\hspace{3ex}Bibliography}
+\end{small} \end{singlespace}
 \end{document}

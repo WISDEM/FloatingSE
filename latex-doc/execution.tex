@@ -32,13 +32,13 @@ cumulatively are in Table \ref{tbl:metocean}
   \begin{tabular}{ l l c l } \hline
     \textbf{Variable} & \textbf{Type} & \textbf{Units} & \textbf{Description} \\
     \mytt{water\_depth} & Float scalar & $m$& Distance to sea floor \\
-    \mytt{hmax}        & Float scalar & $m$& Significant wave height \\
+    \mytt{Hs}        & Float scalar & $m$& Significant wave height \\
     \mytt{T}           & Float scalar & $s$& Wave period \\
     \mytt{cm}          & Float scalar && Added mass coefficient\\
     \mytt{Uc}          & Float scalar & $m/s$& Mean current speed \\
     \mytt{z0}          & Float scalar & $m$& z-coordinate of water line \\
     \mytt{water\_density}      & Float scalar & $kg/m^3$& Density of water \\
-    \mytt{base.waveLoads.mu}  & Float scalar & $kg/m/s$& Viscosity of water \\
+    \mytt{main.waveLoads.mu}  & Float scalar & $kg/m/s$& Viscosity of water \\
   \hline \end{tabular}
 }
 \end{center} \end{table}
@@ -71,8 +71,8 @@ the wind-related variables are in Table \ref{tbl:windvar}.
     \mytt{zref}        & Float scalar & $m$& Wind reference height \\
     \mytt{shearExp}    & Float scalar && Shear exponent in wind power law\\
     \mytt{beta}        & Float scalar & $deg$& Wind beta angle \\
-    \mytt{base.windLoads.rho} & Float scalar & $kg/m^3$& Density of air \\
-    \mytt{base.windLoads.mu}  & Float scalar & $kg/m/s$& Viscosity of air \\
+    \mytt{main.windLoads.rho} & Float scalar & $kg/m^3$& Density of air \\
+    \mytt{main.windLoads.mu}  & Float scalar & $kg/m/s$& Viscosity of air \\
   \hline \end{tabular}
 }
 \end{center} \end{table}
@@ -97,7 +97,7 @@ substructure columns and has similar variable names, listed in Table
 {\footnotesize
   \begin{tabular}{ l l c l } \hline
     \textbf{Variable} & \textbf{Type} & \textbf{Units} & \textbf{Description} \\
-    \mytt{hub\_height}              & Float scalar & $m$& Length from tower base to top (not including freeboard) \\
+    \mytt{hub\_height}              & Float scalar & $m$& Length from tower main.to top (not including freeboard) \\
     \mytt{tower\_section\_height}    & Float array ($n_s$) & $m$& Length of each tower section \\
     \mytt{tower\_outer\_diameter}    & Float array ($n_s+1$) & $m$& Diameter at each tower section node (linear lofting between) \\
     \mytt{tower\_wall\_thickness}    & Float array ($n_s+1$) & $m$& Diameter at each tower section node (linear lofting between) \\
@@ -143,7 +143,7 @@ sub-components in the order that they are listed in Table
 given prefixes to aid in referring to specific variables.  The prefixes
 used in \textit{FloatingSE} are also listed in Table \ref{tbl:exec}.
 These prefixes also appear in some of the variable names listed above (e.g.,
-\texttt{base.waveLoads.mu}) and will appear in the discussion of
+\texttt{main.waveLoads.mu}) and will appear in the discussion of
 optimization constraints in Section \ref{sec:opt}.
 
 \begin{table}[htbp] \begin{center}
@@ -154,10 +154,10 @@ optimization constraints in Section \ref{sec:opt}.
     &  \textbf{Prefix} & \textbf{Name} & \textbf{Description} \\ \hline\hline
     1) & \texttt{tow} & \textit{TowerLeanSE} & Discretization of tower
     geometry (but no analysis) \\
-    2) & \texttt{base} & \textit{Column} & Discretization and API
-    Bulletin 2U compliance of base vertical column \\
-    3) & \texttt{aux} & \textit{Column} & Discretization and API
-    Bulletin 2U compliance of auxiliary columns \\
+    2) & \texttt{main} & \textit{Column} & Discretization and API
+    Bulletin 2U compliance of main.vertical column \\
+    3) & \texttt{off} & \textit{Column} & Discretization and API
+    Bulletin 2U compliance of offset columns \\
     4) & \texttt{sg} & \textit{SubstructureGeometry} & Geometrical constraints
     on substructure \\
     5) & \texttt{mm} & \textit{MapMooring} & Mooring system analysis via \textit{pyMAP} \\
@@ -201,15 +201,14 @@ Figure \ref{fig:initial}
 \begin{figure}[htb]
   \begin{subfigure}[b]{0.49\linewidth}
     \centering \includegraphics[width=\linewidth]{figs/spar-initial.pdf}
-    \caption{Spar}
+    \caption{OC3 Spar}
   \end{subfigure}
   \begin{subfigure}[b]{0.49\linewidth}
     \centering \includegraphics[width=\linewidth]{figs/semi-initial.pdf}
-    \caption{Semisubmersible}
+    \caption{OC4 Semisubmersible}
   \end{subfigure}\\
   \caption{Spar and semisubmersible examples in \textit{FloatingSE} taken from
     OC3\citep{OC3} and OC4\citep{OC4} projects.}
   \label{fig:initial}
 \end{figure}
 
-TODO: SEE FLOATING.PY FOR FULL EXAMPLES
