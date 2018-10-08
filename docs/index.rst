@@ -3,9 +3,9 @@ FloatingSE
 
 .. only:: html
 
-    Internal structural analysis of the spar structure.
+    Floating substructure conceptual design tool
 
-    Author: `Kelly Huang <mailto:yh393@cornell.edu>`_
+    Author: `Garrett Barter <mailto:garrett.barter@nrel.gov>`_
 
     .. rubric:: Table of Contents
 
@@ -14,9 +14,12 @@ FloatingSE
     :numbered:
     :maxdepth: 2
 
-    intro
-    installation
-    tutorial
-    documentation
+    introduction
+    package
+    geometry
     theory
-
+    verification
+    execution
+    optimization
+    other
+    zzbibliography

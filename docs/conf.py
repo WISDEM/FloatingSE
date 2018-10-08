@@ -20,10 +20,10 @@ sys.path.insert(0, os.path.abspath('.'))
 # sys.path.append(os.path.abspath('exts'))
 
 codeName = u'FloatingSE'
-authorName = u'Kelly Huang'
-copyright = u'2015, NREL'
-version = '0.1'
-release = '0.1.0'
+authorName = u'Garrett Barter'
+copyright = u'2018, NREL'
+version = '1.0'
+release = '1.0.0'
 
 # -- General configuration -----------------------------------------------------
 
@@ -33,12 +33,12 @@ release = '0.1.0'
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode',
-              'numpydoc', 'sphinx.ext.autosummary', 'sphinxcontrib.bibtex', 'exts.numfig',
-              'sphinxcontrib.zopeext.autointerface', 'sphinx.ext.intersphinx']
+              'numpydoc', 'sphinx.ext.autosummary', 'sphinxcontrib.bibtex', 'sphinx.ext.intersphinx']#, 'exts.numfig']
 
 autosummary_generate = True  # generate the autosummary pages automatically
 numpydoc_show_class_members = False  # don't let numpydoc generate autosummary b/c it messes up toctree
-number_figures = True  # used by numfig to number the figures in html output
+#number_figures = True  # used by numfig to number the figures in html output
+numfig = True
 autoclass_content = 'init'  # include the init docstring rather than the class docstring
 rst_prolog = """
 .. role:: bib
@@ -60,7 +60,6 @@ master_doc = 'index'
 
 # General information about the project.
 project = codeName
-# copyright = u'2013, S. Andrew Ning'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -142,7 +141,7 @@ html_theme_path = ['.']
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ['nrel-theme/static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
