@@ -21,5 +21,4 @@ FloatingSE
     verification
     execution
     optimization
-    other
-    zzbibliography
+    zz_other

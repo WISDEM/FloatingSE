@@ -133,3 +133,14 @@ found in their home modules.
    +-------------+-----------------------------------+-------------+------------------------------------------------------------------------------+
 
 
+References
+==========
+
+
+.. only:: html
+
+    :bib:`Bibliography`
+
+.. bibliography:: references.bib
+   :cited:
+   :style: unsrt
