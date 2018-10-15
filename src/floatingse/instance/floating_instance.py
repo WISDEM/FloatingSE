@@ -133,7 +133,6 @@ class FloatingInstance(object):
         self.params['lower_ring_pontoons_int']              = 1
         self.params['upper_ring_pontoons_int']              = 1
         self.params['outer_cross_pontoons_int']             = 1 #False
-        self.params['pontoon_cost_rate']                    = 6.250
 
         # OC4 Tower
         self.params['hub_height']                           = 90.0

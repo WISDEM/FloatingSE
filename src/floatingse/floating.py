@@ -1,8 +1,8 @@
 from openmdao.api import Group, IndepVarComp, Problem, Component
-from .column import Column, ColumnGeometry
-from .substructure import Substructure, SubstructureGeometry
-from .loading import Loading
-from .map_mooring import MapMooring
+from floatingse.column import Column, ColumnGeometry
+from floatingse.substructure import Substructure, SubstructureGeometry
+from floatingse.loading import Loading
+from floatingse.map_mooring import MapMooring
 from towerse.tower import TowerLeanSE
 import numpy as np
 
@@ -242,29 +242,11 @@ class FloatingSE(Group):
 
 
 
-def sparExample():
-    # Number of sections to be used in the design
-    nsection = 5
 
-    # Initialize OpenMDAO problem and FloatingSE Group
-    prob = Problem(root=FloatingSE(nsection))
-    prob.setup()
+def commonVars(prob, nsection):
+    # Variables common to both examples
 
-    # Remove all offset columns
-    prob['number_of_offset_columns'] = 0
-    prob['cross_attachment_pontoons_int']   = 0
-    prob['lower_attachment_pontoons_int']   = 0
-    prob['upper_attachment_pontoons_int']   = 0
-    prob['lower_ring_pontoons_int']         = 0
-    prob['upper_ring_pontoons_int']         = 0
-    prob['outer_cross_pontoons_int']        = 0
-
-    # Set environment to that used in OC3 testing campaign
-    prob['water_depth'] = 320.0  # Distance to sea floor [m]
-    prob['Hs']        = 10.8   # Significant wave height [m]
-    prob['T']           = 9.8    # Wave period [s]
-    prob['Uref']        = 11.0   # Wind reference speed [m/s]
-    prob['zref']        = 119.0  # Wind reference height [m]
+    # Set environment to that used in OC4 testing campaign
     prob['shearExp']    = 0.11   # Shear exponent in wind power law
     prob['cm']          = 2.0    # Added mass coefficient
     prob['Uc']          = 0.0    # Mean current speed
@@ -293,9 +275,11 @@ def sparExample():
     prob['shell_mass_factor']        = 1.0     # Scaling for unaccounted shell mass
     prob['column_mass_factor']       = 1.05    # Scaling for unaccounted column mass
     prob['outfitting_mass_fraction'] = 0.06    # Fraction of additional outfitting mass for each column
-    prob['ballast_cost_rate']        = 100.0   # Cost factor for ballast mass [$/kg]
-    prob['tapered_col_cost_rate']    = 4720.0  # Cost factor for column mass [$/kg]
-    prob['outfitting_cost_rate']     = 6980.0  # Cost factor for outfitting mass [$/kg]
+    prob['ballast_cost_rate']        = 0.1   # Cost factor for ballast mass [$/kg]
+    prob['material_cost_rate']       = 1.1  # Cost factor for column mass [$/kg]
+    prob['labor_cost_rate']          = 1.0  # Cost factor for labor time [$/min]
+    prob['painting_cost_rate']       = 14.4  # Cost factor for column surface finishing [$/m^2]
+    prob['outfitting_cost_rate']     = 1.5*1.1  # Cost factor for outfitting mass [$/kg]
     prob['mooring_cost_rate']        = 1.1     # Cost factor for mooring mass [$/kg]
     
     # Safety factors
@@ -305,34 +289,12 @@ def sparExample():
     prob['gamma_n'] = 1.0  # Safety factor on consequence of failure
     prob['gamma_fatigue'] = 1.755 # Not used
 
-    # Column geometry
-    prob['main_permanent_ballast_height'] = 10.0 # Height above keel for permanent ballast [m]
-    prob['main_freeboard']                = 10.0 # Height extension above waterline [m]
-    prob['main_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])  # Length of each section [m]
-    prob['main_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
-    prob['main_wall_thickness'] = 0.05 * np.ones(nsection+1)               # Shell thickness at each section node (linear lofting between) [m]
-    prob['main_bulkhead_thickness'] = 0.05*np.array([1,1,0,0,0,0]) # Locations/thickness of internal bulkheads at section interfaces [m]
-    
-    # Column ring stiffener parameters
-    prob['main_stiffener_web_height']       = 0.10 * np.ones(nsection) # (by section) [m]
-    prob['main_stiffener_web_thickness']    = 0.04 * np.ones(nsection) # (by section) [m]
-    prob['main_stiffener_flange_width']     = 0.10 * np.ones(nsection) # (by section) [m]
-    prob['main_stiffener_flange_thickness'] = 0.02 * np.ones(nsection) # (by section) [m]
-    prob['main_stiffener_spacing']          = 0.40 * np.ones(nsection) # (by section) [m]
-    
     # Mooring parameters
     prob['number_of_mooring_connections'] = 3             # Evenly spaced around structure
     prob['mooring_lines_per_connection'] = 1             # Evenly spaced around structure
     prob['mooring_type']               = 'chain'       # Options are chain, nylon, polyester, fiber, or iwrc
-    prob['anchor_type']                = 'suctionpile' # Options are SUCTIONPILE or DRAGEMBEDMENT
-    prob['mooring_diameter']           = 0.09          # Diameter of mooring line/chain [m]
-    prob['fairlead']                   = 70.0          # Distance below waterline for attachment [m]
-    prob['fairlead_offset_from_shell'] = 0.5           # Offset from shell surface for mooring attachment [m]
-    prob['mooring_line_length']        = 902.2         # Unstretched mooring line length
-    prob['anchor_radius']              = 853.87        # Distance from centerline to sea floor landing [m]
-    prob['fairlead_support_outer_diameter'] = 3.2    # Diameter of all fairlead support elements [m]
-    prob['fairlead_support_wall_thickness'] = 0.0175 # Thickness of all fairlead support elements [m]
-
+    prob['anchor_type']                = 'DRAGEMBEDMENT' # Options are SUCTIONPILE or DRAGEMBEDMENT
+    
     # Porperties of turbine tower
     prob['hub_height']              = 77.6                              # Length from tower main to top (not including freeboard) [m]
     prob['tower_section_height']    = 77.6/nsection * np.ones(nsection) # Length of each tower section [m]
@@ -353,18 +315,75 @@ def sparExample():
     #prob['rna_moment'] = np.array([0.0, 131196.8431,  0.0]) # Net moment acting on RNA (x,y,z) [N*m]
     
     # Mooring constraints
-    prob['max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
+    prob['max_draft'] = 150.0 # Max surge/sway offset [m]      
+    prob['max_offset'] = 100.0 # Max surge/sway offset [m]      
     prob['operational_heel']   = 10.0 # Max heel (pitching) angle [deg]
 
     # Design constraints
     prob['max_taper_ratio'] = 0.2                # For manufacturability of rolling steel
     prob['min_diameter_thickness_ratio'] = 120.0 # For weld-ability
+    prob['connection_ratio_max']      = 0.25 # For welding pontoons to columns
 
     # API 2U flag
     prob['loading'] = 'hydrostatic'
+    
+    return prob
+
+
+def sparExample():
+    # Number of sections to be used in the design
+    nsection = 5
+
+    # Initialize OpenMDAO problem and FloatingSE Group
+    prob = Problem(root=FloatingSE(nsection))
+    prob.setup()
+
+    # Variables common to both examples
+    prob = commonVars(prob, nsection)
+    
+    # Remove all offset columns
+    prob['number_of_offset_columns'] = 0
+    prob['cross_attachment_pontoons_int']   = 0
+    prob['lower_attachment_pontoons_int']   = 0
+    prob['upper_attachment_pontoons_int']   = 0
+    prob['lower_ring_pontoons_int']         = 0
+    prob['upper_ring_pontoons_int']         = 0
+    prob['outer_cross_pontoons_int']        = 0
+
+    # Set environment to that used in OC3 testing campaign
+    prob['water_depth'] = 320.0  # Distance to sea floor [m]
+    prob['Hs']        = 10.8   # Significant wave height [m]
+    prob['T']           = 9.8    # Wave period [s]
+    prob['Uref']        = 11.0   # Wind reference speed [m/s]
+    prob['zref']        = 119.0  # Wind reference height [m]
+
+    # Column geometry
+    prob['main_permanent_ballast_height'] = 10.0 # Height above keel for permanent ballast [m]
+    prob['main_freeboard']                = 10.0 # Height extension above waterline [m]
+    prob['main_section_height'] = np.array([49.0, 29.0, 30.0, 8.0, 14.0])  # Length of each section [m]
+    prob['main_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
+    prob['main_wall_thickness'] = 0.05 * np.ones(nsection+1)               # Shell thickness at each section node (linear lofting between) [m]
+    prob['main_bulkhead_thickness'] = 0.05*np.array([1,1,0,0,0,0]) # Locations/thickness of internal bulkheads at section interfaces [m]
+    
+    # Column ring stiffener parameters
+    prob['main_stiffener_web_height']       = 0.10 * np.ones(nsection) # (by section) [m]
+    prob['main_stiffener_web_thickness']    = 0.04 * np.ones(nsection) # (by section) [m]
+    prob['main_stiffener_flange_width']     = 0.10 * np.ones(nsection) # (by section) [m]
+    prob['main_stiffener_flange_thickness'] = 0.02 * np.ones(nsection) # (by section) [m]
+    prob['main_stiffener_spacing']          = 0.40 * np.ones(nsection) # (by section) [m]
+    
+    # Mooring parameters
+    prob['mooring_diameter']           = 0.09          # Diameter of mooring line/chain [m]
+    prob['fairlead']                   = 70.0          # Distance below waterline for attachment [m]
+    prob['fairlead_offset_from_shell'] = 0.5           # Offset from shell surface for mooring attachment [m]
+    prob['mooring_line_length']        = 902.2         # Unstretched mooring line length
+    prob['anchor_radius']              = 853.87        # Distance from centerline to sea floor landing [m]
+    prob['fairlead_support_outer_diameter'] = 3.2    # Diameter of all fairlead support elements [m]
+    prob['fairlead_support_wall_thickness'] = 0.0175 # Thickness of all fairlead support elements [m]
 
     # Other variables to avoid divide by zeros, even though it won't matter
     prob['radius_to_offset_column'] = 15.0
+    prob['offset_freeboard'] = 0.1
     prob['offset_section_height'] = 1.0 * np.ones(nsection)
     prob['offset_outer_diameter'] = 5.0 * np.ones(nsection+1)
     prob['offset_wall_thickness'] = 0.1 * np.ones(nsection+1)
@@ -378,21 +397,7 @@ def sparExample():
     prob['pontoon_wall_thickness'] = 0.1
     
     prob.run()
-
-    '''
-    f = open('deriv_spar.dat','w')
-    out = prob.check_total_derivatives(f)
-    #out = prob.check_partial_derivatives(f, compact_print=True)
-    f.close()
-    tol = 1e-4
-    for comp in out.keys():
-        for k in out[comp].keys():
-            if ( (out[comp][k]['rel error'][0] > tol) and (out[comp][k]['abs error'][0] > tol) ):
-                print k
-    '''
-
-
-
+    
 
 
 def semiExample():
@@ -403,6 +408,9 @@ def semiExample():
     prob = Problem(root=FloatingSE(nsection))
     prob.setup()
 
+    # Variables common to both examples
+    prob = commonVars(prob, nsection)
+    
     # Add in offset columns and truss elements
     prob['number_of_offset_columns'] = 3
     prob['cross_attachment_pontoons_int']   = 1 # Lower-Upper main-to-offset connecting cross braces
@@ -418,46 +426,6 @@ def semiExample():
     prob['T']           = 9.8    # Wave period [s]
     prob['Uref']        = 11.0   # Wind reference speed [m/s]
     prob['zref']        = 119.0  # Wind reference height [m]
-    prob['shearExp']    = 0.11   # Shear exponent in wind power law
-    prob['cm']          = 2.0    # Added mass coefficient
-    prob['Uc']          = 0.0    # Mean current speed
-    prob['z0']          = 0.0    # Water line
-    prob['yaw']         = 0.0    # Turbine yaw angle
-    prob['beta']        = 0.0    # Wind beta angle
-    prob['cd_usr']      = np.inf # Compute drag coefficient
-
-    # Wind and water properties
-    prob['main.windLoads.rho'] = 1.226   # Density of air [kg/m^3]
-    prob['main.windLoads.mu']  = 1.78e-5 # Viscosity of air [kg/m/s]
-    prob['water_density']      = 1025.0  # Density of water [kg/m^3]
-    prob['main.waveLoads.mu']  = 1.08e-3 # Viscosity of water [kg/m/s]
-    
-    # Material properties
-    prob['material_density'] = 7850.0          # Steel [kg/m^3]
-    prob['E']                = 200e9           # Young's modulus [N/m^2]
-    prob['G']                = 79.3e9          # Shear modulus [N/m^2]
-    prob['yield_stress']     = 3.45e8          # Elastic yield stress [N/m^2]
-    prob['nu']               = 0.26            # Poisson's ratio
-    prob['permanent_ballast_density'] = 4492.0 # [kg/m^3]
-
-    # Mass and cost scaling factors
-    prob['bulkhead_mass_factor']     = 1.0     # Scaling for unaccounted bulkhead mass
-    prob['ring_mass_factor']         = 1.0     # Scaling for unaccounted stiffener mass
-    prob['shell_mass_factor']        = 1.0     # Scaling for unaccounted shell mass
-    prob['column_mass_factor']       = 1.05    # Scaling for unaccounted column mass
-    prob['outfitting_mass_fraction'] = 0.06    # Fraction of additional outfitting mass for each column
-    prob['ballast_cost_rate']        = 100.0   # Cost factor for ballast mass [$/kg]
-    prob['tapered_col_cost_rate']    = 4720.0  # Cost factor for column mass [$/kg]
-    prob['outfitting_cost_rate']     = 6980.0  # Cost factor for outfitting mass [$/kg]
-    prob['mooring_cost_rate']        = 1.1     # Cost factor for mooring mass [$/kg]
-    prob['pontoon_cost_rate']        = 6.250   # Cost factor for pontoons [$/kg]
-    
-    # Safety factors
-    prob['gamma_f'] = 1.35 # Safety factor on loads
-    prob['gamma_b'] = 1.1  # Safety factor on buckling
-    prob['gamma_m'] = 1.1  # Safety factor on materials
-    prob['gamma_n'] = 1.0  # Safety factor on consequence of failure
-    prob['gamma_fatigue'] = 1.755 # Not used
 
     # Column geometry
     prob['main_permanent_ballast_height'] = 10.0 # Height above keel for permanent ballast [m]
@@ -496,10 +464,6 @@ def semiExample():
     prob['main_pontoon_attach_upper'] = 10.0   # Upper z-coordinate on main where truss attaches [m]
     
     # Mooring parameters
-    prob['number_of_mooring_connections'] = 3             # Evenly spaced around structure
-    prob['mooring_lines_per_connection'] = 1             # Evenly spaced around structure
-    prob['mooring_type']               = 'chain'       # Options are chain, nylon, polyester, fiber, or iwrc
-    prob['anchor_type']                = 'suctionpile' # Options are SUCTIONPILE or DRAGEMBEDMENT
     prob['mooring_diameter']           = 0.0766        # Diameter of mooring line/chain [m]
     prob['fairlead']                   = 14.0          # Distance below waterline for attachment [m]
     prob['fairlead_offset_from_shell'] = 0.5           # Offset from shell surface for mooring attachment [m]
@@ -507,37 +471,6 @@ def semiExample():
     prob['anchor_radius']              = 837.6+300.0         # Distance from centerline to sea floor landing [m]
     prob['fairlead_support_outer_diameter'] = 3.2    # Diameter of all fairlead support elements [m]
     prob['fairlead_support_wall_thickness'] = 0.0175 # Thickness of all fairlead support elements [m]
-
-    # Porperties of turbine tower
-    prob['hub_height']              = 77.6                              # Length from tower main to top (not including freeboard) [m]
-    prob['tower_section_height']    = 77.6/nsection * np.ones(nsection) # Length of each tower section [m]
-    prob['tower_outer_diameter']    = np.linspace(6.5, 3.87, nsection+1) # Diameter at each tower section node (linear lofting between) [m]
-    prob['tower_wall_thickness']    = np.linspace(0.027, 0.019, nsection+1) # Diameter at each tower section node (linear lofting between) [m]
-    prob['tower_buckling_length']   = 30.0                              # Tower buckling reinforcement spacing [m]
-    prob['tower_outfitting_factor'] = 1.07                              # Scaling for unaccounted tower mass in outfitting
-
-    # Properties of rotor-nacelle-assembly (RNA)
-    prob['rna_mass']   = 350e3 # Mass [kg]
-    prob['rna_I']      = 1e5*np.array([1149.307, 220.354, 187.597, 0, 5.037, 0]) # Moment of intertia (xx,yy,zz,xy,xz,yz) [kg/m^2]
-    prob['rna_cg']     = np.array([-1.132, 0, 0.509])                       # Offset of RNA center of mass from tower top (x,y,z) [m]
-    # Max thrust
-    prob['rna_force']  = np.array([1284744.196, 0, -112400.5527])           # Net force acting on RNA (x,y,z) [N]
-    prob['rna_moment'] = np.array([3963732.762, 896380.8464, -346781.682]) # Net moment acting on RNA (x,y,z) [N*m]
-    # Max wind speed
-    #prob['rna_force']  = np.array([188038.8045, 0,  -16451.2637]) # Net force acting on RNA (x,y,z) [N]
-    #prob['rna_moment'] = np.array([0.0, 131196.8431,  0.0]) # Net moment acting on RNA (x,y,z) [N*m]
-    
-    # Mooring constraints
-    prob['max_offset'] = 0.1*prob['water_depth'] # Max surge/sway offset [m]      
-    prob['operational_heel']   = 10.0 # Max heel (pitching) angle [deg]
-
-    # Design constraints
-    prob['max_taper_ratio'] = 0.2                # For manufacturability of rolling steel
-    prob['min_diameter_thickness_ratio'] = 120.0 # For weld-ability
-    prob['connection_ratio_max']      = 0.25 # For welding pontoons to columns
-
-    # API 2U flag
-    prob['loading'] = 'hydrostatic'
     
     prob.run()
     

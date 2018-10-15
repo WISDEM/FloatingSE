@@ -124,7 +124,9 @@ def getParams():
     params['gamma_b'] = 1.1
     params['gamma_fatigue'] = 1.755
 
-    params['pontoon_cost_rate'] = 6.250
+    params['material_cost_rate'] = 1.0
+    params['painting_cost_rate'] = 10.0
+    params['labor_cost_rate'] = 2.0
     return params
 
     
@@ -186,6 +188,9 @@ class TestFrame(unittest.TestCase):
         self.params['outer_cross_pontoons'] = False
         self.params['pontoon_main_attach_upper'] = 1.0
         self.params['pontoon_main_attach_lower'] = 0.0
+        self.params['material_cost_rate'] = 6.25
+        self.params['painting_cost_rate'] = 0.0
+        self.params['labor_cost_rate'] = 0.0
         self.mytruss.solve_nonlinear(self.params, self.unknowns, self.resid)
 
         V = np.pi * Ro*Ro * R_semi * ncyl

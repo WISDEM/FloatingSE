@@ -6,6 +6,7 @@ from commonse.utilities import nodal2sectional
 
 from commonse import gravity, eps, Tube, NFREQ
 import commonse.UtilizationSupplement as util
+import commonse.manufacturing as manufacture
 from commonse.WindWaveDrag import AeroHydroLoads, CylinderWindDrag, CylinderWaveDrag
 from commonse.environment import WaveBase, PowerWind
 from commonse.vertical_cylinder import CylinderDiscretization, CylinderMass
@@ -122,7 +123,9 @@ class FloatingFrame(Component):
         self.add_param('connection_ratio_max', val=0.0, desc='Maximum ratio of pontoon outer diameter to main/offset outer diameter')
         
         # Costing
-        self.add_param('pontoon_cost_rate', val=6.250, units='USD/kg', desc='Finished cost rate of truss components')
+        self.add_param('material_cost_rate', 0.0, units='USD/kg', desc='Raw material cost rate: steel $1.1/kg, aluminum $3.5/kg')
+        self.add_param('labor_cost_rate', 0.0, units='USD/min', desc='Labor cost rate')
+        self.add_param('painting_cost_rate', 0.0, units='USD/m/m', desc='Painting / surface finishing cost rate')
         
         # Outputs
         self.add_output('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
@@ -256,8 +259,6 @@ class FloatingFrame(Component):
         cg_offset     = np.r_[0.0, 0.0, params['offset_center_of_mass']]
         cg_tower       = np.r_[0.0, 0.0, params['tower_center_of_mass']]
         
-        coeff          = params['pontoon_cost_rate']
-
         n_connect      = int(params['number_of_mooring_connections'])
         n_lines        = int(params['mooring_lines_per_connection'])
         K_mooring      = np.diag( params['mooring_stiffness'] )
@@ -588,6 +589,8 @@ class FloatingFrame(Component):
         # Compute length and center of gravity for each element for use below
         elemL   = np.sqrt( np.sum( np.diff(plotMat, axis=2)**2.0, axis=1) ).flatten()
         elemCoG = 0.5*np.sum(plotMat, axis=2)
+        # Get vertical angle as a measure of welding prep difficulty
+        elemAng = np.arccos( np.diff(plotMat[:,-1,:], axis=-1).flatten() / elemL )
 
         # ---Options object---
         shear = True               # 1: include shear deformation
@@ -749,6 +752,7 @@ class FloatingFrame(Component):
 
         # ---MASS SUMMARIES---
         # Mass summaries now that we've tabulated all of the pontoons
+        m_substructure = m_main.sum() + ncolumn*m_offset.sum()
         if mainEID > 1: # Have some pontoons or fairlead supports
             # Buoyancy assembly from incremental calculations above
             V_pontoon = F_truss/rhoWater/gravity
@@ -758,12 +762,44 @@ class FloatingFrame(Component):
 
             # Sum up mass and compute CofG.  Frame3DD does mass, but not CG
             # TODO: Subtract out extra pontoon length that overlaps with column radii
-            ind = mainEID-1
-            m_total = Ax[:ind] * rho * elemL[:ind]
-            m_pontoon = m_total.sum() #mass.struct_mass
-            cg_pontoon = np.sum( m_total[:,np.newaxis] * elemCoG[:ind,:], axis=0 ) / m_total.sum()
+            ind             = mainEID-1
+            m_total         = Ax[:ind] * rho * elemL[:ind]
+            m_pontoon       = m_total.sum() #mass.struct_mass
+            m_substructure += m_pontoon
+            cg_pontoon      = np.sum( m_total[:,np.newaxis] * elemCoG[:ind,:], axis=0 ) / m_total.sum()
+
+            # Compute costs based on "Optimum Design of Steel Structures" by Farkas and Jarmai
+            # All dimensions for correlations based on mm, not meters.
+            k_m     = params['material_cost_rate'] #1.1 # USD / kg carbon steel plate
+            k_f     = params['labor_cost_rate'] #1.0 # USD / min labor
+            k_p     = params['painting_cost_rate'] #USD / m^2 painting
+            npont   = m_total.size
+            R_pont  = Jx[:ind] / C[:ind]  # J/C=R
+            t_pont  = R_pont - np.sqrt(R_pont**2 - Ax[:ind]/np.pi)
+
+            # Cost Step 1) Cutting and grinding tube ends
+            theta_g = 3.0 # Difficulty factor
+            # Cost Step 2) Fillet welds with SMAW (shielded metal arc welding)
+            # Multiply by 2 for both ends worth of work
+            theta_w = 3.0 # Difficulty factor
+
+            # Labor-based expenses
+            K_f = k_f * 2 * ( manufacture.steel_tube_cutgrind_time(theta_g, R_pont, t_pont, elemAng[:ind]) +
+                              manufacture.steel_tube_welding_time(theta_w, npont+ncolumn+1, m_substructure, 2*np.pi*R_pont, t_pont) )
+
+            # Cost Step 3) Painting
+            theta_p = 2.0
+            S_pont  = 2.0 * np.pi * R_pont * elemL[:ind]
+            K_p     = k_p * theta_p * S_pont.sum()
+
+            # Material cost
+            K_m = k_m * m_pontoon
+
+            # Total cost
+            c_pontoon = K_m + K_f + K_p
+            
             unknowns['pontoon_mass'] = m_pontoon
-            unknowns['pontoon_cost'] = coeff * m_pontoon
+            unknowns['pontoon_cost'] = c_pontoon
             unknowns['pontoon_center_of_mass'] = cg_pontoon[-1]
         else:
             V_pontoon = z_cb = m_pontoon = 0.0
@@ -771,7 +807,7 @@ class FloatingFrame(Component):
             
         # Summary of mass and volumes
         unknowns['total_displacement'] = V_main.sum() + ncolumn*V_offset.sum() + V_pontoon
-        unknowns['substructure_mass']  = m_pontoon + m_main.sum() + ncolumn*m_offset.sum()
+        unknowns['substructure_mass']  = m_substructure
         unknowns['substructure_center_of_mass'] = (ncolumn*m_offset.sum()*cg_offset + m_main.sum()*cg_main +
                                                    m_pontoon*cg_pontoon) / unknowns['substructure_mass']
         m_total = unknowns['substructure_mass'] + m_rna + m_tower.sum()
@@ -1021,7 +1057,6 @@ class Loading(Group):
         self.add('upper_attachment_pontoons_int',  IndepVarComp('upper_attachment_pontoons_int', 1), promotes=['*'])
         self.add('lower_ring_pontoons_int',        IndepVarComp('lower_ring_pontoons_int', 1), promotes=['*'])
         self.add('upper_ring_pontoons_int',        IndepVarComp('upper_ring_pontoons_int', 1), promotes=['*'])
-        self.add('pontoon_cost_rate',          IndepVarComp('pontoon_cost_rate', 0.0), promotes=['*'])
         self.add('connection_ratio_max',       IndepVarComp('connection_ratio_max', 0.0), promotes=['*'])
         self.add('fairlead_support_outer_diameter',     IndepVarComp('fairlead_support_outer_diameter', 0.0), promotes=['*'])
         self.add('fairlead_support_wall_thickness',     IndepVarComp('fairlead_support_wall_thickness', 0.0), promotes=['*'])
