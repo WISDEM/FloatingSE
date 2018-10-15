@@ -41,9 +41,11 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['shell_mass_factor']        = 1.0     # Scaling for unaccounted shell mass
         self.myfloat['column_mass_factor']       = 1.0    # Scaling for unaccounted column mass
         self.myfloat['outfitting_mass_fraction'] = 0.0    # Fraction of additional outfitting mass for each column
-        self.myfloat['ballast_cost_rate']        = 100.0   # Cost factor for ballast mass [$/kg]
-        self.myfloat['tapered_col_cost_rate']    = 4720.0  # Cost factor for column mass [$/kg]
-        self.myfloat['outfitting_cost_rate']     = 6980.0  # Cost factor for outfitting mass [$/kg]
+        self.myfloat['ballast_cost_rate']        = 0.1   # Cost factor for ballast mass [$/kg]
+        self.myfloat['material_cost_rate']       = 1.1  # Cost factor for column mass [$/kg]
+        self.myfloat['labor_cost_rate']          = 1.0  # Cost factor for labor time [$/min]
+        self.myfloat['painting_cost_rate']       = 14.4  # Cost factor for column surface finishing [$/m^2]
+        self.myfloat['outfitting_cost_rate']     = 1.5*1.1  # Cost factor for outfitting mass [$/kg]
         self.myfloat['mooring_cost_rate']        = 1.1     # Cost factor for mooring mass [$/kg]
 
         # Safety factors
@@ -144,29 +146,23 @@ class TestOC3Mass(unittest.TestCase):
     def testMassProperties(self):
         self.myfloat.run()
 
-        ansys_m_bulk  = 13204.0 + 2.0*27239.0
+        m_top = np.pi*3.2**2.0*0.05*7850.0
+        ansys_m_bulk  = 13204.0 + 2.0*27239.0 + m_top
         ansys_m_shell = 80150.0 + 32060.0 + 79701.0 + 1251800.0
         ansys_m_stiff = 1390.9*52 + 1282.2 + 1121.2 + 951.44*3
         ansys_m_spar = ansys_m_bulk + ansys_m_shell + ansys_m_stiff
         ansys_cg     = -58.926
-        ansys_Ixx    = 2178400000.0
-        ansys_Iyy    = 2178400000.0
-        ansys_Izz    = 32297000.0
+        ansys_Ixx    = 2178400000.0 + m_top*(0.25*3.2**2.0 + (10-ansys_cg)**2)
+        ansys_Iyy    = 2178400000.0 + m_top*(0.25*3.2**2.0 + (10-ansys_cg)**2)
+        ansys_Izz    = 32297000.0 + 0.5*m_top*3.2**2.0
         ansys_I      = np.array([ansys_Ixx, ansys_Iyy, ansys_Izz, 0.0, 0.0, 0.0])
-        
-        npt.assert_allclose(ansys_m_bulk, self.myfloat['main.bulkhead_mass'].sum(), rtol=0.03) # ANSYS uses R_od, we use R_id
+
+        npt.assert_allclose(ansys_m_bulk, self.myfloat['main.bulkhead_mass'].sum(), rtol=0.03) # ANSYS uses R_od, we use R_id, top cover seems unaccounted for
         npt.assert_allclose(ansys_m_shell, self.myfloat['main.cyl_mass.mass'].sum(), rtol=0.01)
         npt.assert_allclose(ansys_m_stiff, self.myfloat['main.stiffener_mass'].sum(), rtol=0.01)
-        npt.assert_allclose(ansys_m_spar, self.myfloat['main.total_mass'].sum(), rtol=0.01)
+        npt.assert_allclose(ansys_m_spar, self.myfloat['main.column_total_mass'].sum(), rtol=0.01)
         npt.assert_allclose(ansys_cg, self.myfloat['main.z_center_of_mass'], rtol=0.01)
         npt.assert_allclose(ansys_I, self.myfloat['main.I_column'], rtol=0.02)
-        '''        
-        print 'stiffeners per section', prob['main.stiff.number_of_stiffeners']
-        print 'total system center of mass (spar + ballast) [m]', prob['subs.center_of_mass']
-        print 'spar displaced volume (m^3)', prob['main.displaced_volume'].sum()
-        print '\nMoments of inertia [Ixx Iyy Izz Ixy Ixz Iyz] (kg*m^2)'
-        print 'Tower mass [kg]', prob['tower_mass']
-        '''        
 
         
 def suite():

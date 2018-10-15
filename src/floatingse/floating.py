@@ -26,13 +26,13 @@ class FloatingSE(Group):
                                                                  'max_draft','max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height',
                                                                  'permanent_ballast_density','bulkhead_mass_factor','buoyancy_tank_mass_factor',
                                                                  'ring_mass_factor','column_mass_factor','outfitting_mass_fraction','ballast_cost_rate',
-                                                                 'tapered_col_cost_rate','outfitting_cost_rate'])
+                                                                 'material_cost_rate','labor_cost_rate','painting_cost_rate','outfitting_cost_rate'])
         self.add('off', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                 'Uref','zref','shearExp','beta','yaw','Uc','Hs','T','cd_usr','cm','loading',
                                                                 'max_draft','max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height',
                                                                 'permanent_ballast_density','bulkhead_mass_factor','buoyancy_tank_mass_factor',
                                                                 'ring_mass_factor','column_mass_factor','outfitting_mass_fraction','ballast_cost_rate',
-                                                                'tapered_col_cost_rate','outfitting_cost_rate'])
+                                                                'material_cost_rate','labor_cost_rate','painting_cost_rate','outfitting_cost_rate'])
 
         # Run Semi Geometry for interfaces
         self.add('sg', SubstructureGeometry(self.nFull), promotes=['*'])
@@ -41,7 +41,7 @@ class FloatingSE(Group):
         self.add('mm', MapMooring(), promotes=['*'])
         
         # Add in the connecting truss
-        self.add('load', Loading(nSection, self.nFull), promotes=['*'])#water_density','material_density','E','G','yield_stress',
+        self.add('load', Loading(nSection, self.nFull), promotes=['*'])
 
         # Run main Semi analysis
         self.add('subs', Substructure(self.nFull), promotes=['*'])
@@ -107,10 +107,12 @@ class FloatingSE(Group):
         self.add('bulkhead_mass_factor',       IndepVarComp('bulkhead_mass_factor', 0.0), promotes=['*'])
         self.add('ring_mass_factor',           IndepVarComp('ring_mass_factor', 0.0), promotes=['*'])
         self.add('shell_mass_factor',          IndepVarComp('shell_mass_factor', 0.0), promotes=['*'])
-        self.add('column_mass_factor',           IndepVarComp('column_mass_factor', 0.0), promotes=['*'])
+        self.add('column_mass_factor',         IndepVarComp('column_mass_factor', 0.0), promotes=['*'])
         self.add('outfitting_mass_fraction',   IndepVarComp('outfitting_mass_fraction', 0.0), promotes=['*'])
         self.add('ballast_cost_rate',          IndepVarComp('ballast_cost_rate', 0.0), promotes=['*'])
-        self.add('tapered_col_cost_rate',      IndepVarComp('tapered_col_cost_rate', 0.0), promotes=['*'])
+        self.add('material_cost_rate',         IndepVarComp('material_cost_rate', 0.0), promotes=['*'])
+        self.add('labor_cost_rate',            IndepVarComp('labor_cost_rate', 0.0), promotes=['*'])
+        self.add('painting_cost_rate',         IndepVarComp('painting_cost_rate', 0.0), promotes=['*'])
         self.add('outfitting_cost_rate',       IndepVarComp('outfitting_cost_rate', 0.0), promotes=['*'])
         self.add('loading',                    IndepVarComp('loading', val='hydrostatic', pass_by_obj=True), promotes=['*'])
         
@@ -200,9 +202,9 @@ class FloatingSE(Group):
         self.connect('main.Awater', 'main_Awaterplane')
         self.connect('main.displaced_volume', 'main_displaced_volume')
         self.connect('main.hydrostatic_force', 'main_hydrostatic_force')
-        self.connect('main.added_mass', 'main_added_mass')
-        self.connect('main.total_mass', 'main_mass')
-        self.connect('main.total_cost', 'main_cost')
+        self.connect('main.column_added_mass', 'main_added_mass')
+        self.connect('main.column_total_mass', 'main_mass')
+        self.connect('main.column_total_cost', 'main_cost')
         self.connect('main.variable_ballast_interp_zpts', 'water_ballast_zpts_vector')
         self.connect('main.variable_ballast_interp_radius', 'water_ballast_radius_vector')
         self.connect('main.Px', 'main_Px')
@@ -217,9 +219,9 @@ class FloatingSE(Group):
         self.connect('off.Awater', 'offset_Awaterplane')
         self.connect('off.displaced_volume', 'offset_displaced_volume')
         self.connect('off.hydrostatic_force', 'offset_hydrostatic_force')
-        self.connect('off.added_mass', 'offset_added_mass')
-        self.connect('off.total_mass', 'offset_mass')
-        self.connect('off.total_cost', 'offset_cost')
+        self.connect('off.column_added_mass', 'offset_added_mass')
+        self.connect('off.column_total_mass', 'offset_mass')
+        self.connect('off.column_total_cost', 'offset_cost')
         self.connect('off.Px', 'offset_Px')
         self.connect('off.Py', 'offset_Py')
         self.connect('off.Pz', 'offset_Pz')

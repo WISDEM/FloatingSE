@@ -3,10 +3,12 @@ import numpy as np
 
 from commonse.utilities import nodal2sectional, assembleI, unassembleI
 import commonse.frustum as frustum
+import commonse.manufacturing as manufacture
 from commonse.UtilizationSupplement import shellBuckling_withStiffeners, GeometricConstraints
 from commonse import gravity, eps, AeroHydroLoads, CylinderWindDrag, CylinderWaveDrag
 from commonse.vertical_cylinder import CylinderDiscretization, CylinderMass
 from commonse.environment import PowerWind, LinearWaves
+
 
 def I_tube(r_i, r_o, h, m):
     if type(r_i) == type(np.array([])):
@@ -28,10 +30,10 @@ def sectionalInterp(xi, x, y):
     return np.interp(xi, xx, yy)
     
 
-class BulkheadMass(Component):
-    """Computes bulkhead masses at each section node"""
+class BulkheadProperties(Component):
+
     def __init__(self, nSection, nFull):
-        super(BulkheadMass,self).__init__()
+        super(BulkheadProperties,self).__init__()
         self.bulk_full = np.zeros( nFull, dtype=np.int_)
 
         self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
@@ -41,8 +43,14 @@ class BulkheadMass(Component):
         self.add_param('rho', val=0.0, units='kg/m**3', desc='material density')
         self.add_param('bulkhead_thickness', val=np.zeros(nSection+1), units='m', desc='Nodal locations of bulkhead thickness, zero meaning no bulkhead, bottom to top (length = nsection + 1)')
         self.add_param('bulkhead_mass_factor', val=0.0, desc='Bulkhead mass correction factor')
+        
+        self.add_param('shell_mass', val=np.zeros(nFull-1), units='kg', desc='mass of column shell')
+        self.add_param('material_cost_rate', 0.0, units='USD/kg', desc='Raw material cost rate: steel $1.1/kg, aluminum $3.5/kg')
+        self.add_param('labor_cost_rate', 0.0, units='USD/min', desc='Labor cost rate')
+        self.add_param('painting_cost_rate', 0.0, units='USD/m/m', desc='Painting / surface finishing cost rate')
 
         self.add_output('bulkhead_mass', val=np.zeros(nFull), units='kg', desc='mass of column bulkheads')
+        self.add_output('bulkhead_cost', val=0.0, units='USD', desc='cost of column bulkheads')
         self.add_output('bulkhead_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of bulkheads relative to keel point')
         
         # Derivatives
@@ -57,24 +65,29 @@ class BulkheadMass(Component):
         z_param    = params['z_param']
         R_od       = 0.5*params['d_full'] # at section nodes
         twall      = params['t_full'] # at section nodes
+        R_id       = (R_od - twall)
         t_bulk     = params['bulkhead_thickness'] # at section nodes
+        rho        = params['rho']
         
         # Map bulkhead locations to finer computation grid
         Zf,Zp = np.meshgrid(z_full, z_param)
         idx = np.argmin( np.abs(Zf-Zp), axis=1 )
         t_bulk_full = np.zeros( z_full.shape )
         t_bulk_full[idx] = t_bulk
+        # Make sure top and bottom are capped
+        if (t_bulk_full[ 0] == 0.0): t_bulk_full[ 0] = twall[ 0]
+        if (t_bulk_full[-1] == 0.0): t_bulk_full[-1] = twall[-1]
         
         # Compute bulkhead volume at every section node
         # Assume bulkheads are same thickness as shell wall
-        V_bulk = np.pi * (R_od - twall)**2 * t_bulk_full
+        V_bulk = np.pi * R_id**2 * t_bulk_full
 
         # Convert to mass with fudge factor for design features not captured in this simple approach
-        m_bulk = params['bulkhead_mass_factor'] * params['rho'] * V_bulk
+        m_bulk = params['bulkhead_mass_factor'] * rho * V_bulk
 
         # Compute moments of inertia at keel
         # Assume bulkheads are just simple thin discs with radius R_od-t_wall and mass already computed
-        Izz = 0.5 * m_bulk * (R_od - twall)**2
+        Izz = 0.5 * m_bulk * R_id**2
         Ixx = Iyy = 0.5 * Izz
         I_keel = np.zeros((3,3))
         dz  = z_full - z_full[0]
@@ -82,30 +95,41 @@ class BulkheadMass(Component):
             R = np.array([0.0, 0.0, dz[k]])
             Icg = assembleI( [Ixx[k], Iyy[k], Izz[k], 0.0, 0.0, 0.0] )
             I_keel += Icg + m_bulk[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+
+
+        # Compute costs based on "Optimum Design of Steel Structures" by Farkas and Jarmai
+        # All dimensions for correlations based on mm, not meters.
+        k_m     = params['material_cost_rate'] #1.1 # USD / kg carbon steel plate
+        k_f     = params['labor_cost_rate'] #1.0 # USD / min labor
+        k_p     = params['painting_cost_rate'] #USD / m^2 painting
+        m_shell = params['shell_mass'].sum()
+        nbulk   = np.count_nonzero(V_bulk)
+        bulkind = (V_bulk > 0.0)
+        
+        # Cost Step 1) Cutting flat plates using plasma cutter
+        cutLengths = 2.0 * np.pi * R_id * bulkind
+        # Cost Step 2) Fillet welds with GMAW-C (gas metal arc welding with CO2) of bulkheads to shell
+        theta_w = 3.0 # Difficulty factor
+
+        # Labor-based expenses
+        K_f = k_f * ( manufacture.steel_cutting_plasma_time(cutLengths, t_bulk_full) +
+                      manufacture.steel_filett_welding_time(theta_w, nbulk, m_bulk+m_shell, 2*np.pi*R_id, t_bulk_full) )
+        
+        # Cost Step 3) Painting (two sided)
+        theta_p = 1.0
+        K_p  = k_p * theta_p * 2 * (np.pi * R_id**2.0 * bulkind).sum()
+
+        # Material cost, without outfitting
+        K_m = k_m * m_bulk.sum()
+
+        # Total cost
+        c_bulk = K_m + K_f + K_p
+        
         
         # Store results
         unknowns['bulkhead_I_keel'] = unassembleI(I_keel)
         unknowns['bulkhead_mass'] = m_bulk
-
-    '''
-    def list_deriv_vars(self):
-        inputs = ('d_full','t_full')
-        outputs = ('bulkhead_mass',)
-        return inputs, outputs
-    
-    def linearize(self, params, unknowns, resids):
-        R_od   = 0.5*params['d_full'] # at section nodes
-        twall  = params['t_full'] # at section nodes
-        dVdR   = 2.0 * np.pi * (R_od - twall) * twall
-        dVdt   = np.pi * (R_od - twall) * ( R_od - 3.0*twall )
-        coeff  = params['bulkhead_mass_factor'] * params['rho']
-        myones = np.ones(dVdR.shape) * self.bulk_full
-
-        J = {}
-        J['bulkhead_mass','d_full'] = coeff * np.diag(dVdR*myones) * 0.5 # 0.5 for d->r
-        J['bulkhead_mass','t_full'] = coeff * np.diag(dVdt*myones)
-        return J
-    '''
+        unknowns['bulkhead_cost'] = c_bulk
 
     
 
@@ -116,6 +140,11 @@ class BuoyancyTankProperties(Component):
         self.add_param('d_full', val=np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
         self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes')
         self.add_param('rho', val=0.0, units='kg/m**3', desc='material density')
+
+        self.add_param('shell_mass', val=np.zeros(nFull-1), units='kg', desc='mass of column shell')
+        self.add_param('material_cost_rate', 0.0, units='USD/kg', desc='Raw material cost: steel $1.1/kg, aluminum $3.5/kg')
+        self.add_param('labor_cost_rate', 0.0, units='USD/min', desc='Labor cost')
+        self.add_param('painting_cost_rate', 0.0, units='USD/m/m', desc='Painting / surface finishing cost rate')
         
         self.add_param('buoyancy_tank_diameter', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
         self.add_param('buoyancy_tank_height', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
@@ -123,6 +152,7 @@ class BuoyancyTankProperties(Component):
         self.add_param('buoyancy_tank_mass_factor', val=0.0, desc='Heave plate mass correction factor')
 
         self.add_output('buoyancy_tank_mass', val=0.0, units='kg', desc='mass of buoyancy tank')
+        self.add_output('buoyancy_tank_cost', val=0.0, units='USD', desc='cost of buoyancy tank')
         self.add_output('buoyancy_tank_cg', val=0.0, units='m', desc='z-coordinate of center of mass for buoyancy tank')
         self.add_output('buoyancy_tank_displacement', val=0.0, units='m**3', desc='volume of water displaced by buoyancy tank')
         self.add_output('buoyancy_tank_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of heave plate relative to keel point')
@@ -196,15 +226,45 @@ class BuoyancyTankProperties(Component):
             Icg       = assembleI( [Ixx_box, Ixx_box, Izz_box, 0.0, 0.0, 0.0] )
             I_keel   += Icg + m_plate[1]*(np.dot(r, r)*np.eye(3) - np.outer(r, r))
 
+
+        # Compute costs based on "Optimum Design of Steel Structures" by Farkas and Jarmai
+        # All dimensions for correlations based on mm, not meters.
+        k_m     = params['material_cost_rate'] #1.1 # USD / kg carbon steel plate
+        k_f     = params['labor_cost_rate'] #1.0 # USD / min labor
+        k_p     = params['painting_cost_rate'] #USD / m^2 painting
+        m_shell = params['shell_mass'].sum()
+
+        # Cost Step 1) Cutting flat plates using plasma cutter into box plate sizes
+        cutLengths = 2.0 * np.pi * (3.0*R_plate + R_col.sum()) # x3 for two plates + side wall
+        # Cost Step 2) Welding box plates together GMAW-C (gas metal arc welding with CO2) fillet welds
+        theta_w = 3.0 # Difficulty factor
+        # Cost Step 3) Welding box to shell GMAW-C (gas metal arc welding with CO2) fillet welds
+
+        # Labor-based expenses
+        K_f = k_f * ( manufacture.steel_cutting_plasma_time(cutLengths, t_plate) +
+                      manufacture.steel_filett_welding_time(theta_w, 3.0, m_box, 2*np.pi*R_plate, t_plate) +
+                      manufacture.steel_filett_welding_time(theta_w, 2.0, m_box+m_shell, 2*np.pi*R_col, t_plate) )
+        
+        # Cost Step 4) Painting
+        theta_p = 1.5
+        K_p  = k_p * theta_p * 2.0 * A_box
+        
+        # Material cost, without outfitting
+        K_m = k_m * m_box
+
+        # Total cost
+        c_box = K_m + K_f + K_p
+            
         # Store outputs
+        unknowns['buoyancy_tank_cost']         = c_box
         unknowns['buoyancy_tank_mass']         = m_box
         unknowns['buoyancy_tank_cg']           = z_cg
         unknowns['buoyancy_tank_displacement'] = V_box
         unknowns['buoyancy_tank_I_keel']       = unassembleI(I_keel)
         
         
-class StiffenerMass(Component):
-    """Computes column stiffener mass by section.  
+class StiffenerProperties(Component):
+    """Computes column stiffener properties by section.  
     Stiffener being the ring of T-cross section members placed periodically along column
     Assumes constant stiffener spacing along the column, but allows for varying stiffener geometry
     Slicing the column lengthwise would reveal the stiffener T-geometry as:
@@ -217,13 +277,18 @@ class StiffenerMass(Component):
     |              |
     """
     def __init__(self, nSection, nFull):
-        super(StiffenerMass,self).__init__()
+        super(StiffenerProperties,self).__init__()
 
         self.nSection = nSection
         self.add_param('d_full', val=np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
         self.add_param('t_full', val=np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
         self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes')
         self.add_param('rho', val=0.0, units='kg/m**3', desc='material density')
+        
+        self.add_param('shell_mass', val=np.zeros(nFull-1), units='kg', desc='mass of column shell')
+        self.add_param('material_cost_rate', 0.0, units='USD/kg', desc='Raw material cost: steel $1.1/kg, aluminum $3.5/kg')
+        self.add_param('labor_cost_rate', 0.0, units='USD/min', desc='Labor cost')
+        self.add_param('painting_cost_rate', 0.0, units='USD/m/m', desc='Painting / surface finishing cost rate')
 
         self.add_param('h_web', val=np.zeros((nFull-1,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top')
         self.add_param('t_web', val=np.zeros((nFull-1,)), units='m', desc='thickness of stiffener web (base of T) within each section bottom to top')
@@ -234,6 +299,7 @@ class StiffenerMass(Component):
         self.add_param('ring_mass_factor', val=0.0, desc='Stiffener ring mass correction factor')
         
         self.add_output('stiffener_mass', val=np.zeros(nFull-1), units='kg', desc='mass of column stiffeners')
+        self.add_output('stiffener_cost', val=0.0, units='USD', desc='cost of column stiffeners')
         self.add_output('stiffener_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of stiffeners relative to keel point')
         self.add_output('number_of_stiffeners', val=np.zeros(nSection, dtype=np.int_), desc='number of stiffeners in each section')
         self.add_output('flange_spacing_ratio', val=np.zeros((nFull-1,)), desc='ratio between flange and stiffener spacing')
@@ -247,11 +313,13 @@ class StiffenerMass(Component):
         
     def solve_nonlinear(self, params, unknowns, resids):
         # Unpack variables
-        R_od,_       = nodal2sectional(params['d_full']) # at section nodes
-        R_od        *= 0.5
-        t_wall,_     = nodal2sectional( params['t_full'] ) # at section nodes
+        R_od         = 0.5*params['d_full']
+        t_wall       = params['t_full']
         z_full       = params['z_full'] # at section nodes
         h_section    = np.diff(z_full)
+        V_shell      = frustum.frustumShellVol(R_od[:-1], R_od[1:], t_wall[:-1], t_wall[1:], h_section)
+        R_od,_       = nodal2sectional( R_od ) # at section nodes
+        t_wall,_     = nodal2sectional( t_wall ) # at section nodes
         
         t_web        = params['t_web']
         t_flange     = params['t_flange']
@@ -321,15 +389,127 @@ class StiffenerMass(Component):
             n_stiff_sec += n_stiff[k::npts_per]
         unknowns['number_of_stiffeners'] = n_stiff_sec
 
+
+        # Compute costs based on "Optimum Design of Steel Structures" by Farkas and Jarmai
+        # All dimensions for correlations based on mm, not meters.
+        k_m     = params['material_cost_rate'] #1.1 # USD / kg carbon steel plate
+        k_f     = params['labor_cost_rate'] #1.0 # USD / min labor
+        k_p     = params['painting_cost_rate'] #USD / m^2 painting
+        m_shell = params['shell_mass'].sum()
+        
+        # Cost Step 1) Cutting stiffener strips from flat plates using plasma cutter
+        cutLengths_w = 2.0 * np.pi * 0.5 * (R_wo + R_wi)
+        cutLengths_f = 2.0 * np.pi * R_fo
+        # Cost Step 2) Welding T-stiffeners together GMAW-C (gas metal arc welding with CO2) fillet welds
+        theta_w = 3.0 # Difficulty factor
+        # Cost Step 3) Welding stiffeners to shell GMAW-C (gas metal arc welding with CO2) fillet welds
+        # Will likely fillet weld twice (top & bottom), so factor of 2 on second welding terms
+
+        # Labor-based expenses
+        K_f = k_f * ( manufacture.steel_cutting_plasma_time(n_stiff * cutLengths_w, t_web) +
+                      manufacture.steel_cutting_plasma_time(n_stiff * cutLengths_f, t_flange) +
+                      manufacture.steel_filett_welding_time(theta_w, n_stiff, m_ring, 2*np.pi*R_fo, t_web) +
+                      manufacture.steel_filett_welding_time(theta_w, n_stiff, m_ring+m_shell, 2*np.pi*R_wo, t_web) )
+        
+        # Cost Step 4) Painting
+        theta_p = 2.0
+        K_p  = k_p * theta_p * (n_stiff*(2*np.pi*(R_wo**2.0-R_wi**2.0) + 2*np.pi*0.5*(R_fo+R_fi)*(2*w_flange + 2*t_flange) - 2*np.pi*R_fo*t_web)).sum()
+        
+        # Material cost, without outfitting
+        K_m = k_m * unknowns['stiffener_mass'].sum()
+
+        # Total cost
+        c_ring = K_m + K_f + K_p
+
+        
         # Store results
+        unknowns['stiffener_cost'] = c_ring
         unknowns['stiffener_I_keel'] = unassembleI(I_keel)
         
         # Create some constraints for reasonable stiffener designs for an optimizer
         unknowns['flange_spacing_ratio']   = w_flange / (0.5*L_stiffener)
         unknowns['stiffener_radius_ratio'] = (h_web + t_flange + t_wall) / R_od
 
-                
 
+
+        
+class BallastProperties(Component):
+
+    def __init__(self, nFull):
+        super(BallastProperties,self).__init__()
+
+        self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
+        self.add_param('d_full', val=np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
+        self.add_param('t_full', val=np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
+        self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes')
+        self.add_param('permanent_ballast_density', val=0.0, units='kg/m**3', desc='density of permanent ballast')
+        self.add_param('permanent_ballast_height', val=0.0, units='m', desc='height of permanent ballast')
+        self.add_param('ballast_cost_rate', val=0.0, units='USD/kg', desc='Cost per unit mass of ballast')
+
+        self.add_output('ballast_cost', val=0.0, units='USD', desc='cost of permanent ballast')
+        self.add_output('ballast_mass', val=np.zeros(nFull-1), units='kg', desc='mass of permanent ballast')
+        self.add_output('ballast_z_cg', val=0.0, units='m', desc='z-coordinate or permanent ballast center of gravity')
+        self.add_output('ballast_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of permanent ballast relative to keel point')
+        self.add_output('variable_ballast_interp_zpts', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
+        self.add_output('variable_ballast_interp_radius', val=np.zeros((nFull,)), units='m', desc='inner radius of column at potential ballast mass')
+
+        
+    def solve_nonlinear(self, params, unknowns, resids):
+        # Unpack variables
+        R_od        = 0.5*params['d_full']
+        t_wall      = params['t_full']
+        z_nodes     = params['z_full']
+        h_ballast   = params['permanent_ballast_height']
+        rho_ballast = params['permanent_ballast_density']
+        rho_water   = params['water_density']
+
+        npts = R_od.size
+        section_mass = np.zeros(npts-1)
+        
+        # Geometry of the column in our coordinate system (z=0 at waterline)
+        z_draft   = z_nodes[0]
+
+        # Fixed and total ballast mass and cg
+        # Assume they are bottled in columns a the keel of the column- first the permanent then the fixed
+        zpts      = np.linspace(z_draft, z_draft+h_ballast, npts)
+        R_id      = np.interp(zpts, z_nodes, R_od-t_wall)
+        V_perm    = np.pi * np.trapz(R_id**2, zpts)
+        m_perm    = rho_ballast * V_perm
+        z_cg_perm = rho_ballast * np.pi * np.trapz(zpts*R_id**2, zpts) / m_perm if m_perm > 0.0 else 0.0
+        for k in range(npts-1):
+            ind = np.logical_and(zpts>=z_nodes[k], zpts<=z_nodes[k+1]) 
+            section_mass[k] += rho_ballast * np.pi * np.trapz(R_id[ind]**2, zpts[ind])
+
+        Ixx = Iyy = frustum.frustumIxx(R_id[:-1], R_id[1:], np.diff(zpts))
+        Izz = frustum.frustumIzz(R_id[:-1], R_id[1:], np.diff(zpts))
+        V_slice = frustum.frustumVol(R_id[:-1], R_id[1:], np.diff(zpts))
+        I_keel = np.zeros((3,3))
+        dz  = frustum.frustumCG(R_id[:-1], R_id[1:], np.diff(zpts)) + zpts[:-1] - z_draft
+        for k in range(V_slice.size):
+            R = np.array([0.0, 0.0, dz[k]])
+            Icg = assembleI( [Ixx[k], Iyy[k], Izz[k], 0.0, 0.0, 0.0] )
+            I_keel += Icg + V_slice[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
+        I_keel = rho_ballast * unassembleI(I_keel)
+        
+        # Water ballast will start at top of fixed ballast
+        z_water_start = (z_draft + h_ballast)
+        #z_water_start = z_water_start + params['variable_ballast_start'] * (z_nodes[-1] - z_water_start)
+        
+        # Find height of water ballast numerically by finding the height that integrates to the mass we want
+        # This step is completed in column.py or semi.py because we must account for other substructure elements too
+        zpts    = np.linspace(z_water_start, 0.0, npts)
+        R_id    = np.interp(zpts, z_nodes, R_od-t_wall)
+        unknowns['variable_ballast_interp_zpts']   = zpts
+        unknowns['variable_ballast_interp_radius'] = R_id
+        
+        # Save permanent ballast mass and variable height
+        unknowns['ballast_mass']   = section_mass
+        unknowns['ballast_I_keel'] = I_keel
+        unknowns['ballast_z_cg']   = z_cg_perm
+        unknowns['ballast_cost']   = params['ballast_cost_rate'] * m_perm
+
+
+        
         
 class ColumnGeometry(Component):
     """
@@ -378,17 +558,6 @@ class ColumnGeometry(Component):
         self.deriv_options['step_calc'] = 'relative'
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """Sets nodal points and sectional centers of mass in z-coordinate system with z=0 at the waterline.
-        Nodal points are the beginning and end points of each section.
-        Nodes and sections start at bottom and move upwards.
-        
-        INPUTS:
-        ----------
-        params   : dictionary of input parameters
-        unknowns : dictionary of output parameters
-        
-        OUTPUTS  : none (all unknown dictionary values set)
-        """
         # Unpack variables
         freeboard = params['freeboard']
 
@@ -427,13 +596,10 @@ class ColumnProperties(Component):
         super(ColumnProperties,self).__init__()
 
         # Variables local to the class and not OpenMDAO
-        self.section_mass = np.zeros((nFull-1,)) # Weight of column by section
+        self.ibox = None
         
         # Environment
         self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
-        
-        # Material properties
-        self.add_param('permanent_ballast_density', val=0.0, units='kg/m**3', desc='density of permanent ballast')
 
         # Inputs from Geometry
         self.add_param('z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
@@ -442,7 +608,6 @@ class ColumnProperties(Component):
         # Design variables
         self.add_param('d_full', val=np.zeros((nFull,)), units='m', desc='outer diameter at each section node bottom to top (length = nsection + 1)')
         self.add_param('t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('permanent_ballast_height', val=0.0, units='m', desc='height of permanent ballast')
         self.add_param('buoyancy_tank_diameter', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
         
         # Mass correction factors from simple rules here to real life
@@ -450,7 +615,10 @@ class ColumnProperties(Component):
         self.add_param('stiffener_mass', val=np.zeros(nFull-1), units='kg', desc='mass of column stiffeners')
         self.add_param('bulkhead_mass', val=np.zeros(nFull), units='kg', desc='mass of column bulkheads')
         self.add_param('buoyancy_tank_mass', val=0.0, units='kg', desc='mass of heave plate')
+        self.add_param('ballast_mass', val=np.zeros(nFull-1), units='kg', desc='mass of permanent ballast')
+
         self.add_param('buoyancy_tank_cg', val=0.0, units='m', desc='z-coordinate of center of mass for buoyancy tank')
+        self.add_param('ballast_z_cg', val=0.0, units='m', desc='z-coordinate or permanent ballast center of gravity')
         self.add_param('column_mass_factor', val=0.0, desc='Overall column mass correction factor')
         self.add_param('outfitting_mass_fraction', val=0.0, desc='Mass fraction added for outfitting')
 
@@ -459,23 +627,21 @@ class ColumnProperties(Component):
         self.add_param('bulkhead_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of bulkheads relative to keel point')
         self.add_param('stiffener_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of stiffeners relative to keel point')
         self.add_param('buoyancy_tank_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of heave plate relative to keel point')
+        self.add_param('ballast_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of permanent ballast relative to keel point')
 
         # For buoyancy
         self.add_param('buoyancy_tank_displacement', val=0.0, units='m**3', desc='volume of water displaced by buoyancy tank')
         
-        # Cost rates
-        self.add_param('ballast_cost_rate', val=0.0, units='USD/kg', desc='Cost per unit mass of ballast')
-        self.add_param('tapered_col_cost_rate', val=0.0, units='USD/kg', desc='Cost per unit mass of tapered columns (frustums)')
+        # Costs and cost rates
+        self.add_param('shell_cost', val=0.0, units='USD', desc='mass of column shell')
+        self.add_param('stiffener_cost', val=0.0, units='USD', desc='mass of column stiffeners')
+        self.add_param('bulkhead_cost', val=0.0, units='USD', desc='mass of column bulkheads')
+        self.add_param('ballast_cost', val=0.0, units='USD', desc='cost of permanent ballast')
+        self.add_param('buoyancy_tank_cost', val=0.0, units='USD', desc='mass of heave plate')
+        self.add_param('material_cost_rate', 0.0, units='USD/kg', desc='Raw material cost: steel $1.1/kg, aluminum $3.5/kg')
         self.add_param('outfitting_cost_rate', val=0.0, units='USD/kg', desc='Cost per unit mass for outfitting column')
 
         # Outputs
-        self.add_output('ballast_cost', val=0.0, units='USD', desc='cost of permanent ballast')
-        self.add_output('ballast_mass', val=0.0, units='kg', desc='mass of permanent ballast')
-        self.add_output('ballast_z_cg', val=0.0, units='m', desc='z-coordinate or permanent ballast center of gravity')
-        self.add_output('ballast_I_keel', val=np.zeros(6), units='kg*m**2', desc='Moments of inertia of permanent ballast relative to keel point')
-        self.add_output('variable_ballast_interp_zpts', val=np.zeros((nFull,)), units='m', desc='z-points of potential ballast mass')
-        self.add_output('variable_ballast_interp_radius', val=np.zeros((nFull,)), units='m', desc='inner radius of column at potential ballast mass')
-
         self.add_output('z_center_of_mass', val=0.0, units='m', desc='z-position CofG of column')
         self.add_output('z_center_of_buoyancy', val=0.0, units='m', desc='z-position CofB of column')
         self.add_output('Awater', val=0.0, units='m**2', desc='Area of waterplace cross section')
@@ -484,15 +650,15 @@ class ColumnProperties(Component):
         self.add_output('displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='Volume of water displaced by column by section')
         self.add_output('hydrostatic_force', val=np.zeros((nFull-1,)), units='N', desc='Net z-force on column sections')
  
-        self.add_output('column_cost', val=0.0, units='USD', desc='cost of column structure')
-        self.add_output('column_mass', val=0.0, units='kg', desc='mass of column structure')
+        self.add_output('column_structural_mass', val=0.0, units='kg', desc='mass of column structure')
         
-        self.add_output('outfitting_cost', val=0.0, units='USD', desc='cost of outfitting the column')
-        self.add_output('outfitting_mass', val=0.0, units='kg', desc='cost of outfitting the column')
+        self.add_output('column_outfitting_cost', val=0.0, units='USD', desc='cost of outfitting the column')
+        self.add_output('column_outfitting_mass', val=0.0, units='kg', desc='cost of outfitting the column')
 
-        self.add_output('added_mass', val=np.zeros(6), units='kg', desc='hydrodynamic added mass matrix diagonal')
-        self.add_output('total_mass', val=np.zeros((nFull-1,)), units='kg', desc='total mass of column by section')
-        self.add_output('total_cost', val=0.0, units='USD', desc='total cost of column')
+        self.add_output('column_added_mass', val=np.zeros(6), units='kg', desc='hydrodynamic added mass matrix diagonal')
+        self.add_output('column_total_mass', val=np.zeros((nFull-1,)), units='kg', desc='total mass of column by section')
+        self.add_output('column_total_cost', val=0.0, units='USD', desc='total cost of column')
+        self.add_output('column_structural_cost', val=0.0, units='USD', desc='Cost of column without ballast or outfitting')
         
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -503,24 +669,12 @@ class ColumnProperties(Component):
         
         
     def solve_nonlinear(self, params, unknowns, resids):
-        """Main entry point for OpenMDAO and the 'main' function for executing column substructure sizing analysis
-        
-        INPUTS:
-        ----------
-        params   : dictionary of input parameters
-        unknowns : dictionary of output parameters
-        resids   : OpenMDAO residuals dictionary
-        
-        OUTPUTS  : (none)
-        """
-        # Balance the design by adding ballast to achieve desired draft and freeboard heights
-        # This requires a full mass tally as well.
-        # Compute the CG, CB, and metacentric heights- use these for a static stability check
-        self.balance_column(params, unknowns)
 
-        # Compute costs of column substructure
+        self.compute_column_mass_cg(params, unknowns)
+        self.balance_column(params, unknowns)
         self.compute_cost(params, unknowns)
 
+        
 
     def compute_column_mass_cg(self, params, unknowns):
         """Computes column mass from components: Shell, Stiffener rings, Bulkheads
@@ -548,126 +702,79 @@ class ColumnProperties(Component):
         z_nodes      = params['z_full']
         z_section    = params['z_section']
         z_box        = params['buoyancy_tank_cg']
+        z_ballast    = params['ballast_z_cg']
         m_shell      = params['shell_mass']
         m_stiffener  = params['stiffener_mass']
         m_bulkhead   = params['bulkhead_mass']
         m_box        = params['buoyancy_tank_mass']
+        m_ballast    = params['ballast_mass']
         I_shell      = params['shell_I_keel']
         I_stiffener  = params['stiffener_I_keel']
         I_bulkhead   = params['bulkhead_I_keel']
         I_box        = params['buoyancy_tank_I_keel']
+        I_ballast    = params['ballast_I_keel']
+
+        # Consistency check
+        if out_frac > 1.0: out_frac -= 1.0
         
-        m_column = 0.0
-        z_cg = 0.0
+        # Initialize summations
+        m_column  = 0.0
+        z_cg      = 0.0
         
         # Find mass of all of the sub-components of the column
         # Masses assumed to be focused at section centroids
-        m_column     += (m_shell + m_stiffener).sum()
-        z_cg       += np.dot(m_shell+m_stiffener, z_section)
+        m_column += (m_shell + m_stiffener).sum()
+        z_cg     += np.dot(m_shell+m_stiffener, z_section)
 
         # Masses assumed to be centered at nodes
-        m_column     += m_bulkhead.sum()
-        z_cg       += np.dot(m_bulkhead, z_nodes)
+        m_column += m_bulkhead.sum()
+        z_cg     += np.dot(m_bulkhead, z_nodes)
 
         # Mass with variable location
-        m_column     += m_box
-        z_cg       += m_box*z_box
+        m_column += m_box
+        z_cg     += m_box*z_box
 
         # Account for components not explicitly calculated here
-        m_column     *= coeff
+        m_column *= coeff
 
         # Compute CG position of the column
-        z_cg       *= coeff / m_column
+        z_cg     *= coeff / m_column
 
-        # Apportion every mass to a section for buckling stress computation later
-        self.section_mass = coeff*(m_shell + m_stiffener + m_bulkhead[:-1])
-        self.section_mass[-1] += coeff*m_bulkhead[-1]
-        ibox = np.where(z_box >= z_nodes)[0][-1]
-        self.section_mass[ibox] += coeff*m_box
+        # Now calculate outfitting mass, evenly distributed so cg doesn't change
+        m_outfit  = out_frac * m_column
 
-        # Store outputs addressed so far
-        unknowns['column_mass']       = m_column
-        unknowns['outfitting_mass'] = out_frac * m_column
+        # Add in ballast
+        m_total   = m_column + m_outfit + m_ballast.sum()
+        z_cg      = ( (m_column+m_outfit)*z_cg + m_ballast.sum()*z_ballast ) / m_total
+
+        # Find sections for ballast and buoyancy tank
+        ibox  = 0
+        try:
+            ibox  = np.where(z_box >= z_nodes)[0][-1]
+        except:
+            print(z_box, z_ballast, z_nodes)
+        self.ibox = ibox
+
+        # Now do tally by section
+        m_sections         = coeff*(m_shell + m_stiffener + m_bulkhead[:-1]) + m_ballast
+        m_sections        += m_outfit / m_shell.size
+        m_sections[-1]    += coeff*m_bulkhead[-1]
+        m_sections[ibox]  += coeff*m_box
 
         # Add up moments of inertia at keel, make sure to scale mass appropriately
-        I_column = ((1+out_frac) * coeff) * (I_shell + I_stiffener + I_bulkhead + I_box)
+        I_total   = ((1+out_frac) * coeff) * (I_shell + I_stiffener + I_bulkhead + I_box) + I_ballast
 
-        # Return total column mass and position of column cg
-        return m_column, z_cg, I_column, ibox
+        # Move moments of inertia from keel to cg
+        I_total  -= m_total*((z_cg-z_nodes[0])**2.0) * np.r_[1.0, 1.0, np.zeros(4)]
+        I_total   = np.maximum(I_total, 0.0)
 
-
-    def compute_ballast_mass_cg(self, params, unknowns):
-        """Computes permanent ballast mass and center of mass
-        Assumes permanent ballast is located at bottom of column (at the keel)
-        From the user/optimizer input of ballast height, computes the mass based on varying radius of the column
+        # Store outputs addressed so far
+        unknowns['column_total_mass']      = m_sections
+        unknowns['column_structural_mass'] = m_column + m_outfit
+        unknowns['column_outfitting_mass'] = m_outfit
+        unknowns['z_center_of_mass']       = z_cg
+        unknowns['I_column']               = I_total
         
-        INPUTS:
-        ----------
-        params   : dictionary of input parameters
-        unknowns : dictionary of output parameters
-        
-        OUTPUTS:
-        ----------
-        variable_ballast_height in 'unknowns' dictionary set
-        variable_ballast_mass   in 'unknowns' dictionary set
-        m_ballast     : permanent ballast mass
-        z_cg          : center of mass along z-axis for the ballast
-        z_ballast_var : z-position of where variable ballast starts
-        ballast_mass in 'unknowns' dictionary set
-
-        """
-        # Unpack variables
-        R_od        = 0.5*params['d_full']
-        t_wall      = params['t_full']
-        h_ballast   = params['permanent_ballast_height']
-        rho_ballast = params['permanent_ballast_density']
-        rho_water   = params['water_density']
-        z_nodes     = params['z_full']
-
-        npts = R_od.size
-        
-        # Geometry of the column in our coordinate system (z=0 at waterline)
-        z_draft     = z_nodes[0]
-
-        # Fixed and total ballast mass and cg
-        # Assume they are bottled in columns a the keel of the column- first the permanent then the fixed
-        zpts      = np.linspace(z_draft, z_draft+h_ballast, npts)
-        R_id      = np.interp(zpts, z_nodes, R_od-t_wall)
-        V_perm    = np.pi * np.trapz(R_id**2, zpts)
-        m_perm    = rho_ballast * V_perm
-        z_cg_perm = rho_ballast * np.pi * np.trapz(zpts*R_id**2, zpts) / m_perm if m_perm > 0.0 else 0.0
-        for k in range(z_nodes.size-1):
-            ind = np.logical_and(zpts>=z_nodes[k], zpts<=z_nodes[k+1]) 
-            self.section_mass[k] += rho_ballast * np.pi * np.trapz(R_id[ind]**2, zpts[ind])
-
-        Ixx = Iyy = frustum.frustumIxx(R_id[:-1], R_id[1:], np.diff(zpts))
-        Izz = frustum.frustumIzz(R_id[:-1], R_id[1:], np.diff(zpts))
-        V_slice = frustum.frustumVol(R_id[:-1], R_id[1:], np.diff(zpts))
-        I_keel = np.zeros((3,3))
-        dz  = frustum.frustumCG(R_id[:-1], R_id[1:], np.diff(zpts)) + zpts[:-1] - z_draft
-        for k in range(V_slice.size):
-            R = np.array([0.0, 0.0, dz[k]])
-            Icg = assembleI( [Ixx[k], Iyy[k], Izz[k], 0.0, 0.0, 0.0] )
-            I_keel += Icg + V_slice[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
-        I_keel = rho_ballast * unassembleI(I_keel)
-        
-        # Water ballast will start at top of fixed ballast
-        z_water_start = (z_draft + h_ballast)
-        #z_water_start = z_water_start + params['variable_ballast_start'] * (z_nodes[-1] - z_water_start)
-        
-        # Find height of water ballast numerically by finding the height that integrates to the mass we want
-        # This step is completed in column.py or semi.py because we must account for other substructure elements too
-        zpts    = np.linspace(z_water_start, 0.0, npts)
-        R_id    = np.interp(zpts, z_nodes, R_od-t_wall)
-        unknowns['variable_ballast_interp_zpts']   = zpts
-        unknowns['variable_ballast_interp_radius'] = R_id
-        
-        # Save permanent ballast mass and variable height
-        unknowns['ballast_mass']   = m_perm
-        unknowns['ballast_I_keel'] = I_keel
-        unknowns['ballast_z_cg']   = z_cg_perm
-
-        return m_perm, z_cg_perm, I_keel
 
         
     def balance_column(self, params, unknowns):
@@ -694,22 +801,7 @@ class ColumnProperties(Component):
         z_box             = params['buoyancy_tank_cg']
         V_box             = params['buoyancy_tank_displacement']
         rho_water         = params['water_density']
-        self.section_mass = np.zeros((z_nodes.size-1,))
-        
-        # Add in contributions from the column and permanent ballast assumed to start at draft point
-        m_column   , cg_column, I_column, ibox = self.compute_column_mass_cg(params, unknowns)
-        m_ballast, cg_ballast, I_ballast = self.compute_ballast_mass_cg(params, unknowns)
-        m_outfit           = unknowns['outfitting_mass']
-        m_total            = m_column + m_ballast + m_outfit
-        self.section_mass += m_outfit / self.section_mass.size
-        z_cg               = ( (m_column+m_outfit)*cg_column + m_ballast*cg_ballast ) / m_total
-        unknowns['total_mass']       = self.section_mass
-        unknowns['z_center_of_mass'] = z_cg
-
-        # Now that cg is calculated, move moments of inertia from keel to cg
-        I_total  = I_column + I_ballast
-        I_total -= m_total*((z_cg-z_nodes[0])**2.0) * np.r_[1.0, 1.0, np.zeros(4)]
-        unknowns['I_column'] = I_total
+        nsection          = R_od.size - 1
 
         # Compute volume of each section and mass of displaced water by section
         # Find the radius at the waterline so that we can compute the submerged volume as a sum of frustum sections
@@ -724,17 +816,16 @@ class ColumnProperties(Component):
 
         # Submerged volume (with zero-padding)
         V_under = frustum.frustumVol(r_under[:-1], r_under[1:], np.diff(z_under))
-        add0    = np.maximum(0, self.section_mass.size-V_under.size)
+        add0    = np.maximum(0, nsection-V_under.size)
         unknowns['displaced_volume'] = np.r_[V_under, np.zeros(add0)]
-        unknowns['displaced_volume'][ibox] += V_box
+        unknowns['displaced_volume'][self.ibox] += V_box
 
         # Compute Center of Buoyancy in z-coordinates (0=waterline)
         # First get z-coordinates of CG of all frustums
         z_cg_under  = frustum.frustumCG(r_under[:-1], r_under[1:], np.diff(z_under))
         z_cg_under += z_under[:-1]
         # Now take weighted average of these CG points with volume
-        V_under += eps
-        z_cb     = ( (V_box*z_box) + np.dot(V_under, z_cg_under)) / unknowns['displaced_volume'].sum()
+        z_cb     = ( (V_box*z_box) + np.dot(V_under, z_cg_under)) / (unknowns['displaced_volume'].sum() + eps)
         unknowns['z_center_of_buoyancy'] = z_cb
 
         # Find total hydrostatic force by section- sign says in which direction force acts
@@ -744,7 +835,7 @@ class ColumnProperties(Component):
             F_hydro[0] += np.pi * r_under[0]**2 * (-z_under[0])
             if z_nodes[-1] < 0.0:
                 F_hydro[-1] -= np.pi * r_under[-1]**2 * (-z_under[-1])
-            F_hydro[ibox] += V_box
+            F_hydro[self.ibox] += V_box
             F_hydro    *= rho_water * gravity
         unknowns['hydrostatic_force'] = np.r_[F_hydro, np.zeros(add0)]
         
@@ -764,13 +855,14 @@ class ColumnProperties(Component):
         m_a[2]   = 0.5 * (8.0/3.0) * rho_water * np.maximum(R_plate, r_under.max())**3.0# A33 heave
         m_a[3:5] = np.pi * rho_water * np.trapz((zpts-z_cb)**2.0 * r_under**2.0, zpts)# A44 roll, A55 pitch
         m_a[5]   = 0.0 # A66 yaw
-        unknowns['added_mass'] = m_a
+        unknowns['column_added_mass'] = m_a
+
         
     def compute_cost(self, params, unknowns):
-        unknowns['ballast_cost']    = params['ballast_cost_rate'] * unknowns['ballast_mass']
-        unknowns['column_cost']       = params['tapered_col_cost_rate'] * unknowns['column_mass']
-        unknowns['outfitting_cost'] = params['outfitting_cost_rate'] * unknowns['outfitting_mass']
-        unknowns['total_cost']      = unknowns['ballast_cost'] + unknowns['column_cost'] + unknowns['outfitting_cost']
+        unknowns['column_structural_cost']   = params['column_mass_factor']*(params['shell_cost'] + params['stiffener_cost'] +
+                                                                             params['bulkhead_cost'] + params['buoyancy_tank_cost'])
+        unknowns['column_outfitting_cost']   = params['outfitting_cost_rate'] * unknowns['column_outfitting_mass']
+        unknowns['column_total_cost']        = unknowns['column_structural_cost'] + unknowns['column_outfitting_cost'] + params['ballast_cost']
 
 
         
@@ -913,38 +1005,22 @@ class Column(Group):
         self.add('cyl_geom', CylinderDiscretization(nSection+1, nRefine), promotes=['section_height','diameter','wall_thickness',
                                                                                     'd_full','t_full','foundation_height'])
         
-        self.add('cyl_mass', CylinderMass(nFull), promotes=['d_full','t_full','material_density'])
-
-        self.add('col_geom', ColumnGeometry(nSection, nFull), promotes=['water_depth','Hs','freeboard','z_full','z_param','z_section',
-                                                                        'max_draft','draft','draft_margin','wave_height_freeboard_ratio',
-                                                                        'stiffener_web_height','stiffener_web_thickness','stiffener_flange_width',
-                                                                        'stiffener_flange_thickness','stiffener_spacing',
-                                                                        't_web','h_web','t_flange','w_flange','L_stiffener'])
-
         self.add('gc', GeometricConstraints(nSection+1, diamFlag=True), promotes=['max_taper','min_d_to_t','manufacturability','weldability'])
 
-        self.add('bulk', BulkheadMass(nSection, nFull), promotes=['z_full','z_param','d_full','t_full','rho',
-                                                                  'bulkhead_mass_factor','bulkhead_thickness',
-                                                                  'bulkhead_mass','bulkhead_I_keel'])
+        self.add('cyl_mass', CylinderMass(nFull), promotes=['d_full','t_full','material_density',
+                                                            'material_cost_rate','labor_cost_rate','section_center_of_mass'])
 
-        self.add('stiff', StiffenerMass(nSection,nFull), promotes=['d_full','t_full','z_full','rho','ring_mass_factor',
-                                                                   't_web','h_web','t_flange','w_flange','L_stiffener',
-                                                                   'stiffener_mass','stiffener_I_keel',
-                                                                   'flange_spacing_ratio','stiffener_radius_ratio'])
+        self.add('col_geom', ColumnGeometry(nSection, nFull), promotes=['*'])
+
+        self.add('bulk', BulkheadProperties(nSection, nFull), promotes=['*'])
+
+        self.add('stiff', StiffenerProperties(nSection,nFull), promotes=['*'])
 
         self.add('plate', BuoyancyTankProperties(nFull), promotes=['*'])
 
-        self.add('col', ColumnProperties(nFull), promotes=['water_density','d_full','t_full','z_full','z_section',
-                                                           'permanent_ballast_density','permanent_ballast_height',
-                                                           'buoyancy_tank_diameter','buoyancy_tank_mass','buoyancy_tank_cg',
-                                                           'buoyancy_tank_displacement','bulkhead_mass','stiffener_mass',
-                                                           'column_mass_factor','outfitting_mass_fraction',
-                                                           'bulkhead_I_keel','stiffener_I_keel','buoyancy_tank_I_keel','column_mass',
-                                                           'ballast_cost_rate','tapered_col_cost_rate','outfitting_cost_rate',
-                                                           'variable_ballast_interp_radius','variable_ballast_interp_zpts',
-                                                           'z_center_of_mass','z_center_of_buoyancy','Awater','Iwater','I_column',
-                                                           'displaced_volume','hydrostatic_force','added_mass','total_mass','total_cost',
-                                                           'ballast_mass','ballast_I_keel', 'ballast_z_cg','ballast_cost'])
+        self.add('ball', BallastProperties(nFull), promotes=['*'])
+
+        self.add('col', ColumnProperties(nFull), promotes=['*'])
 
         self.add('wind', PowerWind(nFull), promotes=['Uref','zref','shearExp','z0'])
         self.add('wave', LinearWaves(nFull), promotes=['Uc','hmax','T'])
@@ -952,27 +1028,20 @@ class Column(Group):
         self.add('waveLoads', CylinderWaveDrag(nFull), promotes=['cm','cd_usr'])
         self.add('distLoads', AeroHydroLoads(nFull), promotes=['Px','Py','Pz','qdyn','yaw'])
 
-        self.add('buck', ColumnBuckling(nSection, nFull), promotes=['d_full','t_full','z_full','E','nu','yield_stress',
-                                                                    'gamma_f','gamma_b','loading','stack_mass_in',
-                                                                    't_web','h_web','t_flange','w_flange','L_stiffener',
-                                                                    'flange_compactness','web_compactness',
-                                                                    'axial_local_api','axial_general_api',
-                                                                    'external_local_api','external_general_api',
-                                                                    'axial_local_utilization','axial_general_utilization',
-                                                                    'external_local_utilization','external_general_utilization'])
+        self.add('buck', ColumnBuckling(nSection, nFull), promotes=['*'])
         
         self.connect('diameter', 'gc.d')
         self.connect('wall_thickness', 'gc.t')
-        self.connect('cyl_geom.z_param', 'col_geom.z_param_in')
-        self.connect('cyl_geom.z_full', ['cyl_mass.z_full','col_geom.z_full_in'])
+        self.connect('cyl_geom.z_param', 'z_param_in')
+        self.connect('cyl_geom.z_full', ['cyl_mass.z_full','z_full_in'])
         
-        self.connect('cyl_mass.section_center_of_mass', 'col_geom.section_center_of_mass')
+        #self.connect('cyl_mass.section_center_of_mass', 'col_geom.section_center_of_mass')
         
-        self.connect('cyl_mass.mass', 'col.shell_mass')
-        self.connect('cyl_mass.I_base', 'col.shell_I_keel')
+        self.connect('cyl_mass.mass', 'shell_mass')
+        self.connect('cyl_mass.I_base', 'shell_I_keel')
         self.connect('material_density','rho')
         
-        self.connect('total_mass', 'buck.section_mass')
+        self.connect('column_total_mass', 'section_mass')
 
         self.connect('water_depth','wave.z_floor')
         self.connect('z_full', ['wind.z', 'wave.z', 'windLoads.z','waveLoads.z','distLoads.z'])
@@ -1005,4 +1074,4 @@ class Column(Group):
         self.connect('waveLoads.waveLoads_z', 'distLoads.waveLoads_z')
         self.connect('waveLoads.waveLoads_d', 'distLoads.waveLoads_d')
 
-        self.connect('qdyn', 'buck.pressure')
+        self.connect('qdyn', 'pressure')

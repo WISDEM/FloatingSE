@@ -122,9 +122,11 @@ class FloatingInstance(object):
         self.params['shell_mass_factor']                    = 1.0
         self.params['column_mass_factor']                   = 1.05
         self.params['outfitting_mass_fraction']             = 0.06
-        self.params['ballast_cost_rate']                    = 100.0
-        self.params['tapered_col_cost_rate']                = 4720.0
-        self.params['outfitting_cost_rate']                 = 6980.0
+        self.params['ballast_cost_rate']                    = 0.1
+        self.params['material_cost_rate']                   = 1.1
+        self.params['labor_cost_rate']                      = 1.0
+        self.params['painting_cost_rate']                   = 14.4
+        self.params['outfitting_cost_rate']                 = 1.5 * params['material_cost_rate']
         self.params['cross_attachment_pontoons_int']        = 1
         self.params['lower_attachment_pontoons_int']        = 1
         self.params['upper_attachment_pontoons_int']        = 1
