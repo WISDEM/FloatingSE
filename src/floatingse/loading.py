@@ -38,7 +38,7 @@ class FloatingFrame(Component):
         # Base column
         self.add_param('main_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('main_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('main_t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('main_t_full', val=np.zeros((nFull-1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
         self.add_param('main_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of main column by section')
         self.add_param('main_buckling_length', val=np.zeros((nFull-1,)), units='m', desc='distance between ring stiffeners')
         self.add_param('main_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
@@ -56,7 +56,7 @@ class FloatingFrame(Component):
         # offset columns
         self.add_param('offset_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('offset_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('offset_t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('offset_t_full', val=np.zeros((nFull-1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
         self.add_param('offset_mass', val=np.zeros((nFull-1,)), units='kg', desc='mass of offset column by section')
         self.add_param('offset_buckling_length', val=np.zeros((nFull-1,)), units='m', desc='distance between ring stiffeners')
         self.add_param('offset_displaced_volume', val=np.zeros((nFull-1,)), units='m**3', desc='column volume of water displaced by section')
@@ -71,7 +71,7 @@ class FloatingFrame(Component):
         # Tower
         self.add_param('tower_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('tower_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('tower_t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('tower_t_full', val=np.zeros((nFull-1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
         self.add_param('tower_mass_section', val=np.zeros((nFull-1,)), units='kg', desc='mass of tower column by section')
         self.add_param('tower_buckling_length', 0.0, units='m', desc='buckling length')
         self.add_param('tower_center_of_mass', val=0.0, units='m', desc='z-position of center of tower mass')
@@ -491,12 +491,9 @@ class FloatingFrame(Component):
         # Now mock up cylindrical columns as truss members even though long, slender assumption breaks down
         # Will set density = 0.0 so that we don't double count the mass
         # First get geometry in each of the elements
-        R_od_main,_      = nodal2sectional( R_od_main )
-        t_wall_main,_    = nodal2sectional( t_wall_main )
+        R_od_main,_     = nodal2sectional( R_od_main )
         R_od_offset,_   = nodal2sectional( R_od_offset )
-        t_wall_offset,_ = nodal2sectional( t_wall_offset )
-        R_od_tower,_     = nodal2sectional( R_od_tower )
-        t_wall_tower,_   = nodal2sectional( t_wall_tower )
+        R_od_tower,_    = nodal2sectional( R_od_tower )
         # Senu TODO: Make artificially more stiff?
         mainEID = N1.size + 1
         mytube  = Tube(2.0*R_od_main, t_wall_main)

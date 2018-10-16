@@ -73,7 +73,7 @@ def getParams():
 
     params['main_z_full'] = np.array([-15.0, -12.5, -10.0, 0.0, 5.0, 10.0])
     params['main_d_full'] = 2*10.0 * np.ones(NPTS)
-    params['main_t_full'] = 0.1 * np.ones(NPTS)
+    params['main_t_full'] = 0.1 * np.ones(NPTS-1)
     params['main_mass'] = 1e2 * np.ones(NSECTIONS)
     params['main_buckling_length'] = 2.0 * np.ones(NSECTIONS)
     params['main_displaced_volume'] = 1e2 * np.ones(NSECTIONS)
@@ -88,7 +88,7 @@ def getParams():
 
     params['offset_z_full'] = np.array([-15.0, -10.0, -5.0, 0.0, 2.5, 10.0])
     params['offset_d_full'] = 2*2.0 * np.ones(NPTS)
-    params['offset_t_full'] = 0.05 * np.ones(NPTS)
+    params['offset_t_full'] = 0.05 * np.ones(NPTS-1)
     params['offset_mass'] = 1e1 * np.ones(NSECTIONS)
     params['offset_buckling_length'] = 2.0 * np.ones(NSECTIONS)
     params['offset_displaced_volume'] = 1e1 * np.ones(NSECTIONS)
@@ -103,7 +103,7 @@ def getParams():
 
     params['tower_z_full'] = np.linspace(0, 90, NPTS)
     params['tower_d_full'] = 2*7.0 * np.ones(NPTS)
-    params['tower_t_full'] = 0.5 * np.ones(NPTS)
+    params['tower_t_full'] = 0.5 * np.ones(NPTS-1)
     params['tower_mass_section'] = 2e2 * np.ones(NSECTIONS)
     params['tower_buckling_length'] = 25.0
     params['tower_center_of_mass'] = 50.0

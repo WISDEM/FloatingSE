@@ -77,7 +77,7 @@ class FloatingSE(Group):
         self.add('main_freeboard',             IndepVarComp('main_freeboard', 0.0), promotes=['*'])
         self.add('main_section_height',        IndepVarComp('main_section_height', np.zeros((nSection,))), promotes=['*'])
         self.add('main_outer_diameter',        IndepVarComp('main_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
-        self.add('main_wall_thickness',        IndepVarComp('main_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
+        self.add('main_wall_thickness',        IndepVarComp('main_wall_thickness', np.zeros((nSection,))), promotes=['*'])
         self.add('main_stiffener_web_height',       IndepVarComp('main_stiffener_web_height', np.zeros((nSection,))), promotes=['*'])
         self.add('main_stiffener_web_thickness',    IndepVarComp('main_stiffener_web_thickness', np.zeros((nSection,))), promotes=['*'])
         self.add('main_stiffener_flange_width',     IndepVarComp('main_stiffener_flange_width', np.zeros((nSection,))), promotes=['*'])
@@ -92,7 +92,7 @@ class FloatingSE(Group):
         self.add('offset_freeboard',          IndepVarComp('offset_freeboard', 0.0), promotes=['*'])
         self.add('offset_section_height',     IndepVarComp('offset_section_height', np.zeros((nSection,))), promotes=['*'])
         self.add('offset_outer_diameter',     IndepVarComp('offset_outer_diameter', np.zeros((nSection+1,))), promotes=['*'])
-        self.add('offset_wall_thickness',     IndepVarComp('offset_wall_thickness', np.zeros((nSection+1,))), promotes=['*'])
+        self.add('offset_wall_thickness',     IndepVarComp('offset_wall_thickness', np.zeros((nSection,))), promotes=['*'])
         self.add('offset_stiffener_web_height',       IndepVarComp('offset_stiffener_web_height', np.zeros((nSection,))), promotes=['*'])
         self.add('offset_stiffener_web_thickness',    IndepVarComp('offset_stiffener_web_thickness', np.zeros((nSection,))), promotes=['*'])
         self.add('offset_stiffener_flange_width',     IndepVarComp('offset_stiffener_flange_width', np.zeros((nSection,))), promotes=['*'])
@@ -299,7 +299,7 @@ def commonVars(prob, nsection):
     prob['hub_height']              = 77.6                              # Length from tower main to top (not including freeboard) [m]
     prob['tower_section_height']    = 77.6/nsection * np.ones(nsection) # Length of each tower section [m]
     prob['tower_outer_diameter']    = np.linspace(6.5, 3.87, nsection+1) # Diameter at each tower section node (linear lofting between) [m]
-    prob['tower_wall_thickness']    = np.linspace(0.027, 0.019, nsection+1) # Diameter at each tower section node (linear lofting between) [m]
+    prob['tower_wall_thickness']    = np.linspace(0.027, 0.019, nsection) # Diameter at each tower section node (linear lofting between) [m]
     prob['tower_buckling_length']   = 30.0                              # Tower buckling reinforcement spacing [m]
     prob['tower_outfitting_factor'] = 1.07                              # Scaling for unaccounted tower mass in outfitting
 
@@ -362,7 +362,7 @@ def sparExample():
     prob['main_freeboard']                = 10.0 # Height extension above waterline [m]
     prob['main_section_height'] = np.array([49.0, 29.0, 30.0, 8.0, 14.0])  # Length of each section [m]
     prob['main_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
-    prob['main_wall_thickness'] = 0.05 * np.ones(nsection+1)               # Shell thickness at each section node (linear lofting between) [m]
+    prob['main_wall_thickness'] = 0.05 * np.ones(nsection)               # Shell thickness at each section node (linear lofting between) [m]
     prob['main_bulkhead_thickness'] = 0.05*np.array([1,1,0,0,0,0]) # Locations/thickness of internal bulkheads at section interfaces [m]
     
     # Column ring stiffener parameters
@@ -386,7 +386,7 @@ def sparExample():
     prob['offset_freeboard'] = 0.1
     prob['offset_section_height'] = 1.0 * np.ones(nsection)
     prob['offset_outer_diameter'] = 5.0 * np.ones(nsection+1)
-    prob['offset_wall_thickness'] = 0.1 * np.ones(nsection+1)
+    prob['offset_wall_thickness'] = 0.1 * np.ones(nsection)
     prob['offset_permanent_ballast_height'] = 0.1
     prob['offset_stiffener_web_height'] = 0.1 * np.ones(nsection)
     prob['offset_stiffener_web_thickness'] =  0.1 * np.ones(nsection)
@@ -432,7 +432,7 @@ def semiExample():
     prob['main_freeboard']                = 10.0 # Height extension above waterline [m]
     prob['main_section_height'] = np.array([36.0, 36.0, 36.0, 8.0, 14.0])  # Length of each section [m]
     prob['main_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
-    prob['main_wall_thickness'] = 0.05 * np.ones(nsection+1)               # Shell thickness at each section node (linear lofting between) [m]
+    prob['main_wall_thickness'] = 0.05 * np.ones(nsection)               # Shell thickness at each section node (linear lofting between) [m]
     prob['main_bulkhead_thickness'] = 0.05*np.array([1,1,0,0,0,0]) # Locations/thickness of internal bulkheads at section interfaces [m]
 
     # Auxiliary column geometry
@@ -441,7 +441,7 @@ def semiExample():
     prob['offset_freeboard']                = 12.0                     # Height extension above waterline [m]
     prob['offset_section_height']           = np.array([6.0, 0.1, 7.9, 8.0, 10]) # Length of each section [m]
     prob['offset_outer_diameter']           = np.array([24, 24, 12, 12, 12, 12]) # Diameter at each section node (linear lofting between) [m]
-    prob['offset_wall_thickness']           = 0.06 * np.ones(nsection+1)         # Shell thickness at each section node (linear lofting between) [m]
+    prob['offset_wall_thickness']           = 0.06 * np.ones(nsection)         # Shell thickness at each section node (linear lofting between) [m]
 
     # Column ring stiffener parameters
     prob['main_stiffener_web_height']       = 0.10 * np.ones(nsection) # (by section) [m]

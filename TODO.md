@@ -1,4 +1,3 @@
-- Inject manufacturing realism that ordering large quantities of constant thickness steel is cheaper than lots of individual orders of slightly varying thickness
 - Move to NEMOH/Capytaine for hydrodynamics
 - Tension arms from API 2V
 - Add horizontal cylinder/floaters
@@ -6,5 +5,4 @@
 - DLC inputs as vector
 - Allow for change in materials- concrete (pre/post tensioned), carbon fiber, different steel alloys
 - Move to more complicated cost model from paper that counts welds
-- Latex doc to Sphinx
 - Move to FUSED python only version

@@ -138,7 +138,7 @@ class FloatingInstance(object):
         self.params['hub_height']                           = 90.0
         self.params['tower_outer_diameter']                 = np.linspace(6.5, 3.87, NSECTIONS+1)
         self.params['tower_section_height']                 = vecOption(77.6/NSECTIONS, NSECTIONS)
-        self.params['tower_wall_thickness']                 = np.linspace(0.027, 0.019, NSECTIONS+1)
+        self.params['tower_wall_thickness']                 = np.linspace(0.027, 0.019, NSECTIONS)
         self.params['tower_buckling_length']                = 30.0
         self.params['tower_outfitting_factor']              = 1.07
         self.params['rna_mass']                             = 350e3 #285598.8
@@ -209,10 +209,10 @@ class FloatingInstance(object):
         
     def check_vectors(self):
         self.params['tower_outer_diameter']            = vecOption(self.params['tower_outer_diameter'], NSECTIONS+1)
-        self.params['tower_wall_thickness']            = vecOption(self.params['tower_wall_thickness'], NSECTIONS+1)
+        self.params['tower_wall_thickness']            = vecOption(self.params['tower_wall_thickness'], NSECTIONS)
         self.params['tower_section_height']            = vecOption(self.params['tower_section_height'], NSECTIONS+1)
         self.params['main_outer_diameter']             = vecOption(self.params['main_outer_diameter'], NSECTIONS+1)
-        self.params['main_wall_thickness']             = vecOption(self.params['main_wall_thickness'], NSECTIONS+1)
+        self.params['main_wall_thickness']             = vecOption(self.params['main_wall_thickness'], NSECTIONS)
         self.params['main_stiffener_web_height']       = vecOption(self.params['main_stiffener_web_height'], NSECTIONS)
         self.params['main_stiffener_web_thickness']    = vecOption(self.params['main_stiffener_web_thickness'], NSECTIONS)
         self.params['main_stiffener_flange_width']     = vecOption(self.params['main_stiffener_flange_width'], NSECTIONS)
@@ -222,7 +222,7 @@ class FloatingInstance(object):
         #self.params['main_bulkhead_thickness'][:2] = 0.05
         
         self.params['offset_outer_diameter']             = vecOption(self.params['offset_outer_diameter'], NSECTIONS+1)
-        self.params['offset_wall_thickness']             = vecOption(self.params['offset_wall_thickness'], NSECTIONS+1)
+        self.params['offset_wall_thickness']             = vecOption(self.params['offset_wall_thickness'], NSECTIONS)
         self.params['offset_stiffener_web_height']       = vecOption(self.params['offset_stiffener_web_height'], NSECTIONS)
         self.params['offset_stiffener_web_thickness']    = vecOption(self.params['offset_stiffener_web_thickness'], NSECTIONS)
         self.params['offset_stiffener_flange_width']     = vecOption(self.params['offset_stiffener_flange_width'], NSECTIONS)
@@ -238,7 +238,7 @@ class FloatingInstance(object):
             self.params['hub_height']              = 90.0
             self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
             self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
-            self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS+1)
+            self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS)
             self.params['Rhub']                 = 1.125
             self.params['main_freeboard'] = 10.0
 
@@ -306,7 +306,8 @@ class FloatingInstance(object):
             idx = [0, 1, trans_idx[0]/2, trans_idx[0]-1, trans_idx[0], trans_idx[-1]]
             self.params['tower_section_height'] = np.diff( np.flipud( towerData[idx,0] ) )
             self.params['tower_outer_diameter'] = np.flipud( towerData[idx, 1] )
-            self.params['tower_wall_thickness'] = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
+            t_temp = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
+            self.params['tower_wall_thickness'] = 0.5*(t_temp[:-1] + t_temp[1:])
 
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 672300.5303006992

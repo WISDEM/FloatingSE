@@ -1,7 +1,7 @@
 from openmdao.api import Component, Group
 import numpy as np
 
-from commonse.utilities import nodal2sectional, assembleI, unassembleI
+from commonse.utilities import nodal2sectional, sectional2nodal, assembleI, unassembleI, sectionalInterp
 import commonse.frustum as frustum
 import commonse.manufacturing as manufacture
 from commonse.UtilizationSupplement import shellBuckling_withStiffeners, GeometricConstraints
@@ -9,6 +9,9 @@ from commonse import gravity, eps, AeroHydroLoads, CylinderWindDrag, CylinderWav
 from commonse.vertical_cylinder import CylinderDiscretization, CylinderMass
 from commonse.environment import PowerWind, LinearWaves
 
+def get_inner_radius(Ro, t):
+    # Radius varies at nodes, t varies by section
+    return (Ro-sectional2nodal(t))
 
 def I_tube(r_i, r_o, h, m):
     if type(r_i) == type(np.array([])):
@@ -22,12 +25,6 @@ def I_tube(r_i, r_o, h, m):
     Ixx = Iyy = (m/12.0) * (3.0*(r_i**2.0 + r_o**2.0) + h**2.0)
     Izz = 0.5 * m * (r_i**2.0 + r_o**2.0)
     return np.c_[Ixx, Iyy, Izz, np.zeros((n,3))]
-
-def sectionalInterp(xi, x, y):
-    epsilon = 1e-11
-    xx=np.c_[x[:-1], x[1:]-epsilon].flatten()
-    yy=np.c_[y, y].flatten()    
-    return np.interp(xi, xx, yy)
     
 
 class BulkheadProperties(Component):
@@ -39,7 +36,7 @@ class BulkheadProperties(Component):
         self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('z_param', val=np.zeros((nSection+1,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('d_full', val=np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
-        self.add_param('t_full', val=np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
+        self.add_param('t_full', val=np.zeros(nFull-1), units='m', desc='shell thickness at corresponding locations')
         self.add_param('rho', val=0.0, units='kg/m**3', desc='material density')
         self.add_param('bulkhead_thickness', val=np.zeros(nSection+1), units='m', desc='Nodal locations of bulkhead thickness, zero meaning no bulkhead, bottom to top (length = nsection + 1)')
         self.add_param('bulkhead_mass_factor', val=0.0, desc='Bulkhead mass correction factor')
@@ -65,7 +62,7 @@ class BulkheadProperties(Component):
         z_param    = params['z_param']
         R_od       = 0.5*params['d_full'] # at section nodes
         twall      = params['t_full'] # at section nodes
-        R_id       = (R_od - twall)
+        R_id       = get_inner_radius(R_od, twall)
         t_bulk     = params['bulkhead_thickness'] # at section nodes
         rho        = params['rho']
         
@@ -205,8 +202,8 @@ class BuoyancyTankProperties(Component):
         # Now do moments of inertia
         # First find MoI at cg of all components
         R_plate += eps
-        Ixx_box   = frustum.frustumShellIxx(R_plate, R_plate, t_plate, t_plate, h_box)
-        Izz_box   = frustum.frustumShellIzz(R_plate, R_plate, t_plate, t_plate, h_box)
+        Ixx_box   = frustum.frustumShellIxx(R_plate, R_plate, t_plate, h_box)
+        Izz_box   = frustum.frustumShellIzz(R_plate, R_plate, t_plate, h_box)
         I_plateL  = 0.25 * m_plate[0] * (R_plate**2.0 - R_col[0]**2.0) * np.array([1.0, 1.0, 2.0, 0.0, 0.0, 0.0])
         I_plateU  = 0.25 * m_plate[1] * (R_plate**2.0 - R_col[1]**2.0) * np.array([1.0, 1.0, 2.0, 0.0, 0.0, 0.0])
 
@@ -281,7 +278,7 @@ class StiffenerProperties(Component):
 
         self.nSection = nSection
         self.add_param('d_full', val=np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
-        self.add_param('t_full', val=np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
+        self.add_param('t_full', val=np.zeros(nFull-1), units='m', desc='shell thickness at corresponding locations')
         self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes')
         self.add_param('rho', val=0.0, units='kg/m**3', desc='material density')
         
@@ -317,9 +314,8 @@ class StiffenerProperties(Component):
         t_wall       = params['t_full']
         z_full       = params['z_full'] # at section nodes
         h_section    = np.diff(z_full)
-        V_shell      = frustum.frustumShellVol(R_od[:-1], R_od[1:], t_wall[:-1], t_wall[1:], h_section)
+        V_shell      = frustum.frustumShellVol(R_od[:-1], R_od[1:], t_wall, h_section)
         R_od,_       = nodal2sectional( R_od ) # at section nodes
-        t_wall,_     = nodal2sectional( t_wall ) # at section nodes
         
         t_web        = params['t_web']
         t_flange     = params['t_flange']
@@ -440,7 +436,7 @@ class BallastProperties(Component):
 
         self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
         self.add_param('d_full', val=np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
-        self.add_param('t_full', val=np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
+        self.add_param('t_full', val=np.zeros(nFull-1), units='m', desc='shell thickness at corresponding locations')
         self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes')
         self.add_param('permanent_ballast_density', val=0.0, units='kg/m**3', desc='density of permanent ballast')
         self.add_param('permanent_ballast_height', val=0.0, units='m', desc='height of permanent ballast')
@@ -462,6 +458,7 @@ class BallastProperties(Component):
         h_ballast   = params['permanent_ballast_height']
         rho_ballast = params['permanent_ballast_density']
         rho_water   = params['water_density']
+        R_id_orig   = get_inner_radius(R_od, t_wall)
 
         npts = R_od.size
         section_mass = np.zeros(npts-1)
@@ -472,7 +469,7 @@ class BallastProperties(Component):
         # Fixed and total ballast mass and cg
         # Assume they are bottled in columns a the keel of the column- first the permanent then the fixed
         zpts      = np.linspace(z_draft, z_draft+h_ballast, npts)
-        R_id      = np.interp(zpts, z_nodes, R_od-t_wall)
+        R_id      = np.interp(zpts, z_nodes, R_id_orig)
         V_perm    = np.pi * np.trapz(R_id**2, zpts)
         m_perm    = rho_ballast * V_perm
         z_cg_perm = rho_ballast * np.pi * np.trapz(zpts*R_id**2, zpts) / m_perm if m_perm > 0.0 else 0.0
@@ -498,7 +495,7 @@ class BallastProperties(Component):
         # Find height of water ballast numerically by finding the height that integrates to the mass we want
         # This step is completed in column.py or semi.py because we must account for other substructure elements too
         zpts    = np.linspace(z_water_start, 0.0, npts)
-        R_id    = np.interp(zpts, z_nodes, R_od-t_wall)
+        R_id    = np.interp(zpts, z_nodes, R_id_orig)
         unknowns['variable_ballast_interp_zpts']   = zpts
         unknowns['variable_ballast_interp_radius'] = R_id
         
@@ -607,7 +604,7 @@ class ColumnProperties(Component):
 
         # Design variables
         self.add_param('d_full', val=np.zeros((nFull,)), units='m', desc='outer diameter at each section node bottom to top (length = nsection + 1)')
-        self.add_param('t_full', val=np.zeros((nFull,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('t_full', val=np.zeros((nFull-1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
         self.add_param('buoyancy_tank_diameter', val=0.0, units='m', desc='Radius of heave plate at bottom of column')
         
         # Mass correction factors from simple rules here to real life
@@ -796,7 +793,6 @@ class ColumnProperties(Component):
         # Unpack variables
         R_od              = 0.5*params['d_full']
         R_plate           = 0.5*params['buoyancy_tank_diameter']
-        t_wall            = params['t_full']
         z_nodes           = params['z_full']
         z_box             = params['buoyancy_tank_cg']
         V_box             = params['buoyancy_tank_displacement']
@@ -880,7 +876,7 @@ class ColumnBuckling(Component):
         self.add_param('pressure', np.zeros(nFull), units='N/m**2', desc='Dynamic (and static)? pressure')
         
         self.add_param('d_full', np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
-        self.add_param('t_full', np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
+        self.add_param('t_full', np.zeros(nFull-1), units='m', desc='shell thickness at corresponding locations')
         self.add_param('z_full', val=np.zeros(nFull), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
 
         self.add_param('h_web', val=np.zeros((nFull-1,)), units='m', desc='height of stiffener web (base of T) within each section bottom to top')
@@ -934,16 +930,16 @@ class ColumnBuckling(Component):
         # Unpack variables
         R_od,_         = nodal2sectional(params['d_full'])
         R_od          *= 0.5
-        t_wall,_       = nodal2sectional(params['t_full'])
+        t_wall         = params['t_full']
         section_mass   = params['section_mass']
         m_stack        = params['stack_mass_in']
         
         # Middle radius
-        R = R_od - 0.5*t_wall
+        R_m = R_od - 0.5*t_wall
         # Add in weight of sections above it
         axial_load = m_stack + np.r_[0.0, np.cumsum(section_mass[:-1])]
         # Divide by shell cross sectional area to get stress
-        return (gravity * axial_load / (2.0 * np.pi * R * t_wall))
+        return (gravity * axial_load / (2.0 * np.pi * R_m * t_wall))
 
     
     def solve_nonlinear(self, params, unknowns, resids):
@@ -951,7 +947,7 @@ class ColumnBuckling(Component):
         R_od,_       = nodal2sectional( params['d_full'] )
         R_od        *= 0.5
         h_section    = np.diff( params['z_full'] )
-        t_wall,_     = nodal2sectional( params['t_full'] )
+        t_wall       = params['t_full']
         
         t_web        = params['t_web']
         t_flange     = params['t_flange']

@@ -10,17 +10,6 @@ NSEC = 2
 myones = np.ones((NPTS,))
 secones = np.ones((NPTS-1,))
 
-class TestSectional(unittest.TestCase):
-    def testAll(self):
-        x = np.arange(0.0, 2.1, 0.5)
-        y = np.array([-1.0, 1.0, -2.0, 2.0])
-        xi = np.array([-0.1, 0.25, 0.9, 1.4, 1.5, 1.6, 2.1])
-        yi = column.sectionalInterp(xi, x, y)
-
-        y_expect = np.array([-1.0, -1.0, 1.0, -2.0, 2.0, 2.0, 2.0])
-        npt.assert_array_equal(yi, y_expect)
-        
-
 class TestBulk(unittest.TestCase):
     def setUp(self):
         self.params = {}
@@ -30,7 +19,7 @@ class TestBulk(unittest.TestCase):
         self.params['z_full'] = np.linspace(0, 1, NPTS)
         self.params['z_param'] = np.linspace(0, 1, 6)
         self.params['d_full'] = 10.0 * myones
-        self.params['t_full'] = 0.05 * myones
+        self.params['t_full'] = 0.05 * secones
         self.params['rho'] = 1e3
         self.params['bulkhead_mass_factor'] = 1.1
         self.params['bulkhead_thickness'] = 0.05 * np.array([0.0, 1.0, 0.0, 1.0, 0.0, 0.0])
@@ -178,8 +167,7 @@ class TestStiff(unittest.TestCase):
         self.params['painting_cost_rate'] = 10.0
         self.params['shell_mass'] = 500.0*np.ones(NPTS-1)
 
-        self.params['t_full'] = 0.5*myones
-        self.params['t_full'][1::2] = 0.4
+        self.params['t_full'] = 0.5*secones
         self.params['d_full'] = 2*10.0*myones
         self.params['d_full'][1::2] = 2*8.0
         self.params['z_full'] = np.linspace(0, 1, NPTS) - 0.5
@@ -190,7 +178,7 @@ class TestStiff(unittest.TestCase):
     def testAll(self):
         self.stiff.solve_nonlinear(self.params, self.unknowns, self.resid)
 
-        Rwo = 9-0.45
+        Rwo = 9-0.5
         Rwi = Rwo - 1.
         Rfi = Rwi - 0.3
         V1 = np.pi*(Rwo**2 - Rwi**2)*0.5
@@ -208,7 +196,7 @@ class TestStiff(unittest.TestCase):
         self.params['labor_cost_rate'] = 0.0
         self.params['painting_cost_rate'] = 10.0
         self.stiff.solve_nonlinear(self.params, self.unknowns, self.resid)
-        self.assertEqual(self.unknowns['stiffener_cost'], (expect + 10*2*A)*(0.5/0.1 + 0.5/0.05) )
+        self.assertAlmostEqual(self.unknowns['stiffener_cost'], (expect + 10*2*A)*(0.5/0.1 + 0.5/0.05) )
         
         self.params['material_cost_rate'] = 0.0
         self.params['labor_cost_rate'] = 1.0
@@ -232,7 +220,7 @@ class TestStiff(unittest.TestCase):
         
         npt.assert_almost_equal(self.unknowns['stiffener_I_keel'], I)
         npt.assert_equal(self.unknowns['flange_spacing_ratio'], 2*2.0/1.2)
-        npt.assert_equal(self.unknowns['stiffener_radius_ratio'], 1.75/9.0)
+        npt.assert_equal(self.unknowns['stiffener_radius_ratio'], 1.8/9.0)
         
 
 class TestBallast(unittest.TestCase):
@@ -240,7 +228,7 @@ class TestBallast(unittest.TestCase):
         self.params = {}
         self.unknowns = {}
         self.resid = None
-        self.params['t_full'] = 0.5*myones
+        self.params['t_full'] = 0.5*secones
         self.params['d_full'] = 2*10.0*myones
         self.params['z_full'] = np.linspace(0, 1, NPTS) - 0.5
         self.params['permanent_ballast_height'] = 1.0
@@ -331,7 +319,7 @@ class TestProperties(unittest.TestCase):
         self.params['Hs'] = 5.0
         self.params['max_draft'] = 70.0
         
-        self.params['t_full'] = 0.5*myones
+        self.params['t_full'] = 0.5*secones
         self.params['d_full'] = 2*10.0*myones
 
         self.params['stack_mass_in'] = 0.0
@@ -496,7 +484,7 @@ class TestBuckle(unittest.TestCase):
         onesec  = np.ones((NPTS-1,))
         #onesec0 = np.ones((NSEC,))
         self.params['d_full'] = 600 * onepts * in_to_si
-        self.params['t_full'] = 0.75 * onepts * in_to_si
+        self.params['t_full'] = 0.75 * onesec * in_to_si
         self.params['t_web'] = 5./8. * onesec * in_to_si
         self.params['h_web'] = 14.0 * onesec * in_to_si
         self.params['t_flange'] = 1.0 * onesec * in_to_si
@@ -540,7 +528,6 @@ class TestBuckle(unittest.TestCase):
         
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestSectional))
     suite.addTest(unittest.makeSuite(TestBulk))
     suite.addTest(unittest.makeSuite(TestBuoyancyTank))
     suite.addTest(unittest.makeSuite(TestStiff))

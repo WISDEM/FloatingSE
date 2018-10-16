@@ -60,7 +60,7 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['main_freeboard']                = 10.0 # Height extension above waterline [m]
         self.myfloat['main_section_height'] = np.array([49.0, 29.0, 30.0, 8.0, 14.0])  # Length of each section [m]
         self.myfloat['main_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
-        self.myfloat['main_wall_thickness'] = 0.05 * np.ones(NSECTION+1)               # Shell thickness at each section node (linear lofting between) [m]
+        self.myfloat['main_wall_thickness'] = 0.05 * np.ones(NSECTION)               # Shell thickness at each section node (linear lofting between) [m]
         self.myfloat['main_bulkhead_thickness'] = 0.05*np.array([1, 1, 0, 0, 1, 0]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.myfloat['main_buoyancy_tank_diameter'] = 0.0
         self.myfloat['main_buoyancy_tank_height'] = 0.0
@@ -102,7 +102,7 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['radius_to_offset_column'] = 15.0
         self.myfloat['offset_section_height'] = 1.0 * np.ones(NSECTION)
         self.myfloat['offset_outer_diameter'] = 5.0 * np.ones(NSECTION+1)
-        self.myfloat['offset_wall_thickness'] = 0.1 * np.ones(NSECTION+1)
+        self.myfloat['offset_wall_thickness'] = 0.1 * np.ones(NSECTION)
         self.myfloat['offset_permanent_ballast_height'] = 0.1
         self.myfloat['offset_stiffener_web_height'] = 0.1 * np.ones(NSECTION)
         self.myfloat['offset_stiffener_web_thickness'] =  0.1 * np.ones(NSECTION)
@@ -131,7 +131,7 @@ class TestOC3Mass(unittest.TestCase):
         self.myfloat['hub_height']              = 77.6                              # Length from tower main to top (not including freeboard) [m]
         self.myfloat['tower_section_height']    = 77.6/NSECTION * np.ones(NSECTION) # Length of each tower section [m]
         self.myfloat['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTION+1) # Diameter at each tower section node (linear lofting between) [m]
-        self.myfloat['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTION+1) # Diameter at each tower section node (linear lofting between) [m]
+        self.myfloat['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTION) # Diameter at each tower section node (linear lofting between) [m]
         self.myfloat['tower_buckling_length']   = 30.0                              # Tower buckling reinforcement spacing [m]
         self.myfloat['tower_outfitting_factor'] = 1.07                              # Scaling for unaccounted tower mass in outfitting
 
