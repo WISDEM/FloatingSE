@@ -16,6 +16,13 @@ from .map_mooring import NLINES_MAX
 def find_nearest(array,value):
     return (np.abs(array-value)).argmin() 
 
+        
+def ghostNodes(x1, x2, r1, r2):
+    dx = x2 - x1
+    L = np.sqrt( np.sum( dx**2 ) )
+    dr1 = (      r1/L) * dx + x1
+    dr2 = (1.0 - r2/L) * dx + x1
+    return dr1, dr2
 
 class FloatingFrame(Component):
     """
@@ -26,6 +33,9 @@ class FloatingFrame(Component):
     def __init__(self, nFull):
         super(FloatingFrame,self).__init__()
 
+        # Keep Frame3DD data object for easy testing and debugging
+        self.myframe = None
+        
         # Environment
         self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
 
@@ -380,7 +390,7 @@ class FloatingFrame(Component):
         xnode     = np.append(xnode, mooringx)
         ynode     = np.append(ynode, mooringy)
         znode     = np.append(znode, z_fairlead*np.ones(n_connect) )
-        rnode     = np.append(rnode, 0.0)
+        rnode     = np.append(rnode, np.zeros(n_connect))
             
         # Add nodes midway around outer ring for cross bracing
         if outerCrossFlag and ncolumn > 0:
@@ -388,74 +398,135 @@ class FloatingFrame(Component):
             crossy = 0.5*(offsety + np.roll(offsety,1))
 
             crossOuterLowerID = xnode.size + np.arange(ncolumn) + 1
+            crossOuterLowerID = crossOuterLowerID.tolist()
             xnode = np.append(xnode, crossx)
             ynode = np.append(ynode, crossy)
             znode = np.append(znode, z_offset[0]*np.ones(ncolumn))
-            rnode = np.append(rnode, 0.0)
+            rnode = np.append(rnode, np.zeros(ncolumn))
 
             #crossOuterUpperID = xnode.size + np.arange(ncolumn) + 1
             #xnode = np.append(xnode, crossx)
             #ynode = np.append(ynode, crossy)
             #znode = np.append(znode, z_offset[-1]*np.ones(ncolumn))
 
-        # Create Node Data object
-        nnode = 1 + np.arange(xnode.size)
-        rnode = np.zeros(xnode.shape) # z-spacing too narrow for use of rnodes
-        nodes = frame3dd.NodeData(nnode, xnode, ynode, znode, rnode)
+        # Create matrix for easy referencing
+        nodeMat = np.c_[xnode, ynode, znode]
 
+        # To aid in wrap-around references
+        if ncolumn > 0:
+            offsetLowerID.append( offsetLowerID[0] )
+            offsetUpperID.append( offsetUpperID[0] )
+            if outerCrossFlag:
+                crossOuterLowerID.append( crossOuterLowerID[0] )
         
-
+        
         # ---ELEMENTS / EDGES---
-        N1 = np.array([], dtype=np.int32)
-        N2 = np.array([], dtype=np.int32)
+        # To accurately capture pontoon length and stiffness, for each connection we create 2 additional nodes,
+        # where the pontoon "line" intersects the main and offset shells.  Highly stiff "ghost" elements are created
+        # from the column centerline to the shell.  These are not calculated for pontoon weight.
+        # The actual pontoon only extends from shell boundary to shell boundary.
+        N1  = np.array([], dtype=np.int32)
+        N2  = np.array([], dtype=np.int32)
+        gN1 = np.array([], dtype=np.int32)
+        gN2 = np.array([], dtype=np.int32)
+        
         # Lower connection from central main column to offset columns
         if lowerAttachFlag:
             lowerAttachEID = N1.size + 1
             for k in range(ncolumn):
-                N1 = np.append(N1, mainLowerID )
-                N2 = np.append(N2, offsetLowerID[k] )
+                add1, add2 = ghostNodes(nodeMat[mainLowerID-1,:], nodeMat[offsetLowerID[k]-1,:], rnode[mainLowerID-1], rnode[offsetLowerID[k]-1])
+                tempID     = xnode.size + 1
+                xnode      = np.append(xnode, [add1[0], add2[0]])
+                ynode      = np.append(ynode, [add1[1], add2[1]])
+                znode      = np.append(znode, [add1[2], add2[2]])
+                gN1        = np.append(gN1, [mainLowerID, offsetLowerID[k]] )
+                gN2        = np.append(gN2, [tempID, tempID+1] )
+                N1         = np.append(N1, tempID )
+                N2         = np.append(N2, tempID+1 )
+                
         # Upper connection from central main column to offset columns
         if upperAttachFlag:
             upperAttachEID = N1.size + 1
             for k in range(ncolumn):
-                N1 = np.append(N1, mainUpperID )
-                N2 = np.append(N2, offsetUpperID[k] )
+                add1, add2 = ghostNodes(nodeMat[mainUpperID-1,:], nodeMat[offsetUpperID[k]-1,:], rnode[mainUpperID-1], rnode[offsetUpperID[k]-1])
+                tempID     = xnode.size + 1
+                xnode      = np.append(xnode, [add1[0], add2[0]])
+                ynode      = np.append(ynode, [add1[1], add2[1]])
+                znode      = np.append(znode, [add1[2], add2[2]])
+                gN1        = np.append(gN1, [mainUpperID, offsetUpperID[k]] )
+                gN2        = np.append(gN2, [tempID, tempID+1] )
+                N1         = np.append(N1, tempID )
+                N2         = np.append(N2, tempID+1 )
+                
         # Cross braces from lower central main column to upper offset columns
         if crossAttachFlag:
             crossAttachEID = N1.size + 1
             for k in range(ncolumn):
-                N1 = np.append(N1, mainLowerID )
-                N2 = np.append(N2, offsetUpperID[k] )
+                add1, add2 = ghostNodes(nodeMat[mainLowerID-1,:], nodeMat[offsetUpperID[k]-1,:], rnode[mainLowerID-1], rnode[offsetUpperID[k]-1])
+                tempID     = xnode.size + 1
+                xnode      = np.append(xnode, [add1[0], add2[0]])
+                ynode      = np.append(ynode, [add1[1], add2[1]])
+                znode      = np.append(znode, [add1[2], add2[2]])
+                gN1        = np.append(gN1, [mainLowerID, offsetUpperID[k]] )
+                gN2        = np.append(gN2, [tempID, tempID+1] )
+                N1         = np.append(N1, tempID )
+                N2         = np.append(N2, tempID+1 )
+                
             # Will be used later to convert from local member c.s. to global
             cross_angle = np.arctan( (z_attach_upper - z_attach_lower) / R_semi )
+            
         # Lower ring around offset columns
         if lowerRingFlag:
             lowerRingEID = N1.size + 1
-            for k in range(ncolumn-1):
-                N1 = np.append(N1, offsetLowerID[k] )
-                N2 = np.append(N2, offsetLowerID[k+1] )
-            N1 = np.append(N1, offsetLowerID[0] )
-            N2 = np.append(N2, offsetLowerID[-1] )
+            for k in range(ncolumn):
+                add1, add2 = ghostNodes(nodeMat[offsetLowerID[k]-1,:], nodeMat[offsetLowerID[k+1]-1,:], rnode[offsetLowerID[k]-1], rnode[offsetLowerID[k+1]-1])
+                tempID     = xnode.size + 1
+                xnode      = np.append(xnode, [add1[0], add2[0]])
+                ynode      = np.append(ynode, [add1[1], add2[1]])
+                znode      = np.append(znode, [add1[2], add2[2]])
+                gN1        = np.append(gN1, [offsetLowerID[k], offsetLowerID[k+1]] )
+                gN2        = np.append(gN2, [tempID, tempID+1] )
+                N1         = np.append(N1, tempID )
+                N2         = np.append(N2, tempID+1 )
+
         # Upper ring around offset columns
         if upperRingFlag:
             upperRingEID = N1.size + 1
-            for k in range(ncolumn-1):
-                N1 = np.append(N1, offsetUpperID[k] )
-                N2 = np.append(N2, offsetUpperID[k+1] )
-            N1 = np.append(N1, offsetUpperID[0] )
-            N2 = np.append(N2, offsetUpperID[-1] )
-        # Outer cross braces
+            for k in range(ncolumn):
+                add1, add2 = ghostNodes(nodeMat[offsetUpperID[k]-1,:], nodeMat[offsetUpperID[k+1]-1,:], rnode[offsetUpperID[k]-1], rnode[offsetUpperID[k+1]-1])
+                tempID     = xnode.size + 1
+                xnode      = np.append(xnode, [add1[0], add2[0]])
+                ynode      = np.append(ynode, [add1[1], add2[1]])
+                znode      = np.append(znode, [add1[2], add2[2]])
+                gN1        = np.append(gN1, [offsetUpperID[k], offsetUpperID[k+1]] )
+                gN2        = np.append(gN2, [tempID, tempID+1] )
+                N1         = np.append(N1, tempID )
+                N2         = np.append(N2, tempID+1 )
+                
+        # Outer cross braces (only one ghost node per connection)
         if outerCrossFlag:
             outerCrossEID = N1.size + 1
-            for k in range(ncolumn-1):
-                N1 = np.append(N1, crossOuterLowerID[k] )
-                N2 = np.append(N2, offsetUpperID[k] )
-                N1 = np.append(N1, crossOuterLowerID[k+1] )
-                N2 = np.append(N2, offsetUpperID[k] )
-            N1 = np.append(N1, crossOuterLowerID[-1] )
-            N2 = np.append(N2, offsetUpperID[-1] )
-            N1 = np.append(N1, crossOuterLowerID[0] )
-            N2 = np.append(N2, offsetUpperID[-1] )
+            for k in range(ncolumn):
+                _, add2 = ghostNodes(nodeMat[crossOuterLowerID[k]-1,:], nodeMat[offsetUpperID[k]-1,:], rnode[crossOuterLowerID[k]-1], rnode[offsetUpperID[k]-1])
+                tempID     = xnode.size + 1
+                xnode      = np.append(xnode, add2[0])
+                ynode      = np.append(ynode, add2[1])
+                znode      = np.append(znode, add2[2])
+                gN1        = np.append(gN1, offsetUpperID[k])
+                gN2        = np.append(gN2, tempID)
+                N1         = np.append(N1, crossOuterLowerID[k] )
+                N2         = np.append(N2, tempID )
+
+                _, add2 = ghostNodes(nodeMat[crossOuterLowerID[k+1]-1,:], nodeMat[offsetUpperID[k]-1,:], rnode[crossOuterLowerID[k+1]-1], rnode[offsetUpperID[k]-1])
+                tempID     = xnode.size + 1
+                xnode      = np.append(xnode, add2[0])
+                ynode      = np.append(ynode, add2[1])
+                znode      = np.append(znode, add2[2])
+                gN1        = np.append(gN1, offsetUpperID[k])
+                gN2        = np.append(gN2, tempID)
+                N1         = np.append(N1, crossOuterLowerID[k+1] )
+                N2         = np.append(N2, tempID )
+            
         # TODO: Parameterize these for upper, lower, cross connections
         # Properties for the inner connectors
         mytube = Tube(2.0*R_od_pontoon, t_wall_pontoon)
@@ -474,20 +545,28 @@ class FloatingFrame(Component):
         mooringEID = N1.size + 1
         mytube  = Tube(2.0*R_od_fairlead, t_wall_fairlead)
         for k in range(n_connect):
-            kfair = 0 if ncolumn==0 else k
-            N1   = np.append(N1  , fairleadID[kfair] )
-            N2   = np.append(N2  , mooringID[k] )
-            Ax   = np.append(Ax  , mytube.Area )
-            As   = np.append(As  , mytube.Asx )
-            Jx   = np.append(Jx  , mytube.J0 )
-            I    = np.append(I   , mytube.Jxx )
-            S    = np.append(S   , mytube.S )
-            C    = np.append(C   , mytube.C )
-            modE = np.append(modE, E )
-            modG = np.append(modG, G )
-            roll = np.append(roll, 0.0 )
-            dens = np.append(dens, rho )
+            kfair   = 0 if ncolumn==0 else k
             
+            add1, _ = ghostNodes(nodeMat[fairleadID[kfair]-1,:], nodeMat[mooringID[k]-1,:], rnode[fairleadID[kfair]-1], rnode[mooringID[k]-1])
+            tempID  = xnode.size + 1
+            xnode   = np.append(xnode, add1[0])
+            ynode   = np.append(ynode, add1[1])
+            znode   = np.append(znode, add1[2])
+            gN1     = np.append(gN1, fairleadID[kfair])
+            gN2     = np.append(gN2, tempID)
+            N1      = np.append(N1, tempID )
+            N2      = np.append(N2, mooringID[k] )
+
+            Ax      = np.append(Ax  , mytube.Area )
+            As      = np.append(As  , mytube.Asx )
+            Jx      = np.append(Jx  , mytube.J0 )
+            I       = np.append(I   , mytube.Jxx )
+            S       = np.append(S   , mytube.S )
+            C       = np.append(C   , mytube.C )
+            modE    = np.append(modE, E )
+            modG    = np.append(modG, G )
+            roll    = np.append(roll, 0.0 )
+            dens    = np.append(dens, rho )
 
         # Now mock up cylindrical columns as truss members even though long, slender assumption breaks down
         # Will set density = 0.0 so that we don't double count the mass
@@ -495,7 +574,8 @@ class FloatingFrame(Component):
         R_od_main,_     = nodal2sectional( R_od_main )
         R_od_offset,_   = nodal2sectional( R_od_offset )
         R_od_tower,_    = nodal2sectional( R_od_tower )
-        # Senu TODO: Make artificially more stiff?
+
+        # Main column
         mainEID = N1.size + 1
         mytube  = Tube(2.0*R_od_main, t_wall_main)
         myrange = np.arange(R_od_main.size)
@@ -514,7 +594,7 @@ class FloatingFrame(Component):
         roll = np.append(roll, np.zeros(myones.shape) )
         dens = np.append(dens, mydens )
 
-        # Rest of tower
+        # Tower column
         towerEID = N1.size + 1
         myrange = np.arange(R_od_tower.size)
         myones  = np.ones(myrange.shape)
@@ -546,7 +626,8 @@ class FloatingFrame(Component):
         modG = np.append(modG, 1e20 )
         roll = np.append(roll, 0.0 )
         dens = np.append(dens, 1e-6 ) 
-        
+
+        # Offset column
         offsetEID = []
         mytube     = Tube(2.0*R_od_offset, t_wall_offset)
         myrange    = np.arange(R_od_offset.size)
@@ -568,8 +649,29 @@ class FloatingFrame(Component):
             roll = np.append(roll, np.zeros(myones.shape) )
             dens = np.append(dens, mydens ) # Mass added below
 
+        # Ghost elements between centerline nodes and column shells
+        ghostEID = N1.size + 1
+        myones   = np.ones(gN1.shape)
+        N1   = np.append(N1  , gN1 )
+        N2   = np.append(N2  , gN2 )
+        Ax   = np.append(Ax  , 1e-1*myones )
+        As   = np.append(As  , 1e-1*myones )
+        Jx   = np.append(Jx  , 1e-1*myones )
+        I    = np.append(I   , 1e-1*myones )
+        S    = np.append(S   , 1e-1*myones )
+        C    = np.append(C   , 1e-1*myones )
+        modE = np.append(modE, 1e20*myones )
+        modG = np.append(modG, 1e20*myones )
+        roll = np.append(roll, 0.0 *myones )
+        dens = np.append(dens, 1e-6*myones )
 
-        # ---Get element object from frame3dd---
+        # Create Node Data object
+        nnode   = 1 + np.arange(xnode.size)
+        myrnode = np.zeros(xnode.shape) # z-spacing too narrow for use of rnodes
+        nodes   = frame3dd.NodeData(nnode, xnode, ynode, znode, myrnode)
+        nodeMat = np.c_[xnode, ynode, znode]
+
+        # Create Element Data object
         nelem    = 1 + np.arange(N1.size)
         elements = frame3dd.ElementData(nelem, N1, N2, Ax, As, As, Jx, I, I, modE, modG, roll, dens)
 
@@ -580,8 +682,8 @@ class FloatingFrame(Component):
         plotMat = np.zeros((mainEID, 3, 2))
         myn1 = N1[:mainEID]
         myn2 = N2[:mainEID]
-        plotMat[:,:,0] = np.c_[xnode[myn1-1], ynode[myn1-1], znode[myn1-1]]
-        plotMat[:,:,1] = np.c_[xnode[myn2-1], ynode[myn2-1], znode[myn2-1]]
+        plotMat[:,:,0] = nodeMat[myn1-1,:]
+        plotMat[:,:,1] = nodeMat[myn2-1,:]
         unknowns['plot_matrix'] = plotMat
         
         # Compute length and center of gravity for each element for use below
@@ -654,7 +756,6 @@ class FloatingFrame(Component):
         load.changeTrapezoidalLoads(EL, xx1, xx2, wx1, wx2, xy1, xy2, wy1, wy2, xz1, xz2, wz1, wz2)
 
         # Buoyancy for fully submerged members
-        # Note indices to elemL and elemCoG could include -1, but since there is assumed to be more than 1 column, this is not necessary
         nrange  = np.arange(ncolumn, dtype=np.int32)
         Frange  = np.pi * R_od_pontoon**2 * rhoWater * gravity
         F_truss = 0.0
@@ -759,7 +860,6 @@ class FloatingFrame(Component):
             unknowns['pontoon_center_of_buoyancy'] = z_cb
 
             # Sum up mass and compute CofG.  Frame3DD does mass, but not CG
-            # TODO: Subtract out extra pontoon length that overlaps with column radii
             ind             = mainEID-1
             m_total         = Ax[:ind] * rho * elemL[:ind]
             m_pontoon       = m_total.sum() #mass.struct_mass
@@ -821,7 +921,7 @@ class FloatingFrame(Component):
 
         # ---REACTIONS---
         # Find node closest to CG
-        cg_dist = np.sum( (np.c_[xnode, ynode, znode] - unknowns['structure_center_of_mass'][np.newaxis,:])**2, axis=1 )
+        cg_dist = np.sum( (nodeMat - unknowns['structure_center_of_mass'][np.newaxis,:])**2, axis=1 )
         cg_node = np.argmin(cg_dist)
         # Free=0, Rigid=1
         rid = np.array([mainBeginID]) #np.array(fairleadID) #np.array([cg_node+1]) #
@@ -845,7 +945,7 @@ class FloatingFrame(Component):
         # ---FRAME3DD INSTANCE---
 
         # Initialize frame3dd object
-        myframe = frame3dd.Frame(nodes, reactions, elements, other)
+        self.myframe = frame3dd.Frame(nodes, reactions, elements, other)
         
         # Add in extra mass of rna
         inode   = np.array([towerEndID], dtype=np.int32) # rna
@@ -859,10 +959,10 @@ class FloatingFrame(Component):
         rhox = np.array([ cg_rna[0] ])
         rhoy = np.array([ cg_rna[1] ])
         rhoz = np.array([ cg_rna[2] ])
-        myframe.changeExtraNodeMass(inode, m_extra, Ixx, Iyy, Izz, Ixy, Ixz, Iyz, rhox, rhoy, rhoz, True)
+        self.myframe.changeExtraNodeMass(inode, m_extra, Ixx, Iyy, Izz, Ixy, Ixz, Iyz, rhox, rhoy, rhoz, True)
         
         # Store load case into frame 3dd object
-        myframe.addLoadCase(load)
+        self.myframe.addLoadCase(load)
 
 
         # ---DYNAMIC ANALYSIS---
@@ -874,14 +974,14 @@ class FloatingFrame(Component):
         tol = 1e-5          # mode shape tolerance
         shift = 0.0        # shift value ... for unrestrained or partially restrained structures
         
-        #myframe.enableDynamics(nM, Mmethod, lump, tol, shift)
+        #self.myframe.enableDynamics(nM, Mmethod, lump, tol, shift)
 
         # ---DEBUGGING---
-        #myframe.write('debug.3dd') # For debugging
+        #self.myframe.write('debug.3dd') # For debugging
 
         # ---RUN ANALYSIS---
         try:
-            displacements, forces, reactions, internalForces, mass, modal = myframe.run()
+            displacements, forces, reactions, internalForces, mass, modal = self.myframe.run()
         except:
             bad_input()
             return

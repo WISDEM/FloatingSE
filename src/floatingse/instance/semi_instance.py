@@ -1,4 +1,5 @@
 from floating_instance import FloatingInstance
+from commonse.utilities import sectional2nodal
 import numpy as np
         
 class SemiInstance(FloatingInstance):
@@ -24,8 +25,9 @@ class SemiInstance(FloatingInstance):
         self.draw_column(fig, [0.0, 0.0], self.params['main_freeboard'], self.params['main_section_height'],
                            0.5*self.params['main_outer_diameter'], self.params['main_stiffener_spacing'])
 
+        t_full = sectional2nodal(self.params['main_wall_thickness'])
         self.draw_ballast(fig, [0.0, 0.0], self.params['main_freeboard'], self.params['main_section_height'],
-                          0.5*self.params['main_outer_diameter']-self.params['main_wall_thickness'],
+                          0.5*self.params['main_outer_diameter']-t_full,
                           self.params['main_permanent_ballast_height'], self.prob['variable_ballast_height'])
         
         if self.prob['main.buoyancy_tank_mass'] > 0.0:
@@ -44,8 +46,9 @@ class SemiInstance(FloatingInstance):
             self.draw_column(fig, [x[k], y[k]], self.params['offset_freeboard'], self.params['offset_section_height'],
                                0.5*self.params['offset_outer_diameter'], self.params['offset_stiffener_spacing'])
 
+            t_full = sectional2nodal(self.params['offset_wall_thickness'])
             self.draw_ballast(fig, [x[k], y[k]], self.params['offset_freeboard'], self.params['offset_section_height'],
-                              0.5*self.params['offset_outer_diameter']-self.params['offset_wall_thickness'],
+                              0.5*self.params['offset_outer_diameter']-t_full,
                               self.params['offset_permanent_ballast_height'], 0.0)
 
             if self.prob['off.buoyancy_tank_mass'] > 0.0:
