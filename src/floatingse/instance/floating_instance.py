@@ -403,12 +403,12 @@ class FloatingInstance(object):
         self.objective = None
         
         # Establish the optimization driver
-        if self.optimizer in ['SOGA','SOPSO','NM']:#,'SUBPLEX']:
+        if self.optimizer in ['SOGA','SOPSO','NM','SUBPLEX']:
             from openmdao.api import HeuristicDriverParallel
             self.prob.driver = HeuristicDriverParallel()
-        elif self.optimizer in ['SUBPLEX']:
-            from openmdao.api import HeuristicDriver
-            self.prob.driver = HeuristicDriver()
+        #elif self.optimizer in ['SUBPLEX']:
+            #from openmdao.api import HeuristicDriver
+            #self.prob.driver = HeuristicDriver()
         elif self.optimizer in ['COBYLA','SLSQP']:
             self.prob.driver = ScipyOptimizer()
         elif self.optimizer in ['CONMIN', 'PSQP','SNOPT','NSGA2','ALPSO']:
