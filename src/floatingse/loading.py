@@ -129,6 +129,7 @@ class FloatingFrame(Component):
         
         # Outputs
         self.add_output('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
+        self.add_output('pontoon_cost_rate', val=0.0, units='USD/t', desc='Cost rate of finished pontoon and truss')
         self.add_output('pontoon_mass', val=0.0, units='kg', desc='Mass of pontoon elements and connecting truss')
         self.add_output('pontoon_displacement', val=0.0, units='m**3', desc='Buoyancy force of submerged pontoon elements')
         self.add_output('pontoon_center_of_buoyancy', val=0.0, units='m', desc='z-position of center of pontoon buoyancy force')
@@ -797,6 +798,7 @@ class FloatingFrame(Component):
             
             unknowns['pontoon_mass'] = m_pontoon
             unknowns['pontoon_cost'] = c_pontoon
+            unknowns['pontoon_cost_rate'] = 1e3*c_pontoon/m_pontoon
             unknowns['pontoon_center_of_mass'] = cg_pontoon[-1]
         else:
             V_pontoon = z_cb = m_pontoon = 0.0

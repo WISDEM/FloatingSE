@@ -126,7 +126,7 @@ class FloatingInstance(object):
         self.params['material_cost_rate']                   = 1.1
         self.params['labor_cost_rate']                      = 1.0
         self.params['painting_cost_rate']                   = 14.4
-        self.params['outfitting_cost_rate']                 = 1.5 * params['material_cost_rate']
+        self.params['outfitting_cost_rate']                 = 1.5 * self.params['material_cost_rate']
         self.params['cross_attachment_pontoons_int']        = 1
         self.params['lower_attachment_pontoons_int']        = 1
         self.params['upper_attachment_pontoons_int']        = 1
@@ -534,7 +534,7 @@ class FloatingInstance(object):
             ['variable_ballast_mass', 0.0, None, None],
             
             # Metacentric height should be positive for static stability
-            ['metacentric_height', 0.1, None, None],
+            ['metacentric_height', 1.0, None, None],
             
             # Center of buoyancy should be above CG (difference should be positive, None],
             #['buoyancy_to_gravity', 0.1, None, None],

@@ -656,6 +656,7 @@ class ColumnProperties(Component):
         self.add_output('column_total_mass', val=np.zeros((nFull-1,)), units='kg', desc='total mass of column by section')
         self.add_output('column_total_cost', val=0.0, units='USD', desc='total cost of column')
         self.add_output('column_structural_cost', val=0.0, units='USD', desc='Cost of column without ballast or outfitting')
+        self.add_output('tapered_column_cost_rate', val=0.0, units='USD/t', desc='Cost rate of finished column')
         
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -775,21 +776,6 @@ class ColumnProperties(Component):
 
         
     def balance_column(self, params, unknowns):
-        """Balances the weight of the column with buoyancy force by setting variable (water) ballast
-        Once this is determined, can set the system center of gravity and determine static stability margins
-        
-        INPUTS:
-        ----------
-        params   : dictionary of input parameters
-        unknowns : dictionary of output parameters
-        
-        OUTPUTS  : (none)
-        ----------
-        system_cg class variable set
-        total_mass              in 'unknowns' dictionary set
-        static_stability        in 'unknowns' dictionary set
-        metacentric_height      in 'unknowns' dictionary set
-        """
         # Unpack variables
         R_od              = 0.5*params['d_full']
         R_plate           = 0.5*params['buoyancy_tank_diameter']
@@ -859,7 +845,7 @@ class ColumnProperties(Component):
                                                                              params['bulkhead_cost'] + params['buoyancy_tank_cost'])
         unknowns['column_outfitting_cost']   = params['outfitting_cost_rate'] * unknowns['column_outfitting_mass']
         unknowns['column_total_cost']        = unknowns['column_structural_cost'] + unknowns['column_outfitting_cost'] + params['ballast_cost']
-
+        unknowns['tapered_column_cost_rate'] = 1e3*unknowns['column_total_cost']/unknowns['column_total_mass'].sum()
 
         
 class ColumnBuckling(Component):
