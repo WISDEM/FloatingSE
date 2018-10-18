@@ -572,7 +572,7 @@ class ColumnGeometry(Component):
         unknowns['draft_margin'] = draft / params['max_draft']
 
         # Make sure freeboard is more than 20% of Hs (DNV-OS-J101)
-        unknowns['wave_height_freeboard_ratio'] = params['Hs'] / freeboard
+        unknowns['wave_height_freeboard_ratio'] = params['Hs'] / np.abs(freeboard)
 
         # Sectional stiffener properties
         unknowns['t_web']        = sectionalInterp(z_section, z_param, params['stiffener_web_thickness'])

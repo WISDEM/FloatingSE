@@ -27,6 +27,7 @@ class SubstructureGeometry(Component):
         self.add_param('number_of_offset_columns', val=0, desc='Number of offset columns evenly spaced around main column')
         self.add_param('tower_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('Rhub', val=0.0, units='m', desc='rotor hub radius')
+        self.add_param('Hs', val=0.0, units='m', desc='significant wave height')
         self.add_param('max_survival_heel', val=0.0, units='deg', desc='max heel angle for turbine survival')
         
         # Output constraints
@@ -37,6 +38,7 @@ class SubstructureGeometry(Component):
         self.add_output('nacelle_transition_buffer', val=0.0, units='m', desc='Buffer between tower top and nacelle main')
         self.add_output('offset_freeboard_heel_margin', val=0.0, units='m', desc='Margin so offset column does not submerge during max heel')
         self.add_output('offset_draft_heel_margin', val=0.0, units='m', desc='Margin so offset column does not leave water during max heel')
+        self.add_output('wave_height_fairlead_ratio', val=0.0, desc='Ratio of maximum wave height (avg of top 1%) to fairlead')
 
         
         # Derivatives
@@ -86,10 +88,11 @@ class SubstructureGeometry(Component):
             z_fairlead = location * (z_nodes_main[-1] - z_nodes_main[0]) + z_nodes_main[0]
             unknowns['fairlead_radius'] = fair_off + np.interp(z_fairlead, z_nodes_main, R_od_main)
         unknowns['fairlead'] = -z_fairlead # Fairlead defined as positive below waterline
+        unknowns['wave_height_fairlead_ratio'] = params['Hs'] / np.abs(z_fairlead)
         
         # Constrain spar top to be at least greater than tower main
         unknowns['tower_transition_buffer']   = R_od_main[-1] - R_tower[0]
-        unknowns['nacelle_transition_buffer'] = R_hub + 1.0 - R_tower[-1] # Guessing at 6m size for nacelle
+        unknowns['nacelle_transition_buffer'] = R_tower[-1] - (R_hub + 1.0) # Guessing at 6m size for nacelle
 
         # Make sure semi columns don't get submerged
         heel_deflect = R_semi*np.sin(np.deg2rad(max_heel))

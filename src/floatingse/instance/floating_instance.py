@@ -465,6 +465,7 @@ class FloatingInstance(object):
             ['off.draft_margin', None, 1.0, None],
             ['main.wave_height_freeboard_ratio', None, 1.0, None],
             ['off.wave_height_freeboard_ratio', None, 1.0, None],
+            ['wave_height_fairlead_ratio', None, 1.0, None],
             
             ['main_offset_spacing', 1.0, None, None],
             
@@ -477,7 +478,7 @@ class FloatingInstance(object):
             ['tow.weldability', None, 0.0, None],
             
             # Ensure that the spar top matches the tower main
-            ['tower_transition_buffer', -1.0, 1.0, None],
+            ['tower_transition_buffer', 0.0, None, None],
             ['nacelle_transition_buffer', 0.0, None, None],
 
             # Make sure semisub columns don't get submerged

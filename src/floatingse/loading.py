@@ -926,7 +926,7 @@ class FloatingFrame(Component):
         # Find node closest to CG
         cg_dist = np.sum( (nodeMat - unknowns['structure_center_of_mass'][np.newaxis,:])**2, axis=1 )
         cg_node = np.argmin(cg_dist)
-        # Free=0, Rigid=1
+        # Free=0, Rigid=inf
         rid = np.array([mainBeginID]) #np.array(fairleadID) #np.array([cg_node+1]) #
         Rx  = np.inf * np.ones(rid.shape)
         Ry  = np.inf * np.ones(rid.shape)
