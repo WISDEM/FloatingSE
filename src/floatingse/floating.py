@@ -142,6 +142,7 @@ class FloatingSE(Group):
         self.connect('tower_buckling_length','tower_buckling_length')
         self.connect('tow.turbine_mass','main.stack_mass_in')
         self.connect('tow.tower_center_of_mass','tower_center_of_mass')
+        self.connect('tow.tower_cost','tower_shell_cost')
         
         self.connect('offset_freeboard', ['off.freeboard','offset_freeboard'])
         self.connect('offset_section_height', 'off.section_height')

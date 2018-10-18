@@ -141,6 +141,7 @@ class Substructure(Component):
         self.add_param('offset_added_mass', val=np.zeros(6), units='kg', desc='Diagonal of added mass matrix- masses are first 3 entries, moments are last 3')
 
         self.add_param('tower_mass', val=0.0, units='kg', desc='Mass of tower')
+        self.add_param('tower_shell_cost', val=0.0, units='USD', desc='Cost of tower')
         self.add_param('tower_I_base', val=np.zeros(6), units='kg*m**2', desc='Moments about tower main')
         self.add_param('tower_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('rna_mass', val=0.0, units='kg', desc='Mass of RNA')
@@ -503,7 +504,8 @@ class Substructure(Component):
         c_aux      = params['offset_cost']
         c_main     = params['main_cost']
         c_pontoon  = params['pontoon_cost']
+        c_tower    = params['tower_shell_cost']
 
-        unknowns['total_cost'] = c_mooring + ncolumn*c_aux + c_main + c_pontoon
+        unknowns['total_cost'] = c_mooring + ncolumn*c_aux + c_main + c_pontoon + c_tower
         
 

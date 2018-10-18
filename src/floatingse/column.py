@@ -416,7 +416,6 @@ class StiffenerProperties(Component):
 
         # Total cost
         c_ring = K_m + K_f + K_p
-
         
         # Store results
         unknowns['stiffener_cost'] = c_ring
@@ -846,6 +845,7 @@ class ColumnProperties(Component):
         unknowns['column_outfitting_cost']   = params['outfitting_cost_rate'] * unknowns['column_outfitting_mass']
         unknowns['column_total_cost']        = unknowns['column_structural_cost'] + unknowns['column_outfitting_cost'] + params['ballast_cost']
         unknowns['tapered_column_cost_rate'] = 1e3*unknowns['column_total_cost']/unknowns['column_total_mass'].sum()
+        print params['shell_cost'], params['stiffener_cost'], params['bulkhead_cost'], params['buoyancy_tank_cost'], unknowns['column_outfitting_cost'], params['ballast_cost']
 
         
 class ColumnBuckling(Component):
@@ -1020,6 +1020,7 @@ class Column(Group):
         #self.connect('cyl_mass.section_center_of_mass', 'col_geom.section_center_of_mass')
         
         self.connect('cyl_mass.mass', 'shell_mass')
+        self.connect('cyl_mass.cost', 'shell_cost')
         self.connect('cyl_mass.I_base', 'shell_I_keel')
         self.connect('material_density','rho')
         
