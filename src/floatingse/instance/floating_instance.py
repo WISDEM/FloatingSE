@@ -515,6 +515,7 @@ class FloatingInstance(object):
             
             # Pontoon stress safety factor
             ['pontoon_stress', None, 1.0, None],
+            ['pontoon_wave_height_depth_margin', 1.0, None, None],
 
             # Frame3DD estimates of stress and buckling
             ['tower_stress', None, 1.0, None],

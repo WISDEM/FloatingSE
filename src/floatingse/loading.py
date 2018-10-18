@@ -44,6 +44,7 @@ class FloatingFrame(Component):
         self.add_param('E', val=0.0, units='Pa', desc='Modulus of elasticity (Youngs) of material')
         self.add_param('G', val=0.0, units='Pa', desc='Shear modulus of material')
         self.add_param('yield_stress', val=0.0, units='Pa', desc='yield stress of material')
+        self.add_param('Hs', val=0.0, units='m', desc='wave significant height')
 
         # Base column
         self.add_param('main_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
@@ -138,6 +139,7 @@ class FloatingFrame(Component):
         self.add_param('painting_cost_rate', 0.0, units='USD/m/m', desc='Painting / surface finishing cost rate')
         
         # Outputs
+        self.add_output('pontoon_wave_height_depth_margin', val=np.zeros(2), units='m', desc='Distance between attachment point of pontoons and wave crest- both above and below waterline')
         self.add_output('pontoon_cost', val=0.0, units='USD', desc='Cost of pontoon elements and connecting truss')
         self.add_output('pontoon_cost_rate', val=0.0, units='USD/t', desc='Cost rate of finished pontoon and truss')
         self.add_output('pontoon_mass', val=0.0, units='kg', desc='Mass of pontoon elements and connecting truss')
@@ -239,9 +241,9 @@ class FloatingFrame(Component):
         sigma_y        = params['yield_stress']
         
         z_main         = params['main_z_full']
-        z_offset      = params['offset_z_full']
+        z_offset       = params['offset_z_full']
         z_tower        = params['tower_z_full']
-        z_attach_upper = z_main[-1] if upperAttachFlag else params['main_pontoon_attach_upper']*(z_main[-1] - z_main[0]) + z_main[0]
+        z_attach_upper = params['main_pontoon_attach_upper']*(z_main[-1] - z_main[0]) + z_main[0]
         z_attach_lower = params['main_pontoon_attach_lower']*(z_main[-1] - z_main[0]) + z_main[0]
         z_fairlead     = -params['fairlead']
         
@@ -286,7 +288,8 @@ class FloatingFrame(Component):
         # Quick ratio for unknowns
         unknowns['main_connection_ratio']    = params['connection_ratio_max'] - R_od_pontoon/R_od_main
         unknowns['offset_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_offset
-
+        unknowns['pontoon_wave_height_depth_margin'] = np.abs(np.array([z_attach_lower, z_attach_upper])) - np.abs(params['Hs'])
+        
         # --- INPUT CHECKS -----
         # There is no truss if not offset columns
         if ncolumn == 0:
