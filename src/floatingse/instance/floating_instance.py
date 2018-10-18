@@ -5,7 +5,7 @@ import numpy as np
 import cPickle as pickle        
 from StringIO import StringIO
 
-NSECTIONS = 5
+NSECTIONS = 4
 NPTS = 100
 Ten_strings = ['DTU', 'DTU10', 'DTU10MW', '10', '10MW', 'DTU-10', 'DTU-10MW']
 Five_strings = ['NREL', 'NREL5', 'NREL5MW', '5', '5MW', 'NREL-5', 'NREL-5MW']

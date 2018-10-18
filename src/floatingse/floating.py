@@ -14,7 +14,7 @@ class FloatingSE(Group):
 
         self.nFull = 3*nSection+1
 
-        self.add('tow', TowerLeanSE(nSection+1,self.nFull), promotes=['material_density','tower_section_height',
+        self.add('tow', TowerLeanSE(nSection,self.nFull), promotes=['material_density','tower_section_height',
                                                                       'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
                                                                       'tower_buckling_length','max_taper','min_d_to_t','rna_mass','rna_cg','rna_I',
                                                                       'tower_mass','tower_I_base','hub_height'])
