@@ -5,7 +5,7 @@ import numpy as np
 import cPickle as pickle        
 from StringIO import StringIO
 
-NSECTIONS = 5
+NSECTIONS = 4
 NPTS = 100
 Ten_strings = ['DTU', 'DTU10', 'DTU10MW', '10', '10MW', 'DTU-10', 'DTU-10MW']
 Five_strings = ['NREL', 'NREL5', 'NREL5MW', '5', '5MW', 'NREL-5', 'NREL-5MW']
@@ -150,8 +150,8 @@ class FloatingInstance(object):
         # Max wind speed
         #self.params['rna_force']                           = np.array([188038.8045, 0,  -16451.2637])
         #self.params['rna_moment']                          = np.array([0.0, 131196.8431,  0.0])
-        self.params['main_bulkhead_thickness']              = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
-        self.params['offset_bulkhead_thickness']         = 0.05*np.array([1, 1, 0, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
+        self.params['main_bulkhead_thickness']              = 0.05*np.array([1, 1, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
+        self.params['offset_bulkhead_thickness']         = 0.05*np.array([1, 1, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.params['Rhub']                              = 1.125
         
         # Typically design (start at OC4 semi)
@@ -303,7 +303,7 @@ class FloatingInstance(object):
             towerData[0,0] = self.params['hub_height']
             towerData[(towerData[:,0] == 40.0),0] += np.array([0.01, 0.0])
             trans_idx = np.where(towerData[:,1] == towerData[-1,1])[0]
-            idx = [0, 1, trans_idx[0]/2, trans_idx[0]-1, trans_idx[0], trans_idx[-1]]
+            idx = [0, np.int_(trans_idx[0]/2), trans_idx[0], trans_idx[-1]]
             self.params['tower_section_height'] = np.diff( np.flipud( towerData[idx,0] ) )
             self.params['tower_outer_diameter'] = np.flipud( towerData[idx, 1] )
             t_temp = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
@@ -354,7 +354,7 @@ class FloatingInstance(object):
                 self.params[k] = newobj[k]
         
     def get_assembly(self):
-        return FloatingSE(NSECTIONS)
+        return FloatingSE()
 
     
     def add_design_variable(self, varStr, lowVal, highVal):
@@ -637,7 +637,7 @@ class FloatingInstance(object):
                 print(e)
                 raise e
             except ValueError as e:
-                print('Badding setting of: ', ivar)
+                print('Badding setting of: ', ivar, '=', self.params[ivar])
                 print(e)
                 raise e
 

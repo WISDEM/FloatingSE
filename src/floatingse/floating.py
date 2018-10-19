@@ -9,25 +9,30 @@ import numpy as np
     
 class FloatingSE(Group):
 
-    def __init__(self, nSection):
+    def __init__(self):
         super(FloatingSE, self).__init__()
 
-        self.nFull = 3*nSection+1
+        nSection = 4
+        nTower   = 3
+        self.nRefine  = 3
+        self.nFullSec = self.nRefine*nSection+1
+        self.nFullTow = self.nRefine*nTower  +1
 
-        self.add('tow', TowerLeanSE(nSection+1,self.nFull), promotes=['material_density','tower_section_height',
-                                                                      'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
-                                                                      'tower_buckling_length','max_taper','min_d_to_t','rna_mass','rna_cg','rna_I',
-                                                                      'tower_mass','tower_I_base','hub_height'])
+        # Need to enter points as nPts (nsection+1), self.nFull
+        self.add('tow', TowerLeanSE(nTower+1, self.nFullTow), promotes=['material_density','tower_section_height',
+                                                                 'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
+                                                                 'tower_buckling_length','max_taper','min_d_to_t','rna_mass','rna_cg','rna_I',
+                                                                 'tower_mass','tower_I_base','hub_height'])
         
         # Next do main and ballast columns
         # Ballast columns are replicated from same design in the components
-        self.add('main', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
+        self.add('main', Column(nSection, self.nFullSec), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                  'Uref','zref','shearExp','beta','yaw','Uc','Hs','T','cd_usr','cm','loading',
                                                                  'max_draft','max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height',
                                                                  'permanent_ballast_density','bulkhead_mass_factor','buoyancy_tank_mass_factor',
                                                                  'ring_mass_factor','column_mass_factor','outfitting_mass_fraction','ballast_cost_rate',
                                                                  'material_cost_rate','labor_cost_rate','painting_cost_rate','outfitting_cost_rate'])
-        self.add('off', Column(nSection, self.nFull), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
+        self.add('off', Column(nSection, self.nFullSec), promotes=['water_depth','water_density','material_density','E','nu','yield_stress','z0',
                                                                 'Uref','zref','shearExp','beta','yaw','Uc','Hs','T','cd_usr','cm','loading',
                                                                 'max_draft','max_taper','min_d_to_t','gamma_f','gamma_b','foundation_height',
                                                                 'permanent_ballast_density','bulkhead_mass_factor','buoyancy_tank_mass_factor',
@@ -35,16 +40,16 @@ class FloatingSE(Group):
                                                                 'material_cost_rate','labor_cost_rate','painting_cost_rate','outfitting_cost_rate'])
 
         # Run Semi Geometry for interfaces
-        self.add('sg', SubstructureGeometry(self.nFull), promotes=['*'])
+        self.add('sg', SubstructureGeometry(self.nFullSec,self.nFullTow), promotes=['*'])
 
         # Next run MapMooring
         self.add('mm', MapMooring(), promotes=['*'])
         
         # Add in the connecting truss
-        self.add('load', Loading(nSection, self.nFull), promotes=['*'])
+        self.add('load', Loading(self.nFullSec, self.nFullTow), promotes=['*'])
 
         # Run main Semi analysis
-        self.add('subs', Substructure(self.nFull), promotes=['*'])
+        self.add('subs', Substructure(self.nFullSec,self.nFullTow), promotes=['*'])
 
         # Define all input variables from all models
         

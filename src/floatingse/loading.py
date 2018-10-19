@@ -30,7 +30,7 @@ class FloatingFrame(Component):
     Should be tightly coupled with Semi and Mooring classes for full system representation.
     """
 
-    def __init__(self, nFull):
+    def __init__(self, nFull, nFullTow):
         super(FloatingFrame,self).__init__()
 
         # Keep Frame3DD data object for easy testing and debugging
@@ -80,16 +80,16 @@ class FloatingFrame(Component):
         self.add_param('offset_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on offset')
 
         # Tower
-        self.add_param('tower_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
-        self.add_param('tower_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
-        self.add_param('tower_t_full', val=np.zeros((nFull-1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
-        self.add_param('tower_mass_section', val=np.zeros((nFull-1,)), units='kg', desc='mass of tower column by section')
+        self.add_param('tower_z_full', val=np.zeros((nFullTow,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('tower_d_full', val=np.zeros((nFullTow,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('tower_t_full', val=np.zeros((nFullTow-1,)), units='m', desc='shell wall thickness at each section node bottom to top (length = nsection + 1)')
+        self.add_param('tower_mass_section', val=np.zeros((nFullTow-1,)), units='kg', desc='mass of tower column by section')
         self.add_param('tower_buckling_length', 0.0, units='m', desc='buckling length')
         self.add_param('tower_center_of_mass', val=0.0, units='m', desc='z-position of center of tower mass')
-        self.add_param('tower_Px', np.zeros(nFull), units='N/m', desc='force per unit length in x-direction on tower')
-        self.add_param('tower_Py', np.zeros(nFull), units='N/m', desc='force per unit length in y-direction on tower')
-        self.add_param('tower_Pz', np.zeros(nFull), units='N/m', desc='force per unit length in z-direction on tower')
-        self.add_param('tower_qdyn', np.zeros(nFull), units='N/m**2', desc='dynamic pressure on tower')
+        self.add_param('tower_Px', np.zeros(nFullTow), units='N/m', desc='force per unit length in x-direction on tower')
+        self.add_param('tower_Py', np.zeros(nFullTow), units='N/m', desc='force per unit length in y-direction on tower')
+        self.add_param('tower_Pz', np.zeros(nFullTow), units='N/m', desc='force per unit length in z-direction on tower')
+        self.add_param('tower_qdyn', np.zeros(nFullTow), units='N/m**2', desc='dynamic pressure on tower')
         
         # Semi geometry
         self.add_param('radius_to_offset_column', val=0.0, units='m',desc='Distance from main column centerpoint to offset column centerpoint')
@@ -166,13 +166,13 @@ class FloatingFrame(Component):
         self.add_output('offset_shell_buckling', np.zeros(nFull-1), desc='Shell buckling constraint. Should be < 1 for feasibility. Includes safety factors')
         self.add_output('offset_global_buckling', np.zeros(nFull-1), desc='Global buckling constraint. Should be < 1 for feasibility. Includes safety factors')
 
-        self.add_output('tower_stress', np.zeros(nFull-1), desc='Von Mises stress utilization along tower at specified locations.  incudes safety factor.')
-        self.add_output('tower_stress:axial', np.zeros(nFull-1), desc='Axial stress along tower column at specified locations.')
-        self.add_output('tower_stress:shear', np.zeros(nFull-1), desc='Shear stress along tower column at specified locations.')
-        self.add_output('tower_stress:hoop', np.zeros(nFull-1), desc='Hoop stress along tower column at specified locations.')
-        self.add_output('tower_stress:hoopStiffen', np.zeros(nFull-1), desc='Hoop stress along tower column at specified locations.')
-        self.add_output('tower_shell_buckling', np.zeros(nFull-1), desc='Shell buckling constraint.  Should be < 1 for feasibility.  Includes safety factors')
-        self.add_output('tower_global_buckling', np.zeros(nFull-1), desc='Global buckling constraint.  Should be < 1 for feasibility.  Includes safety factors')
+        self.add_output('tower_stress', np.zeros(nFullTow-1), desc='Von Mises stress utilization along tower at specified locations.  incudes safety factor.')
+        self.add_output('tower_stress:axial', np.zeros(nFullTow-1), desc='Axial stress along tower column at specified locations.')
+        self.add_output('tower_stress:shear', np.zeros(nFullTow-1), desc='Shear stress along tower column at specified locations.')
+        self.add_output('tower_stress:hoop', np.zeros(nFullTow-1), desc='Hoop stress along tower column at specified locations.')
+        self.add_output('tower_stress:hoopStiffen', np.zeros(nFullTow-1), desc='Hoop stress along tower column at specified locations.')
+        self.add_output('tower_shell_buckling', np.zeros(nFullTow-1), desc='Shell buckling constraint.  Should be < 1 for feasibility.  Includes safety factors')
+        self.add_output('tower_global_buckling', np.zeros(nFullTow-1), desc='Global buckling constraint.  Should be < 1 for feasibility.  Includes safety factors')
 
         self.add_output('plot_matrix', val=np.array([]), desc='Ratio of shear stress to yield stress for all pontoon elements', pass_by_obj=True)
         self.add_output('main_connection_ratio', val=np.zeros((nFull,)), desc='Ratio of pontoon outer diameter to main outer diameter')
@@ -599,6 +599,7 @@ class FloatingFrame(Component):
 
         # Tower column
         towerEID = N1.size + 1
+        mytube  = Tube(2.0*R_od_tower, t_wall_tower)
         myrange = np.arange(R_od_tower.size)
         myones  = np.ones(myrange.shape)
         mydens  = m_tower / mytube.Area / np.diff(z_tower) + eps
@@ -1145,7 +1146,7 @@ class TrussIntegerToBoolean(Component):
 
 class Loading(Group):
 
-    def __init__(self, nSection, nFull):
+    def __init__(self, nFull, nFullTow):
         super(Loading, self).__init__()
         
         # Independent variables that are unique to TowerSE
@@ -1164,10 +1165,10 @@ class Loading(Group):
         self.add('fairlead_support_wall_thickness',     IndepVarComp('fairlead_support_wall_thickness', 0.0), promotes=['*'])
 
         # All the components
-        self.add('loadingWind', PowerWind(nFull), promotes=['z0','Uref','shearExp','zref'])
-        self.add('windLoads', CylinderWindDrag(nFull), promotes=['cd_usr','beta'])
+        self.add('loadingWind', PowerWind(nFullTow), promotes=['z0','Uref','shearExp','zref'])
+        self.add('windLoads', CylinderWindDrag(nFullTow), promotes=['cd_usr','beta'])
         self.add('intbool', TrussIntegerToBoolean(), promotes=['*'])
-        self.add('frame', FloatingFrame(nFull), promotes=['*'])
+        self.add('frame', FloatingFrame(nFull, nFullTow), promotes=['*'])
         
         # Connections for geometry and mass
         self.connect('loadingWind.z', ['windLoads.z', 'tower_z_full'])

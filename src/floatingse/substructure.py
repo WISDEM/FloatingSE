@@ -11,7 +11,7 @@ class SubstructureGeometry(Component):
     OpenMDAO Component class for substructure geometry for floating offshore wind turbines.
     """
 
-    def __init__(self, nFull):
+    def __init__(self, nFull, nFullTow):
         super(SubstructureGeometry,self).__init__()
 
         # Design variables
@@ -25,7 +25,7 @@ class SubstructureGeometry(Component):
         self.add_param('fairlead_offset_from_shell', val=0.0, units='m',desc='fairlead offset from shell')
         self.add_param('radius_to_offset_column', val=0.0, units='m',desc='Distance from main column centerpoint to offset column centerpoint')
         self.add_param('number_of_offset_columns', val=0, desc='Number of offset columns evenly spaced around main column')
-        self.add_param('tower_d_full', val=np.zeros((nFull,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
+        self.add_param('tower_d_full', val=np.zeros((nFullTow,)), units='m', desc='outer radius at each section node bottom to top (length = nsection + 1)')
         self.add_param('Rhub', val=0.0, units='m', desc='rotor hub radius')
         self.add_param('Hs', val=0.0, units='m', desc='significant wave height')
         self.add_param('max_survival_heel', val=0.0, units='deg', desc='max heel angle for turbine survival')
@@ -102,7 +102,7 @@ class SubstructureGeometry(Component):
 
 
 class Substructure(Component):
-    def __init__(self, nFull):
+    def __init__(self, nFull,nFullTow):
         super(Substructure,self).__init__()
         # Environment
         self.add_param('water_density', val=0.0, units='kg/m**3', desc='density of water')
@@ -146,7 +146,7 @@ class Substructure(Component):
         self.add_param('tower_mass', val=0.0, units='kg', desc='Mass of tower')
         self.add_param('tower_shell_cost', val=0.0, units='USD', desc='Cost of tower')
         self.add_param('tower_I_base', val=np.zeros(6), units='kg*m**2', desc='Moments about tower main')
-        self.add_param('tower_z_full', val=np.zeros((nFull,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
+        self.add_param('tower_z_full', val=np.zeros((nFullTow,)), units='m', desc='z-coordinates of section nodes (length = nsection+1)')
         self.add_param('rna_mass', val=0.0, units='kg', desc='Mass of RNA')
         self.add_param('rna_cg', val=np.zeros(3), units='m', desc='Location of RNA center of mass relative to tower top')
         self.add_param('rna_I', val=np.zeros(6), units='kg*m**2', desc='Moments about turbine main')
