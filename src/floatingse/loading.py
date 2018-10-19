@@ -246,7 +246,7 @@ class FloatingFrame(Component):
         z_attach_upper = params['main_pontoon_attach_upper']*(z_main[-1] - z_main[0]) + z_main[0]
         z_attach_lower = params['main_pontoon_attach_lower']*(z_main[-1] - z_main[0]) + z_main[0]
         z_fairlead     = -params['fairlead']
-        
+
         m_main         = params['main_mass']
         m_offset      = params['offset_mass']
         m_tower        = params['tower_mass_section']
@@ -437,43 +437,76 @@ class FloatingFrame(Component):
         if lowerAttachFlag:
             lowerAttachEID = N1.size + 1
             for k in range(ncolumn):
-                add1, add2 = ghostNodes(nodeMat[mainLowerID-1,:], nodeMat[offsetLowerID[k]-1,:], rnode[mainLowerID-1], rnode[offsetLowerID[k]-1])
-                tempID     = xnode.size + 1
-                xnode      = np.append(xnode, [add1[0], add2[0]])
-                ynode      = np.append(ynode, [add1[1], add2[1]])
-                znode      = np.append(znode, [add1[2], add2[2]])
-                gN1        = np.append(gN1, [mainLowerID, offsetLowerID[k]] )
-                gN2        = np.append(gN2, [tempID, tempID+1] )
-                N1         = np.append(N1, tempID )
-                N2         = np.append(N2, tempID+1 )
+                tempID1 = mainLowerID
+                tempID2 = offsetLowerID[k]
+                add1, add2 = ghostNodes(nodeMat[tempID1-1,:], nodeMat[tempID2-1,:], rnode[tempID1-1], rnode[tempID2-1])
+                if ( (add1[-1] > z_main[0]) and (add1[-1] < z_main[-1]) ):
+                    tempID1 = xnode.size + 1
+                    xnode   = np.append(xnode, add1[0])
+                    ynode   = np.append(ynode, add1[1])
+                    znode   = np.append(znode, add1[2])
+                    gN1     = np.append(gN1, mainLowerID)
+                    gN2     = np.append(gN2, tempID1)
+                if ( (add2[-1] > z_offset[0]) and (add2[-1] < z_offset[-1]) ):
+                    tempID2 = xnode.size + 1
+                    xnode   = np.append(xnode, add2[0])
+                    ynode   = np.append(ynode, add2[1])
+                    znode   = np.append(znode, add2[2])
+                    gN1     = np.append(gN1, offsetLowerID[k])
+                    gN2     = np.append(gN2, tempID2)
+                # Pontoon connection
+                N1 = np.append(N1, tempID1 )
+                N2 = np.append(N2, tempID2 )
                 
         # Upper connection from central main column to offset columns
         if upperAttachFlag:
             upperAttachEID = N1.size + 1
             for k in range(ncolumn):
-                add1, add2 = ghostNodes(nodeMat[mainUpperID-1,:], nodeMat[offsetUpperID[k]-1,:], rnode[mainUpperID-1], rnode[offsetUpperID[k]-1])
-                tempID     = xnode.size + 1
-                xnode      = np.append(xnode, [add1[0], add2[0]])
-                ynode      = np.append(ynode, [add1[1], add2[1]])
-                znode      = np.append(znode, [add1[2], add2[2]])
-                gN1        = np.append(gN1, [mainUpperID, offsetUpperID[k]] )
-                gN2        = np.append(gN2, [tempID, tempID+1] )
-                N1         = np.append(N1, tempID )
-                N2         = np.append(N2, tempID+1 )
+                tempID1 = mainUpperID
+                tempID2 = offsetUpperID[k]
+                add1, add2 = ghostNodes(nodeMat[tempID1-1,:], nodeMat[tempID2-1,:], rnode[tempID1-1], rnode[tempID2-1])
+                if ( (add1[-1] > z_main[0]) and (add1[-1] < z_main[-1]) ):
+                    tempID1 = xnode.size + 1
+                    xnode   = np.append(xnode, add1[0])
+                    ynode   = np.append(ynode, add1[1])
+                    znode   = np.append(znode, add1[2])
+                    gN1     = np.append(gN1, mainUpperID)
+                    gN2     = np.append(gN2, tempID1)
+                if ( (add2[-1] > z_offset[0]) and (add2[-1] < z_offset[-1]) ):
+                    tempID2 = xnode.size + 1
+                    xnode   = np.append(xnode, add2[0])
+                    ynode   = np.append(ynode, add2[1])
+                    znode   = np.append(znode, add2[2])
+                    gN1     = np.append(gN1, offsetUpperID[k])
+                    gN2     = np.append(gN2, tempID2)
+                # Pontoon connection
+                N1 = np.append(N1, tempID1 )
+                N2 = np.append(N2, tempID2 )
                 
         # Cross braces from lower central main column to upper offset columns
         if crossAttachFlag:
             crossAttachEID = N1.size + 1
             for k in range(ncolumn):
-                add1, add2 = ghostNodes(nodeMat[mainLowerID-1,:], nodeMat[offsetUpperID[k]-1,:], rnode[mainLowerID-1], rnode[offsetUpperID[k]-1])
-                tempID     = xnode.size + 1
-                xnode      = np.append(xnode, [add1[0], add2[0]])
-                ynode      = np.append(ynode, [add1[1], add2[1]])
-                znode      = np.append(znode, [add1[2], add2[2]])
-                gN1        = np.append(gN1, [mainLowerID, offsetUpperID[k]] )
-                gN2        = np.append(gN2, [tempID, tempID+1] )
-                N1         = np.append(N1, tempID )
-                N2         = np.append(N2, tempID+1 )
+                tempID1 = mainLowerID
+                tempID2 = offsetUpperID[k]
+                add1, add2 = ghostNodes(nodeMat[tempID1-1,:], nodeMat[tempID2-1,:], rnode[tempID1-1], rnode[tempID2-1])
+                if ( (add1[-1] > z_main[0]) and (add1[-1] < z_main[-1]) ):
+                    tempID1 = xnode.size + 1
+                    xnode   = np.append(xnode, add1[0])
+                    ynode   = np.append(ynode, add1[1])
+                    znode   = np.append(znode, add1[2])
+                    gN1     = np.append(gN1, mainLowerID)
+                    gN2     = np.append(gN2, tempID1)
+                if ( (add2[-1] > z_offset[0]) and (add2[-1] < z_offset[-1]) ):
+                    tempID2 = xnode.size + 1
+                    xnode   = np.append(xnode, add2[0])
+                    ynode   = np.append(ynode, add2[1])
+                    znode   = np.append(znode, add2[2])
+                    gN1     = np.append(gN1, offsetUpperID[k])
+                    gN2     = np.append(gN2, tempID2)
+                # Pontoon connection
+                N1 = np.append(N1, tempID1 )
+                N2 = np.append(N2, tempID2 )
                 
             # Will be used later to convert from local member c.s. to global
             cross_angle = np.arctan( (z_attach_upper - z_attach_lower) / R_semi )
@@ -482,43 +515,69 @@ class FloatingFrame(Component):
         if lowerRingFlag:
             lowerRingEID = N1.size + 1
             for k in range(ncolumn):
-                add1, add2 = ghostNodes(nodeMat[offsetLowerID[k]-1,:], nodeMat[offsetLowerID[k+1]-1,:], rnode[offsetLowerID[k]-1], rnode[offsetLowerID[k+1]-1])
-                tempID     = xnode.size + 1
-                xnode      = np.append(xnode, [add1[0], add2[0]])
-                ynode      = np.append(ynode, [add1[1], add2[1]])
-                znode      = np.append(znode, [add1[2], add2[2]])
-                gN1        = np.append(gN1, [offsetLowerID[k], offsetLowerID[k+1]] )
-                gN2        = np.append(gN2, [tempID, tempID+1] )
-                N1         = np.append(N1, tempID )
-                N2         = np.append(N2, tempID+1 )
+                tempID1 = offsetLowerID[k]
+                tempID2 = offsetLowerID[k+1]
+                add1, add2 = ghostNodes(nodeMat[tempID1-1,:], nodeMat[tempID2-1,:], rnode[tempID1-1], rnode[tempID2-1])
+                if ( (add1[-1] > z_offset[0]) and (add1[-1] < z_offset[-1]) ):
+                    tempID1 = xnode.size + 1
+                    xnode   = np.append(xnode, add1[0])
+                    ynode   = np.append(ynode, add1[1])
+                    znode   = np.append(znode, add1[2])
+                    gN1     = np.append(gN1, offsetLowerID[k])
+                    gN2     = np.append(gN2, tempID1)
+                if ( (add2[-1] > z_offset[0]) and (add2[-1] < z_offset[-1]) ):
+                    tempID2 = xnode.size + 1
+                    xnode   = np.append(xnode, add2[0])
+                    ynode   = np.append(ynode, add2[1])
+                    znode   = np.append(znode, add2[2])
+                    gN1     = np.append(gN1, offsetLowerID[k+1])
+                    gN2     = np.append(gN2, tempID2)
+                # Pontoon connection
+                N1 = np.append(N1, tempID1 )
+                N2 = np.append(N2, tempID2 )
 
         # Upper ring around offset columns
         if upperRingFlag:
             upperRingEID = N1.size + 1
             for k in range(ncolumn):
-                add1, add2 = ghostNodes(nodeMat[offsetUpperID[k]-1,:], nodeMat[offsetUpperID[k+1]-1,:], rnode[offsetUpperID[k]-1], rnode[offsetUpperID[k+1]-1])
-                tempID     = xnode.size + 1
-                xnode      = np.append(xnode, [add1[0], add2[0]])
-                ynode      = np.append(ynode, [add1[1], add2[1]])
-                znode      = np.append(znode, [add1[2], add2[2]])
-                gN1        = np.append(gN1, [offsetUpperID[k], offsetUpperID[k+1]] )
-                gN2        = np.append(gN2, [tempID, tempID+1] )
-                N1         = np.append(N1, tempID )
-                N2         = np.append(N2, tempID+1 )
+                tempID1 = offsetUpperID[k]
+                tempID2 = offsetUpperID[k+1]
+                add1, add2 = ghostNodes(nodeMat[tempID1-1,:], nodeMat[tempID2-1,:], rnode[tempID1-1], rnode[tempID2-1])
+                if ( (add1[-1] > z_offset[0]) and (add1[-1] < z_offset[-1]) ):
+                    tempID1 = xnode.size + 1
+                    xnode   = np.append(xnode, add1[0])
+                    ynode   = np.append(ynode, add1[1])
+                    znode   = np.append(znode, add1[2])
+                    gN1     = np.append(gN1, offsetUpperID[k])
+                    gN2     = np.append(gN2, tempID1)
+                if ( (add2[-1] > z_offset[0]) and (add2[-1] < z_offset[-1]) ):
+                    tempID2 = xnode.size + 1
+                    xnode   = np.append(xnode, add2[0])
+                    ynode   = np.append(ynode, add2[1])
+                    znode   = np.append(znode, add2[2])
+                    gN1     = np.append(gN1, offsetUpperID[k+1])
+                    gN2     = np.append(gN2, tempID2)
+                # Pontoon connection
+                N1 = np.append(N1, tempID1 )
+                N2 = np.append(N2, tempID2 )
                 
         # Outer cross braces (only one ghost node per connection)
         if outerCrossFlag:
             outerCrossEID = N1.size + 1
             for k in range(ncolumn):
-                _, add2 = ghostNodes(nodeMat[crossOuterLowerID[k]-1,:], nodeMat[offsetUpperID[k]-1,:], rnode[crossOuterLowerID[k]-1], rnode[offsetUpperID[k]-1])
-                tempID     = xnode.size + 1
-                xnode      = np.append(xnode, add2[0])
-                ynode      = np.append(ynode, add2[1])
-                znode      = np.append(znode, add2[2])
-                gN1        = np.append(gN1, offsetUpperID[k])
-                gN2        = np.append(gN2, tempID)
-                N1         = np.append(N1, crossOuterLowerID[k] )
-                N2         = np.append(N2, tempID )
+                tempID1 = crossOuterLowerID[k]
+                tempID2 = offsetUpperID[k]
+                _, add2 = ghostNodes(nodeMat[tempID1-1,:], nodeMat[tempID2-1,:], rnode[tempID1-1], rnode[tempID2-1])
+                if ( (add2[-1] > z_offset[0]) and (add2[-1] < z_offset[-1]) ):
+                    tempID2 = xnode.size + 1
+                    xnode   = np.append(xnode, add2[0])
+                    ynode   = np.append(ynode, add2[1])
+                    znode   = np.append(znode, add2[2])
+                    gN1     = np.append(gN1, offsetUpperID[k])
+                    gN2     = np.append(gN2, tempID2)
+                # Pontoon connection
+                N1 = np.append(N1, tempID1 )
+                N2 = np.append(N2, tempID2 )
 
                 _, add2 = ghostNodes(nodeMat[crossOuterLowerID[k+1]-1,:], nodeMat[offsetUpperID[k]-1,:], rnode[crossOuterLowerID[k+1]-1], rnode[offsetUpperID[k]-1])
                 tempID     = xnode.size + 1
@@ -529,6 +588,21 @@ class FloatingFrame(Component):
                 gN2        = np.append(gN2, tempID)
                 N1         = np.append(N1, crossOuterLowerID[k+1] )
                 N2         = np.append(N2, tempID )
+
+                tempID1 = crossOuterLowerID[k+1]
+                tempID2 = offsetUpperID[k]
+                _, add2 = ghostNodes(nodeMat[tempID1-1,:], nodeMat[tempID2-1,:], rnode[tempID1-1], rnode[tempID2-1])
+                if ( (add2[-1] > z_offset[0]) and (add2[-1] < z_offset[-1]) ):
+                    tempID2 = xnode.size + 1
+                    xnode   = np.append(xnode, add2[0])
+                    ynode   = np.append(ynode, add2[1])
+                    znode   = np.append(znode, add2[2])
+                    gN1     = np.append(gN1, offsetUpperID[k])
+                    gN2     = np.append(gN2, tempID2)
+                # Pontoon connection
+                N1 = np.append(N1, tempID1 )
+                N2 = np.append(N2, tempID2 )
+                
             
         # TODO: Parameterize these for upper, lower, cross connections
         # Properties for the inner connectors
@@ -680,9 +754,6 @@ class FloatingFrame(Component):
         elements = frame3dd.ElementData(nelem, N1, N2, Ax, As, As, Jx, I, I, modE, modG, roll, dens)
 
         # Store data for plotting, also handy for operations below
-        #plotMat = np.zeros((nelem.size, 3, 2))
-        #plotMat[:,:,0] = np.c_[xnode[N1-1], ynode[N1-1], znode[N1-1]]
-        #plotMat[:,:,1] = np.c_[xnode[N2-1], ynode[N2-1], znode[N2-1]]
         plotMat = np.zeros((mainEID, 3, 2))
         myn1 = N1[:mainEID]
         myn2 = N2[:mainEID]
@@ -1061,7 +1132,6 @@ class FloatingFrame(Component):
 
         tower_height = z_tower[-1] - z_tower[0]
         unknowns['tower_global_buckling'] = util.bucklingGL(2*R_od_tower, t_wall_tower, Nx[idx], M[idx], tower_height, modE[idx], sigma_y_vec, gamma_f, gamma_b)
-
         
         # Extract main column for Eurocode checks
         idx = mainEID-1 + np.arange(R_od_main.size, dtype=np.int32)

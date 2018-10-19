@@ -40,6 +40,7 @@ def getParams():
     params['G'] = 79.3e9
     params['material_density'] = 7850.0
     params['yield_stress'] = 345e6
+    params['Hs'] = 10.0
 
     params['water_density'] = 1025.0
 
@@ -138,7 +139,7 @@ class TestFrame(unittest.TestCase):
 
         self.unknowns['pontoon_stress'] = np.zeros(70)
         
-        self.mytruss = sP.FloatingFrame(NPTS)
+        self.mytruss = sP.FloatingFrame(NPTS,NPTS)
 
     def tearDown(self):
         self.mytruss = None
@@ -324,7 +325,7 @@ class TestSandbox(unittest.TestCase):
         self.unknowns = {}
         self.resid = None
         self.unknowns['pontoon_stress'] = np.zeros(70)
-        self.mytruss = sP.FloatingFrame(NPTS)
+        self.mytruss = sP.FloatingFrame(NPTS,NPTS)
 
     def tearDown(self):
         self.mytruss = None

@@ -816,11 +816,12 @@ class FloatingInstance(object):
     def draw_column(self, fig, centerline, freeboard, h_section, r_nodes, spacingVec=None, ckIn=None):
         from mayavi import mlab
         npts = 20
-        
+
+        nsection = h_section.size
         z_nodes = np.flipud( freeboard - np.r_[0.0, np.cumsum(np.flipud(h_section))] )
 
         th = np.linspace(0, 2*np.pi, npts)
-        for k in xrange(NSECTIONS):
+        for k in xrange(nsection):
             rk = np.linspace(r_nodes[k], r_nodes[k+1], npts)
             z  = np.linspace(z_nodes[k], z_nodes[k+1], npts)
             R, TH = np.meshgrid(rk, th)

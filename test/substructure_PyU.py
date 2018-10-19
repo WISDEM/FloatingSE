@@ -38,6 +38,7 @@ class TestSubs(unittest.TestCase):
         self.params['pontoon_cost'] = 512.0
         
 
+        self.params['Hs'] = 10.0
         self.params['wave_period'] = 50.0
         
         self.params['main_Iwaterplane'] = 150.0
@@ -80,8 +81,8 @@ class TestSubs(unittest.TestCase):
         self.params['wave_period_range_low'] = 2.0
         self.params['wave_period_range_high'] = 20.0
 
-        self.mysemi = subs.Substructure(NPTS)
-        self.mysemiG = subs.SubstructureGeometry(2)
+        self.mysemi = subs.Substructure(NPTS,NPTS)
+        self.mysemiG = subs.SubstructureGeometry(2,2)
         
     def testSetGeometry(self):
         self.params['number_of_offset_columns'] = 3
