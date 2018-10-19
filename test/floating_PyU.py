@@ -4,12 +4,13 @@ import unittest
 from openmdao.api import Problem
 from floatingse.floating import FloatingSE
 
-NSECTION = 5
+nSec = 4
+nSecTow = 3
 NPTS = 100
 
 class TestOC3Mass(unittest.TestCase):
     def setUp(self):
-        self.myfloat = Problem(root=FloatingSE(NSECTION))
+        self.myfloat = Problem(root=FloatingSE())
         self.myfloat.setup()
 
         # Remove all offset columns
@@ -58,19 +59,19 @@ class TestOC3Mass(unittest.TestCase):
         # Column geometry
         self.myfloat['main_permanent_ballast_height'] = 0.0 # Height above keel for permanent ballast [m]
         self.myfloat['main_freeboard']                = 10.0 # Height extension above waterline [m]
-        self.myfloat['main_section_height'] = np.array([49.0, 29.0, 30.0, 8.0, 14.0])  # Length of each section [m]
-        self.myfloat['main_outer_diameter'] = np.array([9.4, 9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
-        self.myfloat['main_wall_thickness'] = 0.05 * np.ones(NSECTION)               # Shell thickness at each section node (linear lofting between) [m]
-        self.myfloat['main_bulkhead_thickness'] = 0.05*np.array([1, 1, 0, 0, 1, 0]) # Locations/thickness of internal bulkheads at section interfaces [m]
+        self.myfloat['main_section_height'] = np.array([49.0, 59.0, 8.0, 14.0])  # Length of each section [m]
+        self.myfloat['main_outer_diameter'] = np.array([9.4, 9.4, 9.4, 6.5, 6.5]) # Diameter at each section node (linear lofting between) [m]
+        self.myfloat['main_wall_thickness'] = 0.05 * np.ones(nSec)               # Shell thickness at each section node (linear lofting between) [m]
+        self.myfloat['main_bulkhead_thickness'] = 0.05*np.array([1, 1, 0, 1, 0]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.myfloat['main_buoyancy_tank_diameter'] = 0.0
         self.myfloat['main_buoyancy_tank_height'] = 0.0
 
         # Column ring stiffener parameters
-        self.myfloat['main_stiffener_web_height']       = 0.10 * np.ones(NSECTION) # (by section) [m]
-        self.myfloat['main_stiffener_web_thickness']    = 0.04 * np.ones(NSECTION) # (by section) [m]
-        self.myfloat['main_stiffener_flange_width']     = 0.10 * np.ones(NSECTION) # (by section) [m]
-        self.myfloat['main_stiffener_flange_thickness'] = 0.02 * np.ones(NSECTION) # (by section) [m]
-        self.myfloat['main_stiffener_spacing']          = np.array([1.5, 2.8, 2.8, 3.0, 5.0]) # (by section) [m]
+        self.myfloat['main_stiffener_web_height']       = 0.10 * np.ones(nSec) # (by section) [m]
+        self.myfloat['main_stiffener_web_thickness']    = 0.04 * np.ones(nSec) # (by section) [m]
+        self.myfloat['main_stiffener_flange_width']     = 0.10 * np.ones(nSec) # (by section) [m]
+        self.myfloat['main_stiffener_flange_thickness'] = 0.02 * np.ones(nSec) # (by section) [m]
+        self.myfloat['main_stiffener_spacing']          = np.array([1.5, 2.8, 3.0, 5.0]) # (by section) [m]
 
         # Mooring parameters
         self.myfloat['number_of_mooring_connections']    = 3             # Evenly spaced around structure
@@ -100,15 +101,15 @@ class TestOC3Mass(unittest.TestCase):
 
         # Other variables to avoid divide by zeros, even though it won't matter
         self.myfloat['radius_to_offset_column'] = 15.0
-        self.myfloat['offset_section_height'] = 1.0 * np.ones(NSECTION)
-        self.myfloat['offset_outer_diameter'] = 5.0 * np.ones(NSECTION+1)
-        self.myfloat['offset_wall_thickness'] = 0.1 * np.ones(NSECTION)
+        self.myfloat['offset_section_height'] = 1.0 * np.ones(nSec)
+        self.myfloat['offset_outer_diameter'] = 5.0 * np.ones(nSec+1)
+        self.myfloat['offset_wall_thickness'] = 0.1 * np.ones(nSec)
         self.myfloat['offset_permanent_ballast_height'] = 0.1
-        self.myfloat['offset_stiffener_web_height'] = 0.1 * np.ones(NSECTION)
-        self.myfloat['offset_stiffener_web_thickness'] =  0.1 * np.ones(NSECTION)
-        self.myfloat['offset_stiffener_flange_width'] =  0.1 * np.ones(NSECTION)
-        self.myfloat['offset_stiffener_flange_thickness'] =  0.1 * np.ones(NSECTION)
-        self.myfloat['offset_stiffener_spacing'] =  0.1 * np.ones(NSECTION)
+        self.myfloat['offset_stiffener_web_height'] = 0.1 * np.ones(nSec)
+        self.myfloat['offset_stiffener_web_thickness'] =  0.1 * np.ones(nSec)
+        self.myfloat['offset_stiffener_flange_width'] =  0.1 * np.ones(nSec)
+        self.myfloat['offset_stiffener_flange_thickness'] =  0.1 * np.ones(nSec)
+        self.myfloat['offset_stiffener_spacing'] =  0.1 * np.ones(nSec)
         self.myfloat['offset_freeboard'] =  0.1
         self.myfloat['pontoon_outer_diameter'] = 1.0
         self.myfloat['pontoon_wall_thickness'] = 0.1
@@ -129,9 +130,9 @@ class TestOC3Mass(unittest.TestCase):
 
         # Porperties of turbine tower
         self.myfloat['hub_height']              = 77.6                              # Length from tower main to top (not including freeboard) [m]
-        self.myfloat['tower_section_height']    = 77.6/NSECTION * np.ones(NSECTION) # Length of each tower section [m]
-        self.myfloat['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTION+1) # Diameter at each tower section node (linear lofting between) [m]
-        self.myfloat['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTION) # Diameter at each tower section node (linear lofting between) [m]
+        self.myfloat['tower_section_height']    = 77.6/nSecTow * np.ones(nSecTow) # Length of each tower section [m]
+        self.myfloat['tower_outer_diameter']    = np.linspace(6.5, 3.87, nSecTow+1) # Diameter at each tower section node (linear lofting between) [m]
+        self.myfloat['tower_wall_thickness']    = np.linspace(0.027, 0.019, nSecTow) # Diameter at each tower section node (linear lofting between) [m]
         self.myfloat['tower_buckling_length']   = 30.0                              # Tower buckling reinforcement spacing [m]
         self.myfloat['tower_outfitting_factor'] = 1.07                              # Scaling for unaccounted tower mass in outfitting
 
