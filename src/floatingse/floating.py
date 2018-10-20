@@ -22,7 +22,7 @@ class FloatingSE(Group):
         self.add('tow', TowerLeanSE(nTower+1, self.nFullTow), promotes=['material_density','tower_section_height',
                                                                  'tower_outer_diameter','tower_wall_thickness','tower_outfitting_factor',
                                                                  'tower_buckling_length','max_taper','min_d_to_t','rna_mass','rna_cg','rna_I',
-                                                                 'tower_mass','tower_I_base','hub_height'])
+                                                                        'tower_mass','tower_I_base','hub_height','material_cost_rate','labor_cost_rate','painting_cost_rate'])
         
         # Next do main and ballast columns
         # Ballast columns are replicated from same design in the components

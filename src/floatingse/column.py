@@ -989,7 +989,8 @@ class Column(Group):
         self.add('gc', GeometricConstraints(nSection+1, diamFlag=True), promotes=['max_taper','min_d_to_t','manufacturability','weldability'])
 
         self.add('cyl_mass', CylinderMass(nFull), promotes=['d_full','t_full','material_density',
-                                                            'material_cost_rate','labor_cost_rate','section_center_of_mass'])
+                                                            'material_cost_rate','labor_cost_rate','painting_cost_rate',
+                                                            'section_center_of_mass'])
 
         self.add('col_geom', ColumnGeometry(nSection, nFull), promotes=['*'])
 
