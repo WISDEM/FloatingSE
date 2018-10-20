@@ -92,7 +92,7 @@ class SubstructureGeometry(Component):
         
         # Constrain spar top to be at least greater than tower main
         unknowns['tower_transition_buffer']   = R_od_main[-1] - R_tower[0]
-        unknowns['nacelle_transition_buffer'] = R_tower[-1] - (R_hub + 1.0) # Guessing at 6m size for nacelle
+        unknowns['nacelle_transition_buffer'] = (R_hub + 1.0) - R_tower[-1] # Guessing at 6m size for nacelle
 
         # Make sure semi columns don't get submerged
         heel_deflect = R_semi*np.sin(np.deg2rad(max_heel))
