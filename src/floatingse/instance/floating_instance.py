@@ -467,7 +467,7 @@ class FloatingInstance(object):
         conlist = [
             # Try to get tower height to match desired hub height
             ['tow.height_constraint', -1e-2, 1e-2, None],
-            ['tow.tip_clearance', 1.0, None, None],
+            ['tow.tip_deflection_margin', 1.0, None, None],
             
             # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
             ['main.draft_margin', None, 1.0, None],
