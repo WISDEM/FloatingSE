@@ -50,7 +50,7 @@ class SparInstance(FloatingInstance):
 
         poplist = []
         for k in range(len(conlist)):
-            if ( (conlist[k][0].find('aux') >= 0) or
+            if ( (conlist[k][0].find('off') >= 0) or
                  (conlist[k][0].find('pontoon') >= 0) or
                  (conlist[k][0].find('main_connection_ratio') >= 0) ):
                 poplist.append(k)
