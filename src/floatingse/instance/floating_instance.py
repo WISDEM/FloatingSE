@@ -141,6 +141,8 @@ class FloatingInstance(object):
         self.params['tower_wall_thickness']                 = np.linspace(0.027, 0.019, NSECTIONS)
         self.params['tower_buckling_length']                = 30.0
         self.params['tower_outfitting_factor']              = 1.07
+        self.params['hub_cm']                               = np.array([-5.01910, 0.0, 1.96256])
+        self.params['tip_position']                         = np.array([-0.9315, 0.0, 27.5])
         self.params['rna_mass']                             = 350e3 #285598.8
         self.params['rna_I']                                = np.array([1.14930678e+08, 2.20354030e+07, 1.87597425e+07, 0.0, 5.03710467e+05, 0.0])
         self.params['rna_cg']                               = np.array([-1.13197635, 0.0, 0.50875268])
@@ -153,6 +155,7 @@ class FloatingInstance(object):
         self.params['main_bulkhead_thickness']              = 0.05*np.array([1, 1, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.params['offset_bulkhead_thickness']         = 0.05*np.array([1, 1, 0, 0, 1]) # Locations/thickness of internal bulkheads at section interfaces [m]
         self.params['Rhub']                              = 1.125
+        self.params['downwind'] = False
         
         # Typically design (start at OC4 semi)
         self.params['radius_to_offset_column']           = 28.867513459481287
@@ -241,6 +244,7 @@ class FloatingInstance(object):
             self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS)
             self.params['Rhub']                 = 1.125
             self.params['main_freeboard'] = 10.0
+            self.params['hub_cm']   = np.array([-5.01910, 0.0, 1.96256])
 
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 350e3 #285598.8
@@ -252,6 +256,7 @@ class FloatingInstance(object):
                 # Max wind speed
                 #self.params['rna_force']     = np.array([188038.8045, 0,  -16451.2637])
                 #self.params['rna_moment']    = np.array([0.0, 131196.8431,  0.0])
+                self.params['tip_position'] = np.array([-0.9315, 0.0, 27.5])
                 
             
         elif instr.upper() in Ten_strings:
@@ -309,6 +314,8 @@ class FloatingInstance(object):
             t_temp = np.flipud( towerData[idx, 1] - towerData[idx, 2] )
             self.params['tower_wall_thickness'] = 0.5*(t_temp[:-1] + t_temp[1:])
 
+            self.params['hub_cm']   = np.array([-7.1, 0.0, 2.75])
+
             if self.params.has_key('rna_mass'):
                 self.params['rna_mass'] = 672300.5303006992
                 self.params['rna_I'] = np.array([1.67424279e+08, 1.05417282e+08, 8.52142680e+07, 0.0, 1.53820004e+06, 0.0])
@@ -316,6 +323,7 @@ class FloatingInstance(object):
                 self.params['rna_force']   = np.array([ 2.11271060e+06, 0.0, -6.81485569e+06])
                 self.params['rna_moment']  = np.array([29259007.24076359, 245729.82542406, -3075245.58067333])
                 self.params['Rhub']     = 2.3
+                self.params['tip_position'] = np.array([-3.551, 0.0, 21.504])
             
         else:
             raise ValueError('Inputs must be either NREL5MW or DTU10MW')
@@ -459,6 +467,7 @@ class FloatingInstance(object):
         conlist = [
             # Try to get tower height to match desired hub height
             ['tow.height_constraint', -1e-2, 1e-2, None],
+            ['tow.tip_clearance', 1.0, None, None],
             
             # Ensure that draft is greater than 0 (spar length>0) and that less than water depth
             ['main.draft_margin', None, 1.0, None],
