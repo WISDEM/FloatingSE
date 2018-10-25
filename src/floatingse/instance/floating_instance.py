@@ -5,6 +5,7 @@ import numpy as np
 import cPickle as pickle        
 from StringIO import StringIO
 
+TOWSEC = 3
 NSECTIONS = 4
 NPTS = 100
 Ten_strings = ['DTU', 'DTU10', 'DTU10MW', '10', '10MW', 'DTU-10', 'DTU-10MW']
@@ -136,9 +137,9 @@ class FloatingInstance(object):
 
         # OC4 Tower
         self.params['hub_height']                           = 90.0
-        self.params['tower_outer_diameter']                 = np.linspace(6.5, 3.87, NSECTIONS+1)
-        self.params['tower_section_height']                 = vecOption(77.6/NSECTIONS, NSECTIONS)
-        self.params['tower_wall_thickness']                 = np.linspace(0.027, 0.019, NSECTIONS)
+        self.params['tower_outer_diameter']                 = np.linspace(6.5, 3.87, TOWSEC+1)
+        self.params['tower_section_height']                 = vecOption(77.6/TOWSEC, TOWSEC)
+        self.params['tower_wall_thickness']                 = np.linspace(0.027, 0.019, TOWSEC)
         self.params['tower_buckling_length']                = 30.0
         self.params['tower_outfitting_factor']              = 1.07
         self.params['hub_cm']                               = np.array([-5.01910, 0.0, 1.96256])
@@ -211,9 +212,9 @@ class FloatingInstance(object):
         self.params['offset_section_height'] =  vecOption(inval/NSECTIONS, NSECTIONS)
         
     def check_vectors(self):
-        self.params['tower_outer_diameter']            = vecOption(self.params['tower_outer_diameter'], NSECTIONS+1)
-        self.params['tower_wall_thickness']            = vecOption(self.params['tower_wall_thickness'], NSECTIONS)
-        self.params['tower_section_height']            = vecOption(self.params['tower_section_height'], NSECTIONS+1)
+        self.params['tower_outer_diameter']            = vecOption(self.params['tower_outer_diameter'], TOWSEC+1)
+        self.params['tower_wall_thickness']            = vecOption(self.params['tower_wall_thickness'], TOWSEC)
+        self.params['tower_section_height']            = vecOption(self.params['tower_section_height'], TOWSEC)
         self.params['main_outer_diameter']             = vecOption(self.params['main_outer_diameter'], NSECTIONS+1)
         self.params['main_wall_thickness']             = vecOption(self.params['main_wall_thickness'], NSECTIONS)
         self.params['main_stiffener_web_height']       = vecOption(self.params['main_stiffener_web_height'], NSECTIONS)
@@ -239,9 +240,9 @@ class FloatingInstance(object):
         if instr.upper() in Five_strings:
 
             self.params['hub_height']              = 90.0
-            self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, NSECTIONS+1)
-            self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, NSECTIONS)
-            self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, NSECTIONS)
+            self.params['tower_outer_diameter']    = np.linspace(6.5, 3.87, TOWSEC+1)
+            self.params['tower_section_height']    = vecOption(77.6/NSECTIONS, TOWSEC)
+            self.params['tower_wall_thickness']    = np.linspace(0.027, 0.019, TOWSEC)
             self.params['Rhub']                 = 1.125
             self.params['main_freeboard'] = 10.0
             self.params['hub_cm']   = np.array([-5.01910, 0.0, 1.96256])
