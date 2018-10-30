@@ -810,13 +810,18 @@ class ColumnProperties(Component):
         unknowns['z_center_of_buoyancy'] = z_cb
 
         # Find total hydrostatic force by section- sign says in which direction force acts
-        z_section,_ = nodal2sectional(z_under)
-        F_hydro     = np.pi * np.diff(r_under**2.0) * np.maximum(0.0, -z_section) #cg_under))
+        # Since we are working on z_under grid, need to redefine z_section, ibox, etc.
+        z_undersec,_ = nodal2sectional(z_under)
+        if z_box > 0.0 and V_box == 0.0:
+            ibox = 0
+        else:
+            ibox = np.where(z_box >= z_under)[0][-1]
+        F_hydro      = np.pi * np.diff(r_under**2.0) * np.maximum(0.0, -z_undersec) #cg_under))
         if F_hydro.size > 0:
             F_hydro[0] += np.pi * r_under[0]**2 * (-z_under[0])
             if z_nodes[-1] < 0.0:
                 F_hydro[-1] -= np.pi * r_under[-1]**2 * (-z_under[-1])
-            F_hydro[self.ibox] += V_box
+            F_hydro[ibox] += V_box
             F_hydro    *= rho_water * gravity
         unknowns['hydrostatic_force'] = np.r_[F_hydro, np.zeros(add0)]
         

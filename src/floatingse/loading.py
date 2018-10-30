@@ -947,8 +947,6 @@ class FloatingFrame(Component):
             k_f     = params['labor_cost_rate'] #1.0 # USD / min labor
             k_p     = params['painting_cost_rate'] #USD / m^2 painting
             npont   = m_total.size
-            R_pont  = Jx[:ind] / C[:ind]  # J/C=R
-            t_pont  = R_pont - np.sqrt(R_pont**2 - Ax[:ind]/np.pi)
 
             # Cost Step 1) Cutting and grinding tube ends
             theta_g = 3.0 # Difficulty factor
@@ -957,12 +955,12 @@ class FloatingFrame(Component):
             theta_w = 3.0 # Difficulty factor
 
             # Labor-based expenses
-            K_f = k_f * 2 * ( manufacture.steel_tube_cutgrind_time(theta_g, R_pont, t_pont, elemAng[:ind]) +
-                              manufacture.steel_tube_welding_time(theta_w, npont+ncolumn+1, m_substructure, 2*np.pi*R_pont, t_pont) )
+            K_f = k_f * 2 * ( manufacture.steel_tube_cutgrind_time(theta_g, R_od_pontoon, t_wall_pontoon, elemAng[:ind]) +
+                              manufacture.steel_tube_welding_time(theta_w, npont+ncolumn+1, m_substructure, 2*np.pi*R_od_pontoon, t_wall_pontoon) )
 
             # Cost Step 3) Painting
             theta_p = 2.0
-            S_pont  = 2.0 * np.pi * R_pont * elemL[:ind]
+            S_pont  = 2.0 * np.pi * R_od_pontoon * elemL[:ind]
             K_p     = k_p * theta_p * S_pont.sum()
 
             # Material cost
