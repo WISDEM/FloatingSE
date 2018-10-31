@@ -564,10 +564,10 @@ class FloatingInstance(object):
             ['modal_margin_high', 1.0, None, None]
         ]
         #raise NotImplementedError("Subclasses should implement this!")
-        return conlist
+        return self.constraints if len(self.constraints) > 0 else conlist
 
 
-    def constraint_report(self, tol=2e-2):
+    def constraint_report(self, tol=2e-2, printFlag=True):
         passStr   = 'yes'
         noStr     = 'NO'
         activeStr = 'ACTIVE'
@@ -583,10 +583,11 @@ class FloatingInstance(object):
             highStr = '< '+str(k[2])+'\t'
             conStr  = activeStr if np.any(margin <= tol) else ''
             valStr  = str(self.params[k[0]])
-            print(conStr, lowStr, k[0], highStr, valStr)
+            if printFlag: print(conStr, lowStr, k[0], highStr, valStr)
         
         #print('Status\tLow\tName\tHigh\tEq\tValue')
         conlist = self.constraints if len(self.constraints) > 0 else self.get_constraints()
+        allPass = True
         for k in conlist:
             lowStr   = ''
             highStr  = ''
@@ -623,8 +624,13 @@ class FloatingInstance(object):
             else:
                 conStr = passStr
                 valStr = ''
-            print(conStr, '\t', lowStr, k[0], '\t', highStr, eqStr, '\t', valStr)
+            if printFlag: print(conStr, '\t', lowStr, k[0], '\t', highStr, eqStr, '\t', valStr)
 
+            # Record summary statistic
+            allPass = allPass and passFlag
+            
+        return allPass
+    
             
     def add_objective(self, varname='total_cost', scale=1e-9):
         if (len(self.prob.driver._objs) == 0):
