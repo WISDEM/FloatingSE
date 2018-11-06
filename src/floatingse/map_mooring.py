@@ -135,9 +135,9 @@ class MapMooring(Component):
 
         # TODO: Costs per unit length are not synced with new input sources
         if lineType == 'CHAIN':
-            #self.min_break_load      = 2.74e7  * Dmooring2 * (44.0 - 80.0*Dmooring)
+            self.min_break_load      = 2.74e7  * Dmooring2 * (44.0 - 80.0*Dmooring)
             # Use a linear fit to the other fit becuase it is poorly conditioned for optimization
-            self.min_break_load      = 1e3*np.maximum(1.0, -5445.2957034820683+176972.68498888266*Dmooring)
+            #self.min_break_load      = 1e3*np.maximum(1.0, -5445.2957034820683+176972.68498888266*Dmooring)
             self.wet_mass_per_length = 19.9e3  * Dmooring2 # From Orca, 7983.34117 OC3 definiton doc
             self.axial_stiffness     = 8.54e10 * Dmooring2 # From Orca, 4.74374e10 OC3 definiton doc, 
             self.area                = 2.0 * 0.25 * np.pi * Dmooring2
