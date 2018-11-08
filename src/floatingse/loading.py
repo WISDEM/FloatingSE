@@ -196,22 +196,6 @@ class FloatingFrame(Component):
         self.deriv_options['step_size'] = 1e-5
          
     def solve_nonlinear(self, params, unknowns, resids):
-        # If something fails, we have to tell the optimizer this design is no good
-        def bad_input():
-            unknowns['structural_frequencies'] = 1e30 * np.ones(NFREQ)
-            unknowns['top_deflection'] = 1e30
-            unknowns['substructure_mass']  = 1e30
-            unknowns['structural_mass']    = 1e30
-            unknowns['total_displacement'] = 1e30
-            unknowns['z_center_of_buoyancy'] = 0.0
-            unknowns['substructure_center_of_mass'] = 1e30 * np.ones(3)
-            unknowns['structure_center_of_mass'] = 1e30 * np.ones(3)
-            unknowns['total_force'] =  1e30 * np.ones(3)
-            unknowns['total_moment'] = 1e30 * np.ones(3)
-            unknowns['tower_stress'] = 1e30 * np.ones(m_main.shape)
-            unknowns['tower_shell_buckling'] = 1e30 * np.ones(m_main.shape)
-            unknowns['tower_global_buckling'] = 1e30 * np.ones(m_main.shape)
-            return
         
         # Unpack variables
         ncolumn         = int(params['number_of_offset_columns'])
@@ -289,8 +273,32 @@ class FloatingFrame(Component):
         unknowns['main_connection_ratio']    = params['connection_ratio_max'] - R_od_pontoon/R_od_main
         unknowns['offset_connection_ratio'] = params['connection_ratio_max'] - R_od_pontoon/R_od_offset
         unknowns['pontoon_wave_height_depth_margin'] = np.abs(np.array([z_attach_lower, z_attach_upper])) - np.abs(params['Hs'])
+
         
         # --- INPUT CHECKS -----
+        # If something fails, we have to tell the optimizer this design is no good
+        def bad_input():
+            unknowns['structural_frequencies'] = 1e30 * np.ones(NFREQ)
+            unknowns['top_deflection'] = 1e30
+            unknowns['substructure_mass']  = 1e30
+            unknowns['structural_mass']    = 1e30
+            unknowns['total_displacement'] = 1e30
+            unknowns['z_center_of_buoyancy'] = 0.0
+            unknowns['substructure_center_of_mass'] = 1e30 * np.ones(3)
+            unknowns['structure_center_of_mass'] = 1e30 * np.ones(3)
+            unknowns['total_force'] =  1e30 * np.ones(3)
+            unknowns['total_moment'] = 1e30 * np.ones(3)
+            unknowns['tower_stress'] = 1e30 * np.ones(m_tower.shape)
+            unknowns['tower_shell_buckling'] = 1e30 * np.ones(m_tower.shape)
+            unknowns['tower_global_buckling'] = 1e30 * np.ones(m_tower.shape)
+            unknowns['main_stress'] = 1e30 * np.ones(m_main.shape)
+            unknowns['main_shell_buckling'] = 1e30 * np.ones(m_main.shape)
+            unknowns['main_global_buckling'] = 1e30 * np.ones(m_main.shape)
+            unknowns['offset_stress'] = 1e30 * np.ones(m_offset.shape)
+            unknowns['offset_shell_buckling'] = 1e30 * np.ones(m_offset.shape)
+            unknowns['offset_global_buckling'] = 1e30 * np.ones(m_offset.shape)
+            return
+        
         # There is no truss if not offset columns
         if ncolumn == 0:
             crossAttachFlag = lowerAttachFlag = upperAttachFlag = False
