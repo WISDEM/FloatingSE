@@ -1,35 +1,24 @@
 # FloatingSE
-FloatingSE is a set of models for analyzing the floating support structures for offshore wind plants.  Currently, the only available design is the spar-buoy. 
 
-Author: [G. Barter](mailto:garrett.barter@nrel.gov)
+FloatingSE is a set of models for analyzing the floating support structures for offshore wind plants.  
 
-## Version
+Author: [NREL WISDEM Team](mailto:systems.engineering@nrel.gov) 
 
-This software is a alpha version 0.3.0.
+## Documentation
 
-## Detailed Documentation
-
-Detailed documentation is not yet available.
-
-## Prerequisites
-
-General: NumPy, SciPy, OpenMDAO, MAP++
-
-## Dependencies
-
-Wind Plant Framework: [FUSED-Wind](http://fusedwind.org) (Framework for Unified Systems Engineering and Design of Wind Plants)
-
-Interfaces with other WISDEM Models: CommonSE, TowerSE, RotorSE
-
-Supporting python packages: Sphinx, PyOptSparse
+See local documentation in the `docs`-directory or access the online version at <http://wisdem.github.io/FloatingSE/>
 
 ## Installation
 
-TODO
+For detailed installation instructions of WISDEM modules see <https://github.com/WISDEM/WISDEM> or to install FloatingSE by itself do:
 
-## Detailed Documentation
+    $ python setup.py install
 
-[describe where to find documentation for your code]
-Access the online version at <http://wisdem.github.io/FloatingSE/>
+## Run Unit Tests
 
+To check if installation was successful, run the unit tests
+
+    $ python test/package_PyU.py
+
+For software issues please use <https://github.com/WISDEM/FloatingSE/issues>.  For functionality and theory related questions and comments please use the NWTC forum for [Systems Engineering Software Questions](https://wind.nrel.gov/forum/wind/viewtopic.php?f=34&t=1002).
 

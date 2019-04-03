@@ -1,5 +1,11 @@
 # [FloatingSE] Changelog
 
+## 0.2.0 ([09/31/2018])
+
+[Garrett Barter](mailto: garrett.barter@nrel.gov)
+
+- OpenMDAO1 release with spars, semis, and TLPs
+
 ## 0.1.0 ([ReleaseDate])
 
 	[Kelly Huang] <[YourEmailAddress]>
